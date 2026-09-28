@@ -1,4 +1,7 @@
-// Stub (W0a). Owner: recording-server (Stage 08). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('recording-server')
+// GET /api/recordings/:id (recording-server): recorder, room owner or admin; anyone else 404.
+import { getRecordingForUser } from '../../../services/recordings/access'
+
+export default defineEventHandler(async (event) => {
+  const user = await requireUser(event)
+  return getRecordingForUser(user, getRouterParam(event, 'id'))
 })

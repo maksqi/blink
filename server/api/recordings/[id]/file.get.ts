@@ -1,4 +1,7 @@
-// Stub (W0a). Owner: recording-server (Stage 08). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('recording-server')
+// GET /api/recordings/:id/file (recording-server, docs/API.md §8): the decrypted MP4, with Range support.
+import { serveRecordingFile } from '../../../services/recordings/serve'
+
+export default defineEventHandler(async (event) => {
+  const user = await requireUser(event)
+  await serveRecordingFile(event, user, getRouterParam(event, 'id'))
 })

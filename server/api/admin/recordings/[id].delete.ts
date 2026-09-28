@@ -1,4 +1,8 @@
-// Stub (W0a). Owner: recording-server (Stage 08). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('recording-server')
+// DELETE /api/admin/recordings/:id (recording-server): any state; cancels processing and ends an active recording.
+import { adminDeleteRecording } from '../../../services/recordings/access'
+
+export default defineEventHandler(async (event) => {
+  await requireAdmin(event)
+  await adminDeleteRecording(event, getRouterParam(event, 'id'))
+  return null
 })
