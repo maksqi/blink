@@ -1,4 +1,9 @@
-// Stub (W0a). Owner: auth (Stage 02). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('auth')
+// POST /api/auth/logout (auth, docs/API.md §3): 204, session revoked, cookie cleared. Exempt from the password guard.
+import { logout } from '../../services/auth/sessions'
+import { requireUser } from '../../utils/auth'
+
+export default defineEventHandler(async (event) => {
+  await requireUser(event)
+  await logout(event)
+  return null
 })

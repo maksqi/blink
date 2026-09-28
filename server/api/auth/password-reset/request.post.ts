@@ -1,4 +1,12 @@
-// Stub (W0a). Owner: auth (Stage 02). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('auth')
+// POST /api/auth/password-reset/request (auth, docs/API.md §3): always 202 (no enumeration); 503 without SMTP.
+import { passwordResetRequestSchema } from '#shared/schemas/auth'
+import { limitAuthRequest } from '../../../services/auth/limits'
+import { requestPasswordReset } from '../../../services/auth/password-reset'
+
+export default defineEventHandler(async (event) => {
+  limitAuthRequest(event)
+  const { email } = await readValidatedBody(event, passwordResetRequestSchema.parse)
+  await requestPasswordReset(event, email)
+  setResponseStatus(event, 202)
+  return { ok: true as const }
 })
