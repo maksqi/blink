@@ -30,8 +30,11 @@ async function measure(page: Page): Promise<number> {
 }
 
 test.describe('join time', () => {
-  test('click to first remote frame', async ({ joinAs }, testInfo) => {
+  test('click to first remote frame', async ({ joinAs, guards }, testInfo) => {
     test.setTimeout(nightly ? 300_000 : 60_000)
+    // Rejoining with the same identity ten times in a row races the SFU: the SDK may log a track that arrives before
+    // the (new) participant is known. Only the nightly loop does that.
+    if (nightly) guards.allowConsoleError(/Tried to add a track for a participant, that's not present/)
     const host = await joinAs('host', { name: 'Hana Host' })
     const guest = await joinAs('participant', { name: 'Gus Guest', room: host.room, join: false })
 
@@ -43,6 +46,14 @@ test.describe('join time', () => {
     if (nightly) {
       samples.length = 0 // the first join was the warm-up
       for (let i = 0; i < 10; i++) {
+        // Leave gracefully, then load a fresh document (the same URL with a new fragment would only be a same-document
+        // navigation).
+        await guest.page.evaluate(async () => {
+          const hooks = (window as unknown as { __blinqTest: { state: { harness: { leave(): Promise<void> } } } })
+            .__blinqTest
+          await hooks.state.harness.leave()
+        })
+        await guest.page.goto('about:blank')
         await guest.page.goto(guest.url)
         samples.push(await measure(guest.page))
         await waitForPhase(guest.page, 'inCall')
