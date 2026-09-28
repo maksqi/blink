@@ -1,0 +1,22 @@
+# gitleaks configuration: every default rule, plus an allowlist for the public dev-only values below.
+# Run it with `sh scripts/scan-secrets.sh` (CI: ci.yml, job gitleaks).
+title = "blinq"
+
+[extend]
+useDefault = true
+
+# The dev stack's credentials in .env.dev.example and docker-compose.dev.yml are public placeholders that only work
+# against the local dev stack. They are allowlisted by exact value, not by path, so a real secret added to those files
+# is still reported. Never reuse these values anywhere else.
+[[allowlists]]
+description = "Public dev-only placeholders (.env.dev.example, docker-compose.dev.yml)"
+regexTarget = "secret"
+regexes = [
+  # APP_SECRET and LIVEKIT_API_SECRET of the dev stack.
+  '''^dev-only-[a-z0-9-]+-not-for-production-[0-9]+$''',
+  # RECORDING_ENCRYPTION_KEY of the dev stack: base64 of "dev-only-recording-key-32-bytes!".
+  '''^ZGV2LW9ubHktcmVjb3JkaW5nLWtleS0zMi1ieXRlcyE=$''',
+  # Bootstrap admin password and Postgres password of the dev stack.
+  '''^dev-admin-password-0000$''',
+  '''^blinq-dev$''',
+]

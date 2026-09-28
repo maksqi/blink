@@ -1,0 +1,232 @@
+name: ci
+
+# The pull-request gate (docs/TESTING.md §8). Actions are pinned by commit SHA; the comment names the release.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NUXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  verify:
+    name: Install, English, lint, typecheck, unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Install leaves the tree unchanged
+        run: |
+          git diff --exit-code
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --porcelain
+            echo "::error::pnpm install created files that are neither committed nor ignored"
+            exit 1
+          fi
+      - name: English only
+        run: pnpm check:english
+      - name: Lint
+        run: pnpm lint
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Unit tests
+        run: pnpm test
+      - name: Component tests (Nuxt environment)
+        run: pnpm exec vitest run --project nuxt --passWithNoTests
+
+  gitleaks:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: gitleaks (pinned image, .gitleaks.toml)
+        run: sh scripts/scan-secrets.sh
+
+  actionlint:
+    name: Workflow lint (actionlint + shellcheck)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: actionlint (pinned image)
+        run: sh scripts/lint-workflows.sh
+
+  audit:
+    name: Dependency audit (report only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # High and critical advisories block a release (release.yml). Here they are reported without failing the run, so a
+    # new advisory never blocks unrelated pull requests.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: pnpm audit (high and critical)
+        run: pnpm audit --audit-level high
+
+  build:
+    name: Builds (production + test) and bundle checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Production build
+        run: pnpm build
+      - name: Production bundle has no test hooks or harness, and /dev/** is a 404
+        run: node scripts/check-build.mjs production
+      - name: Test build
+        run: pnpm build:test
+      - name: Test build has the harness page and test route
+        run: node scripts/check-build.mjs test
+
+  api:
+    name: API tests (Postgres, Mailpit, fake LiveKit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      # Same images, credentials and host ports as docker-compose.dev.yml, so .env.dev.example works unchanged.
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: blinq
+          POSTGRES_PASSWORD: blinq-dev
+          POSTGRES_DB: blinq
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U blinq -d blinq"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 30
+      mailpit:
+        image: axllent/mailpit:v1.31.3
+        env:
+          MP_SMTP_AUTH_ACCEPT_ANY: '1'
+          MP_SMTP_AUTH_ALLOW_INSECURE: '1'
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+      - name: Dev environment
+        run: cp .env.dev.example .env
+      - name: API tests
+        run: pnpm test:api
+
+  api-livekit:
+    name: API tests (real LiveKit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: blinq
+          POSTGRES_PASSWORD: blinq-dev
+          POSTGRES_DB: blinq
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U blinq -d blinq"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 30
+      mailpit:
+        image: axllent/mailpit:v1.31.3
+        env:
+          MP_SMTP_AUTH_ACCEPT_ANY: '1'
+          MP_SMTP_AUTH_ALLOW_INSECURE: '1'
+        ports:
+          - 1025:1025
+          - 8025:8025
+        options: >-
+          --health-cmd "/mailpit readyz"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Find the real-LiveKit test files (tests/api/**/*.livekit.test.ts)
+        id: files
+        run: |
+          if git ls-files 'tests/api/*.livekit.test.ts' | grep -q .; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No tests/api/**/*.livekit.test.ts yet; nothing to run against the real LiveKit."
+          fi
+      - if: steps.files.outputs.present == 'true'
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - if: steps.files.outputs.present == 'true'
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install (frozen lockfile)
+        if: steps.files.outputs.present == 'true'
+        run: pnpm install --frozen-lockfile
+      - name: Dev environment
+        if: steps.files.outputs.present == 'true'
+        run: cp .env.dev.example .env
+      - name: LiveKit v1.13.7 with the dev configuration (docker-compose.dev.yml)
+        if: steps.files.outputs.present == 'true'
+        run: LIVEKIT_NODE_IP="$(sh scripts/detect-ip.sh)" docker compose -f docker-compose.dev.yml up -d --wait livekit
+      - name: API tests against the real LiveKit
+        if: steps.files.outputs.present == 'true'
+        env:
+          API_LIVEKIT_URL: http://127.0.0.1:7880
+        run: pnpm test:api .livekit.test

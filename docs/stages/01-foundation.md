@@ -161,17 +161,19 @@ their owned paths and never touch frozen files.
       provides `$fragment.take(path)` for pages (decision); parsing uses `parseRoomFragment` / `parseTokenFragment`.
 - [ ] Post-login redirects accept only relative `route.path` values starting with a single `/`.
 ### W0b — devops-ci
-- [ ] `ci.yml`: install + `git diff --exit-code`, lint, typecheck, unit, `check:english`, gitleaks, actionlint,
+- [x] `ci.yml`: install + `git diff --exit-code`, lint, typecheck, unit, `check:english`, gitleaks, actionlint,
       `build` and `build:test` (prod bundle has no `__blinqTest`, `/dev/call` returns 404), API tests (Postgres service,
       Mailpit, fake RoomService, a small real-LiveKit job).
-- [ ] `e2e.yml` (dev compose with `node_ip` = runner eth0 IP, test build, e2e Caddy, Chromium + Firefox, WebKit UI-only,
+- [x] `e2e.yml` (dev compose with `node_ip` = runner eth0 IP, test build, e2e Caddy, Chromium + Firefox, WebKit UI-only,
       ffmpeg/ffprobe from `mwader/static-ffmpeg:9.0.2`), `docker.yml`, `nightly.yml`, `release.yml` (prepared,
       `workflow_dispatch` only); actions pinned by SHA.
-- [ ] Healthchecks in `docker-compose.dev.yml` so `up -d --wait` blocks until Postgres, LiveKit and Mailpit are healthy.
-- [ ] `docker/e2e/Caddyfile`: `http://localhost:8080`, `/rtc*` → LiveKit 7880, `/api/webhooks/*` → 404, everything else
+- [x] Healthchecks in `docker-compose.dev.yml` so `up -d --wait` blocks until Postgres, LiveKit and Mailpit are healthy.
+- [x] `docker/e2e/Caddyfile`: `http://localhost:8080`, `/rtc*` → LiveKit 7880, `/api/webhooks/*` → 404, everything else
       → the app; production CSP unchanged.
-- [ ] `tests/e2e/fixtures/base.ts`: fail on `securitypolicyviolation`, console errors, secrets in app/Caddy logs.
-- [ ] `tests/e2e/shell/`-independent smoke spec proposed to `ui-shell`; `docs/TESTING.md` updated as built.
+- [x] `tests/e2e/fixtures/base.ts`: fail on `securitypolicyviolation`, console errors, secrets in app/Caddy logs.
+- [x] `tests/e2e/shell/`-independent smoke spec proposed to `ui-shell`; `docs/TESTING.md` updated as built.
+      (Smoke specs: `tests/e2e/smoke/`. The `docs/TESTING.md` text is in the devops-ci report, because that file is
+      being edited on main.)
 
 ## Tests
 - Unit: `server/utils/env.test.ts`, `shared/utils/{display-name,permissions}.test.ts`, `app/lib/e2ee/*.test.ts` (W0a);
