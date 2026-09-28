@@ -10,7 +10,7 @@ and verifying a stage.
 
 | Stage | Title | Owner(s) | Wave | Depends on | Status |
 |---|---|---|---|---|---|
-| [00](stages/00-docs-and-planning.md) | Docs and planning | orchestrator + doc agents | W0-docs | — | in progress |
+| [00](stages/00-docs-and-planning.md) | Docs and planning | orchestrator + doc agents | W0-docs | — | done |
 | [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | in progress (W0a done) |
 | [02](stages/02-auth-and-accounts.md) | Auth and accounts | auth | W1 | 01 | todo |
 | [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | todo |
@@ -153,3 +153,4 @@ Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
 ## Change log
 
 - 2026-09-28 — Roadmap created from the approved plan.
+- 2026-09-28 — Stage 00 done (all docs committed); W0a committed; W0b started from c923e6d.

@@ -1,6 +1,6 @@
 # Stage 00 — Docs and planning
 
-Status: todo
+Status: done
 Owner(s): `orchestrator` (W0-docs), doc agent A (W0-docs), doc agent B (W0-docs)
 Depends on: approved implementation plan, contracts brief
 Blocks: Stage 01 (W0a) and therefore every later stage
@@ -34,32 +34,32 @@ the ones implementation must use.
 
 ## Tasks
 ### Orchestrator
-- [ ] `AGENT.md`: agent rules (read AGENT.md and your stage doc first; stay in owned paths; never edit frozen files;
+- [x] `AGENT.md`: agent rules (read AGENT.md and your stage doc first; stay in owned paths; never edit frozen files;
       new deps and contract changes go into the report), worktree protocol (`git merge-base --is-ancestor
       <waveBaseSha> HEAD`, `scripts/worktree-setup.sh <agent> <port>`), never `docker compose down` on the shared dev
       stack, heavy commands under `scripts/with-lock.sh`, gotchas from the plan, report format (branch, commit, files,
       DoD status, requests).
-- [ ] `CLAUDE.md`: exactly one line, `@AGENT.md`.
-- [ ] `docs/ROADMAP.md`: status table (stage, owner, wave, status), dependency graph, ownership map that covers every
+- [x] `CLAUDE.md`: exactly one line, `@AGENT.md`.
+- [x] `docs/ROADMAP.md`: status table (stage, owner, wave, status), dependency graph, ownership map that covers every
       path of the repository layout, frozen-file list, wave base SHAs.
-- [ ] `docs/ARCHITECTURE.md`: topology, layers and conventions, data model, auth, rooms/joining, E2EE, call media,
+- [x] `docs/ARCHITECTURE.md`: topology, layers and conventions, data model, auth, rooms/joining, E2EE, call media,
       recording, headers (plan section 2).
-- [ ] `docs/SECURITY.md`: threat model including every statement required by plan section 2.7 (protected against SFU,
+- [x] `docs/SECURITY.md`: threat model including every statement required by plan section 2.7 (protected against SFU,
       network, DB and storage compromise; not against a malicious app server; no per-sender authenticity; metadata
       visible to the server; removed people keep the key until rotation; recordings readable by server/admins).
 ### Doc agent A
-- [ ] `docs/stages/00-docs-and-planning.md` … `docs/stages/05-call-core.md` in the stage template.
-- [ ] `docs/API.md`: conventions, every endpoint of plan section 2.4 plus the obviously required ones, SSE contract,
+- [x] `docs/stages/00-docs-and-planning.md` … `docs/stages/05-call-core.md` in the stage template.
+- [x] `docs/API.md`: conventions, every endpoint of plan section 2.4 plus the obviously required ones, SSE contract,
       LiveKit contracts, cookies, link formats, crypto derivations, settings keys and defaults.
 ### Doc agent B
-- [ ] `docs/stages/06-host-controls-collaboration.md` … `docs/stages/10-hardening-qa-release.md` in the stage template
+- [x] `docs/stages/06-host-controls-collaboration.md` … `docs/stages/10-hardening-qa-release.md` in the stage template
       (Stage 09 has parts 9a and 9b).
-- [ ] `docs/TESTING.md`: test layers, locations, commands, Playwright projects, fake media, manual browser matrix.
-- [ ] `docs/DEPLOYMENT.md`, `docs/PERFORMANCE.md`: skeletons with headings and TODO markers owned by later stages.
-- [ ] `README.md`: skeleton (what blinq is, requirements, ports table, quick start placeholder, browser matrix
+- [x] `docs/TESTING.md`: test layers, locations, commands, Playwright projects, fake media, manual browser matrix.
+- [x] `docs/DEPLOYMENT.md`, `docs/PERFORMANCE.md`: skeletons with headings and TODO markers owned by later stages.
+- [x] `README.md`: skeleton (what blinq is, requirements, ports table, quick start placeholder, browser matrix
       placeholder, "remove `ADMIN_PASSWORD` after the first login").
 ### Review
-- [ ] Orchestrator cross-checks names against the contracts brief, resolves or accepts every "(decision)" item, then
+- [x] Orchestrator cross-checks names against the contracts brief, resolves or accepts every "(decision)" item, then
       commits all docs in one W0-docs commit on `main`.
 
 ## Tests
@@ -69,28 +69,28 @@ the ones implementation must use.
 - Docs checks: the commands in the Definition of Done below.
 
 ## Definition of Done
-- [ ] [agent-manual] All 11 stage files exist with the exact names from the contracts brief — evidence: `ls docs/stages`
+- [x] [agent-manual] All 11 stage files exist with the exact names from the contracts brief — evidence: `ls docs/stages`
       matches the stage list in `docs/ROADMAP.md`.
-- [ ] [agent-manual] Every stage file has the template sections — evidence: `grep -L '^## Definition of Done'
+- [x] [agent-manual] Every stage file has the template sections — evidence: `grep -L '^## Definition of Done'
       docs/stages/*.md` prints nothing, and each file has Goal, Scope, Owned paths, Tasks, Tests, Notes and gotchas.
-- [ ] [agent-manual] Every DoD item carries exactly one tag and an evidence pointer — evidence:
+- [x] [agent-manual] Every DoD item carries exactly one tag and an evidence pointer — evidence:
       `awk '/^## Definition of Done/{d=1;next} /^## /{d=0} d && /^- \[ \]/ && !/\[(auto|agent-manual|user)\].*evidence:/' docs/stages/*.md`
       prints nothing.
-- [ ] [agent-manual] Every DoD item listed in plan section 4 appears in its stage file — evidence: orchestrator
+- [x] [agent-manual] Every DoD item listed in plan section 4 appears in its stage file — evidence: orchestrator
       checklist in the W0-docs review.
-- [ ] [agent-manual] No Cyrillic character in any doc — evidence:
+- [x] [agent-manual] No Cyrillic character in any doc — evidence:
       `perl -CSD -ne 'print "$ARGV:$.\n" if /\p{Cyrillic}/' AGENT.md CLAUDE.md README.md docs/*.md docs/stages/*.md`
       prints nothing.
-- [ ] [auto] `check-english` passes once it exists — evidence: `pnpm check:english` (first run in Stage 01 CI).
-- [ ] [agent-manual] The ROADMAP ownership map covers every layout path — evidence: ownership table in
+- [x] [auto] `check-english` passes once it exists — evidence: `pnpm check:english` (first run in Stage 01 CI).
+- [x] [agent-manual] The ROADMAP ownership map covers every layout path — evidence: ownership table in
       `docs/ROADMAP.md` checked against plan section 3; no path has two writers in the same wave.
-- [ ] [agent-manual] `docs/API.md` lists every endpoint of plan section 2.4 — evidence: endpoint index in
+- [x] [agent-manual] `docs/API.md` lists every endpoint of plan section 2.4 — evidence: endpoint index in
       `docs/API.md`.
-- [ ] [agent-manual] Names in all docs match the committed contracts — evidence: orchestrator review notes comparing
+- [x] [agent-manual] Names in all docs match the committed contracts — evidence: orchestrator review notes comparing
       error codes, settings keys, env vars, cookie names and LiveKit contracts with `shared/**` and
       `server/contracts/index.ts`.
-- [ ] [agent-manual] `CLAUDE.md` is exactly `@AGENT.md` — evidence: `cat CLAUDE.md`.
-- [ ] [agent-manual] Docs are committed on `main` in one W0-docs commit — evidence: `git log --oneline -1 -- docs`.
+- [x] [agent-manual] `CLAUDE.md` is exactly `@AGENT.md` — evidence: `cat CLAUDE.md`.
+- [x] [agent-manual] Docs are committed on `main` in one W0-docs commit — evidence: `git log --oneline -1 -- docs`.
 
 ## Notes and gotchas
 - The repository CI fails on any Cyrillic character in any tracked file, including docs and test fixtures. Hotkey tests
