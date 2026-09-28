@@ -118,17 +118,17 @@ their owned paths and never touch frozen files.
       `mobile-chromium` (`@responsive`), 1 worker, `E2E_BASE_URL`.
 - [ ] Commit W0a; record the wave base SHA in `docs/ROADMAP.md`.
 ### W0b — server-core
-- [ ] Sessions (`server/services/session/**`): 32 random bytes, `sessions.id` = sha256 hex, cookie
+- [x] Sessions (`server/services/session/**`): 32 random bytes, `sessions.id` = sha256 hex, cookie
       `__Host-blinq_session` (dev `blinq_session`; httpOnly, Secure in prod, SameSite=Lax, Path=/), absolute expiry
       30 d (`expires_at`), idle 7 d (`last_seen_at`, written at most once per minute (decision)), in-process cache ≤ 30 s
       evicted on revoke, rotate, revoke one/all.
-- [ ] `server/middleware/*`: request id (`X-Request-Id`, never trusted from clients), session resolution, CSRF
+- [x] `server/middleware/*`: request id (`X-Request-Id`, never trusted from clients), session resolution, CSRF
       (mutating `/api/**` requests need `Origin` = origin of `PUBLIC_URL` and `Sec-Fetch-Site: same-origin` when
       present; `/api/webhooks/livekit` exempt; 403 `CSRF_REJECTED`), and the forced-password-change guard (403
       `AUTH_PASSWORD_CHANGE_REQUIRED` except `GET /api/auth/me`, `POST /api/auth/password`, `POST /api/auth/logout`,
       `GET /api/{config,health,ready}`) (decision: server-core builds the guard because it owns
       `server/middleware/**`; `auth` tests it).
-- [ ] `server/utils/*`: `requireUser` (401 `UNAUTHENTICATED`), `requireAdmin` (403 `FORBIDDEN`), `resolveCaller(event,
+- [x] `server/utils/*`: `requireUser` (401 `UNAUTHENTICATED`), `requireAdmin` (403 `FORBIDDEN`), `resolveCaller(event,
       roomId)` (session user or the room's guest cookie `__Host-blinq_g_<slug>`, resolved to the caller's own
       `call_participants` row; 403 `CALL_NOT_PARTICIPANT`); client IP (`X-Forwarded-For` trusted only from loopback;
       IPv6 keyed by /64); limiter (`createLimiter`, exponential backoff, keys `email:`, `ip:`, `net:`, room+IP, user;
@@ -136,17 +136,17 @@ their owned paths and never touch frozen files.
       m=19456, t=2, p=1) with a dummy-hash verify and a semaphore (4 concurrent (decision)); consola logger
       (`LOG_LEVEL`, `LOG_FORMAT`, request id, redaction of passwords, tokens, proofs, cookies, `authorization`,
       `#k=`/`#t=` fragments); in-process `EventBus` implementation.
-- [ ] `server/plugins/*`: assert `NITRO_HOST=127.0.0.1` in production; one-line startup summary (version,
+- [x] `server/plugins/*`: assert `NITRO_HOST=127.0.0.1` in production; one-line startup summary (version,
       `PUBLIC_URL`, TURN on/off, SMTP on/off, registration mode).
-- [ ] `server/api/health.get.ts`, `ready.get.ts`, `config.get.ts` exactly as `docs/API.md` (Public section).
-- [ ] CLI: `migrate`, `bootstrap` (only when zero admins and `system.bootstrapDone` unset; admin from
+- [x] `server/api/health.get.ts`, `ready.get.ts`, `config.get.ts` exactly as `docs/API.md` (Public section).
+- [x] CLI: `migrate`, `bootstrap` (only when zero admins and `system.bootstrapDone` unset; admin from
       `ADMIN_EMAIL`/`ADMIN_PASSWORD` with `must_change_password`), `reset-password <email>` (stdin, revokes sessions,
       audit); PG advisory lock, DB retry, idempotent.
-- [ ] `server/services/settings/**` (cached, validated, write-through, publishes nothing secret) and
+- [x] `server/services/settings/**` (cached, validated, write-through, publishes nothing secret) and
       `server/services/audit/**` (`audit(event, { action, targetType, targetId, details })`, actions `<domain>.<verb>`).
-- [ ] `server/tasks/maintenance/{cleanup,retention}.ts`: expired sessions, invites, guest sessions, email tokens,
+- [x] `server/tasks/maintenance/{cleanup,retention}.ts`: expired sessions, invites, guest sessions, email tokens,
       throttle rows; IP retention (`privacy.ipRetentionDays`) and audit retention (`audit.retentionDays`).
-- [ ] API harness `tests/api/_harness/**`: build once (`pnpm build:test` under `scripts/with-lock.sh`), DB
+- [x] API harness `tests/api/_harness/**`: build once (`pnpm build:test` under `scripts/with-lock.sh`), DB
       `blinq_test_api`, start `.output/server/index.mjs`, `provide('apiBaseUrl')`; helpers for cookie jars, `Origin`
       header, factories (users, admins, sessions, rooms with a known key, invites, meetings), Mailpit client.
 ### W0b — ui-shell

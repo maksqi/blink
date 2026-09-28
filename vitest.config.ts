@@ -52,6 +52,8 @@ export default defineConfig({
           exclude,
           // Builds and starts the server once for all API test files (tests/api/_harness, owned by server-core).
           globalSetup: ['tests/api/_harness/global-setup.ts'],
+          // Files share one server, limiter store and settings cache: run them one at a time.
+          fileParallelism: false,
           testTimeout: 30_000,
           hookTimeout: 240_000,
         },
