@@ -104,7 +104,7 @@ describe('guest cookie', () => {
     setGuestCookie(e, 'abc-defg-hjk', token, { expiresAt: new Date(Date.now() + 12 * 3600_000) })
     const header = setCookieHeader(e)
     expect(header).toContain(`__Host-blinq_g_abc-defg-hjk=${token}`)
-    expect(header).toMatch(/Max-Age=4319[0-9]/)
+    expect(header).toMatch(/Max-Age=(4319\d|43200)(;|$)/)
     expect(header).toContain('HttpOnly')
     expect(readGuestToken(event(`__Host-blinq_g_abc-defg-hjk=${token}`), 'abc-defg-hjk')).toBe(token)
     expect(readGuestToken(event(`__Host-blinq_g_abc-defg-hjk=${token}`), 'xyz-defg-hjk')).toBeNull()

@@ -90,12 +90,12 @@ export interface TestServer {
 
 export async function startTestServer(
   env: Record<string, string>,
-  options: { logFile: string; timeoutMs?: number; publicUrl?: string; host?: string },
+  options: { logFile: string; timeoutMs?: number; publicUrl?: string; host?: string; port?: number },
 ): Promise<TestServer> {
-  const port = await freePort()
+  const port = options.port ?? (await freePort())
   const baseUrl = `http://127.0.0.1:${port}`
   mkdirSync(dirname(options.logFile), { recursive: true })
-  const fd = openSync(options.logFile, 'a')
+  const fd = openSync(options.logFile, 'w')
   const child = spawn(process.execPath, ['.output/server/index.mjs'], {
     cwd: REPO_ROOT,
     stdio: ['ignore', fd, fd],
@@ -118,22 +118,26 @@ export async function startTestServer(
     }),
   )
 
+  // Healthy means: this child logged that it listens, and the port answers. Checking the log first means a stale
+  // server on the same port can never pass for this one.
   const deadline = Date.now() + (options.timeoutMs ?? 30_000)
   while (true) {
     if (exited !== undefined) {
       throw new Error(`Test server exited early (code ${exited}). Log ${options.logFile}:\n${tail(options.logFile)}`)
     }
-    try {
-      const response = await fetch(`${baseUrl}/api/health`)
-      if (response.ok) break
-    } catch {
-      // Not listening yet.
+    if (readFileSync(options.logFile, 'utf8').includes('Listening on')) {
+      try {
+        const response = await fetch(`${baseUrl}/api/health`)
+        if (response.ok) break
+      } catch {
+        // Not accepting connections yet.
+      }
     }
     if (Date.now() > deadline) {
       child.kill('SIGKILL')
       throw new Error(`Test server did not become healthy in time. Log ${options.logFile}:\n${tail(options.logFile)}`)
     }
-    await new Promise((r) => setTimeout(r, 150))
+    await new Promise((r) => setTimeout(r, 100))
   }
 
   return {
