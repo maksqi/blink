@@ -9,6 +9,8 @@
  * - iOS and Android browsers offer no screen capture to web pages, so the share button is hidden there.
  */
 
+import { isInsertableStreamSupported, isScriptTransformSupported } from 'livekit-client'
+
 export interface BrowserEnv {
   userAgent: string
   /** navigator.maxTouchPoints (iPadOS reports a macOS user agent). */
@@ -107,14 +109,14 @@ export function canShareScreen(env: Pick<BrowserEnv, 'userAgent' | 'maxTouchPoin
 /** Reads the current browser. Call only in the browser. */
 export function currentBrowserEnv(): BrowserEnv {
   const w = window as unknown as Record<string, unknown>
-  const sender = w.RTCRtpSender as { prototype?: object } | undefined
   const devices = typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined
   return {
     userAgent: navigator.userAgent,
     maxTouchPoints: navigator.maxTouchPoints ?? 0,
     hasRTCPeerConnection: typeof w.RTCPeerConnection !== 'undefined',
-    hasInsertableStreams: Boolean(sender?.prototype && 'createEncodedStreams' in sender.prototype),
-    hasScriptTransform: typeof w.RTCRtpScriptTransform !== 'undefined',
+    // The SDK's own checks, so the gate equals isE2EESupported() (plus Worker and WebCrypto).
+    hasInsertableStreams: isInsertableStreamSupported(),
+    hasScriptTransform: isScriptTransformSupported(),
     hasWorker: typeof w.Worker !== 'undefined',
     hasSubtleCrypto: typeof crypto !== 'undefined' && typeof crypto.subtle !== 'undefined',
     hasGetUserMedia: typeof devices?.getUserMedia === 'function',

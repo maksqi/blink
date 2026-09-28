@@ -10,9 +10,12 @@
  * The room is created when pre-join mounts, so the SDK and the worker are loaded before the user clicks Join.
  */
 import E2EEWorker from 'livekit-client/e2ee-worker?worker'
-import { ExternalE2EEKeyProvider, Room, type RoomOptions } from 'livekit-client'
+import { ExternalE2EEKeyProvider, Room, setLogLevel, type RoomOptions } from 'livekit-client'
 import { buildPublishDefaults, cameraPreset, type MediaLimits } from './presets'
 import { canSimulcastWithE2EE, currentBrowserEnv, type BrowserEnv } from './support'
+
+// The SDK logs every connection step at info level; keep the console for warnings and errors.
+setLogLevel('warn')
 
 export interface RoomOptionsInput {
   limits: MediaLimits
