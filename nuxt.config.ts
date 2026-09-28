@@ -13,6 +13,11 @@ const isTestBuild = process.env.BLINQ_TEST_HOOKS === '1'
 /** Dev only: LiveKit runs on its own port in docker-compose.dev.yml. Production and E2E are same-origin. */
 const devConnectSources = isDev ? ['ws://localhost:7880', 'http://localhost:7880'] : []
 
+// Sub-agent worktrees live in <repo>/.claude/worktrees/<name>. Ignore them only under THIS checkout's root: an
+// unanchored ".claude" glob would also match the absolute path of a worktree itself and disable HMR inside it.
+const rootDir = fileURLToPath(new URL('.', import.meta.url)).replace(/\/$/, '')
+const worktreesGlob = `${rootDir}/.claude/**`
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: isDev },
@@ -56,13 +61,13 @@ export default defineNuxtConfig({
   typescript: { strict: true, typeCheck: false },
 
   // Parallel sub-agents keep git worktrees under .claude/worktrees — never scan or watch them.
-  ignore: ['**/.claude/**'],
-  watchers: { chokidar: { ignored: ['**/.claude/**', '**/public/vendor/**'] } },
+  ignore: [worktreesGlob],
+  watchers: { chokidar: { ignored: [worktreesGlob, `${rootDir}/public/vendor/**`] } },
 
   vite: {
     plugins: [tailwindcss()],
     define: { __BLINQ_TEST_HOOKS__: JSON.stringify(isTestBuild) },
-    server: { watch: { ignored: ['**/.claude/**'] } },
+    server: { watch: { ignored: [worktreesGlob] } },
     worker: { format: 'es' },
   },
 
