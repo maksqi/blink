@@ -1,7 +1,13 @@
-// Stub (W0a). Owner: recording-server. Replace the body; keep the task name (scheduled in nuxt.config.ts).
+// recordings:retention (recording-server), daily (nuxt.config.ts): deletes expired recordings, old failed and local
+// rows and orphaned files. Logic: server/services/recordings/tasks.ts.
+import { applyRetention } from '../../services/recordings/tasks'
+import { logger } from '../../utils/logger'
+
 export default defineTask({
   meta: { name: 'recordings:retention', description: 'Delete recordings past their retention date' },
-  run() {
-    return { result: 'noop' }
+  async run() {
+    const result = await applyRetention()
+    logger.info('recordings:retention finished', { ...result })
+    return { result }
   },
 })

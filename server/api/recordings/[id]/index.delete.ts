@@ -1,4 +1,8 @@
-// Stub (W0a). Owner: recording-server (Stage 08). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('recording-server')
+// DELETE /api/recordings/:id (recording-server): recorder, room owner or admin; 409 while recording or processing.
+import { deleteRecording } from '../../../services/recordings/access'
+
+export default defineEventHandler(async (event) => {
+  const user = await requireUser(event)
+  await deleteRecording(event, user, getRouterParam(event, 'id'))
+  return null
 })

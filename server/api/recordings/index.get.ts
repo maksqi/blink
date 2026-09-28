@@ -1,4 +1,9 @@
-// Stub (W0a). Owner: recording-server (Stage 08). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('recording-server')
+// GET /api/recordings (recording-server): own recordings and recordings of rooms the caller owns, newest first.
+import { paginationQuerySchema } from '#shared/schemas/common'
+import { listRecordings } from '../../services/recordings/access'
+
+export default defineEventHandler(async (event) => {
+  const user = await requireUser(event)
+  const query = await getValidatedQuery(event, paginationQuerySchema.parse)
+  return listRecordings(user, query)
 })
