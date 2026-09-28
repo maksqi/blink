@@ -26,6 +26,7 @@
     "typecheck": "nuxt typecheck",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
+    "test:nuxt": "vitest run --project nuxt",
     "test:api": "vitest run --project api",
     "test:e2e": "playwright test",
     "check:english": "node scripts/check-english.mjs",

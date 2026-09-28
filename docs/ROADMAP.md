@@ -10,8 +10,8 @@ and verifying a stage.
 
 | Stage | Title | Owner(s) | Wave | Depends on | Status |
 |---|---|---|---|---|---|
-| [00](stages/00-docs-and-planning.md) | Docs and planning | orchestrator + 2 doc agents | W0-docs | — | in progress |
-| [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | todo |
+| [00](stages/00-docs-and-planning.md) | Docs and planning | orchestrator + doc agents | W0-docs | — | in progress |
+| [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | in progress (W0a done) |
 | [02](stages/02-auth-and-accounts.md) | Auth and accounts | auth | W1 | 01 | todo |
 | [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | todo |
 | [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | todo |
@@ -75,7 +75,7 @@ Wave base SHAs (filled in by the orchestrator):
 
 | Wave | Base SHA |
 |---|---|
-| W0b | — |
+| W0b | c923e6d |
 | W1 | — |
 | W2 | — |
 | W3 | — |
@@ -116,7 +116,7 @@ orchestrator. "Frozen" paths change only through the orchestrator, after an agen
 | `rooms-backend` | `server/api/{rooms,join,calls,webhooks}/**` (except `server/api/calls/[roomId]/recording/**`), `server/services/{rooms,invites,join,lobby,calls,meetings,livekit,guests}/**`, `server/tasks/rooms/**`, `server/testing/**` (fake LiveKit adapter endpoint, test/dev builds only), `tests/api/{rooms,join,calls,webhooks}/**` |
 | `call-core` | `app/dev/**` (harness pages, registered only in dev/test builds), `app/components/call/**` (except the Wave-2 feature folders listed below), `app/lib/{livekit,layout}/**`, `app/lib/call/**` (except Wave-2 feature folders), `app/stores/call*.ts`, `app/composables/call/**`, `tests/e2e/call/**`, `tests/e2e/fixtures/livekit.ts` |
 | `recording-server` | `server/api/recordings/**`, `server/api/calls/[roomId]/recording/**`, `server/api/admin/recordings/**`, `server/services/recordings/**`, `server/tasks/recordings/**`, `app/pages/recordings/**`, `app/pages/admin/recordings.vue`, `app/components/recordings/**`, `tests/api/recordings/**`, `tests/fixtures/media/**` |
-| `infra` | `Dockerfile`, `.dockerignore` (request), `docker/{app,caddy}/**`, `docker-compose.yml`, `scripts/{init-env.sh,preflight.sh,smoke-prod.sh}`, `README.md`, `docs/DEPLOYMENT.md` |
+| `infra` | `Dockerfile`, `.dockerignore` (request), `docker/{app,caddy}/**`, `docker-compose.yml`, `scripts/{init-env.sh,preflight.sh,smoke-prod.sh}`, `tests/smoke-prod/**`, `README.md`, `docs/DEPLOYMENT.md` |
 
 ### W2
 
@@ -130,7 +130,8 @@ orchestrator. "Frozen" paths change only through the orchestrator, after an agen
 
 ### W3
 
-- `e2e`: `tests/e2e/**` (all specs and fixtures, after W2 merges).
+- `e2e`: `tests/e2e/**` (all specs and fixtures, after W2 merges), `tests/load/**`, `tests/perf/**`,
+  `tests/api/security/**`, `docs/PERFORMANCE.md`.
 - `security-review` and `quality-review` are read-only and produce reports.
 - Fix agents get the owning area of each finding.
 - `docs`: `docs/**` (except files the orchestrator owns), `README.md`, `CHANGELOG.md`.

@@ -31,7 +31,8 @@ export default defineConfig({
             'server/database/**/*.test.ts',
             'scripts/**/*.test.ts',
           ],
-          exclude,
+          // *.nuxt.test.ts files need the Nuxt environment and run in the `nuxt` project.
+          exclude: [...exclude, '**/*.nuxt.test.ts'],
         },
       },
       await defineVitestProject({
