@@ -52,7 +52,7 @@ export interface IncomingPacket {
 
 export interface MessagingTransport {
   localIdentity(): string | null
-  publish(bytes: Uint8Array, options: { topic: string; destinationIdentities?: string[] }): Promise<void>
+  publish(bytes: Uint8Array<ArrayBuffer>, options: { topic: string; destinationIdentities?: string[] }): Promise<void>
 }
 
 export interface MessagingOptions {
