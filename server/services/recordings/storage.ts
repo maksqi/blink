@@ -116,7 +116,10 @@ export async function removeWorkDir(id: string): Promise<void> {
   await rm(workDir(id), { recursive: true, force: true })
 }
 
-/** Plaintext bytes stored in an existing BLQ1 file (from its size and header), or null when it does not exist. */
+/**
+ * Plaintext bytes stored in an existing BLQ1 file (from its size and header), or null when it does not exist or is
+ * not a valid BLQ1 file (a retry then simply replaces it).
+ */
 export async function storedPlaintextSize(path: string): Promise<number | null> {
   let handle
   try {
@@ -129,6 +132,8 @@ export async function storedPlaintextSize(path: string): Promise<number | null> 
     const header = Buffer.alloc(BLQ1_HEADER_SIZE)
     await handle.read(header, 0, BLQ1_HEADER_SIZE, 0)
     return layoutForFileSize(size, parseHeader(header).segmentSize).plaintextSize
+  } catch {
+    return null
   } finally {
     await handle.close()
   }

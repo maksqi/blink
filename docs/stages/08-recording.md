@@ -62,7 +62,7 @@ saves the file on the recorder's device, uploads nothing and stays end-to-end en
 
 ## Tasks
 ### recording-server — routes and ingest
-- [ ] `POST /api/calls/:roomId/recording/start` (`startRecordingSchema`): `resolveCaller`; `canPerform(actor,
+- [x] `POST /api/calls/:roomId/recording/start` (`startRecordingSchema`): `resolveCaller`; `canPerform(actor,
       'recording.start')` false → 403 `RECORDING_NOT_ALLOWED` (participants and guests); `recording.enabled` false →
       403 `RECORDING_DISABLED` (both modes, decision); dimensions above `recording.maxResolution` → 400
       `VALIDATION_FAILED` (decision); quota used up → 409 `RECORDING_QUOTA_EXCEEDED`. One transaction under
@@ -70,10 +70,10 @@ saves the file on the recorder's device, uploads nothing and stays end-to-end en
       `RECORDING_ACTIVE`, else insert (mode, `meetingId`, `createdBy`, `sourceMime`, dimensions). Then
       `await publishRoomState(roomId)`; if it fails, delete the row and answer 503 `SERVICE_UNAVAILABLE` (no recording
       without an indicator). 201 `StartRecordingResponse`; audit `recording.started`.
-- [ ] `POST /api/calls/:roomId/recording/stop` (`recording.stop`, any moderator with an account): set `ended_at`,
+- [x] `POST /api/calls/:roomId/recording/stop` (`recording.stop`, any moderator with an account): set `ended_at`,
       `publishRoomState` (indicator off), local rows → `ready` without a file (decision); nothing active → 409
       `CONFLICT` (`not_recording`); 204; audit `recording.stopped`.
-- [ ] `PUT /api/recordings/:id/chunks/:seq`: the recorder's session only (else 403 `FORBIDDEN`); server mode and
+- [x] `PUT /api/recordings/:id/chunks/:seq`: the recorder's session only (else 403 `FORBIDDEN`); server mode and
       `status = 'recording'` (else 409 `CONFLICT` `not_recording`); `seq` = `chunkCount` (next) or an already stored
       seq (retry: replaced, 204); a gap → 409 `CONFLICT`; `Content-Type: application/octet-stream`. Stream the raw
       request (never `readRawBody`) through a byte counter (over `RECORDING_CHUNK_MAX_BYTES` → abort, delete, 413
@@ -81,25 +81,25 @@ saves the file on the recorder's device, uploads nothing and stays end-to-end en
       `RECORDING_QUOTA_EXCEEDED`; free space on `RECORDINGS_DIR` (`fs.statfs`) below 2 GiB → 503
       `SERVICE_UNAVAILABLE` (decision); a chunk later than `startedAt + maxDuration + 2 min` → 413. Updates
       `chunkCount`, `uploadedBytes`, `lastChunkAt`. Limiter `recording-chunks`.
-- [ ] `POST /api/recordings/:id/complete` (`completeRecordingSchema`, recorder only): `chunkCount` must equal the stored
+- [x] `POST /api/recordings/:id/complete` (`completeRecordingSchema`, recorder only): `chunkCount` must equal the stored
       contiguous chunks (else 409 `CONFLICT`); sets `ended_at` if unset (+ `publishRoomState`), status `processing`,
       enqueues; 202 `{ status: 'processing' }`.
-- [ ] `server/services/recordings/api.ts` (entry points for other workstreams): `finalizeRecording(id, reason)`
+- [x] `server/services/recordings/api.ts` (entry points for other workstreams): `finalizeRecording(id, reason)`
       (idempotent) and `deleteRecordingsForUser(userId)` (Stage 03 deletes files before the user row cascades).
-- [ ] Bus: `recording.changed` (from `rooms-backend` on `room_finished`) → `finalizeRecording(…, 'meeting-ended')`.
+- [x] Bus: `recording.changed` (from `rooms-backend` on `room_finished`) → `finalizeRecording(…, 'meeting-ended')`.
       (decision) Request a sync Nitro plugin that subscribes at boot (`server/plugins/**` is not ours) and, from
       `rooms-backend`, the same event when the recorder leaves; the finalize-stale task is the backstop.
 ### recording-server — processing
-- [ ] `queue.ts`: in-memory FIFO, concurrency 1, the DB is the source of truth. After a restart the finalize-stale task
+- [x] `queue.ts`: in-memory FIFO, concurrency 1, the DB is the source of truth. After a restart the finalize-stale task
       re-enqueues `processing` rows; a job interrupted by a restart retries once, then fails (marker in `error`)
       (decision).
-- [ ] Probe (`probe.ts`, pure allowlist over ffprobe JSON): decrypt chunks in order into `ffprobe -v error
+- [x] Probe (`probe.ts`, pure allowlist over ffprobe JSON): decrypt chunks in order into `ffprobe -v error
       -protocol_whitelist pipe,file -f <matroska|mov> -show_entries stream=codec_type,codec_name,width,height:
       format=format_name,duration -of json pipe:0` (demuxer forced from `sourceMime`: webm → `matroska`, mp4 → `mov`;
       at most 32 MiB fed). Accept only the forced family, ≥ 1 video stream `h264`|`vp8`|`vp9`, optional audio
       `aac`|`opus`, 0 < width, height ≤ 4096, declared duration ≤ `recording.maxDurationMinutes` + 1 min. Anything
       else → `failed` (`invalid_media`) without running ffmpeg.
-- [ ] Transcode (`ffmpeg-args.ts` pure builder, `transcode.ts`): decrypt chunks into ffmpeg `pipe:0`; write the output
+- [x] Transcode (`ffmpeg-args.ts` pure builder, `transcode.ts` → implemented as `processor.ts` + `tools.ts`): decrypt chunks into ffmpeg `pipe:0`; write the output
       to `RECORDING_WORK_DIR/<id>/out.mp4` (tmpfs; `+faststart` needs a seekable file). Always re-encode, never
       `-c copy`. `W×H` = source size rounded to even, capped at 1280×720 or 1920×1080 (`recording.maxResolution`):
       ```
@@ -110,43 +110,43 @@ saves the file on the recorder's device, uploads nothing and stays end-to-end en
       -fps_mode cfr -c:v libx264 -preset veryfast -crf 23 -c:a aac -b:a 128k -ar 48000 -ac 2
       -t <maxDurationSec> -fs <workDirBudgetBytes> -threads <FFMPEG_THREADS> -movflags +faststart -f mp4 <out>
       ```
-- [ ] Child processes: `spawn(FFMPEG_PATH | FFPROBE_PATH, args, { env: { PATH: process.env.PATH } })` (no secrets),
+- [x] Child processes: `spawn(FFMPEG_PATH | FFPROBE_PATH, args, { env: { PATH: process.env.PATH } })` (no secrets),
       `os.setPriority(pid, 10)`, SIGKILL after `FFMPEG_TIMEOUT_MINUTES`, stderr kept to 64 KiB, work dir wiped in
       `finally`. In production, refuse to process while `RECORDING_WORK_DIR` is not a tmpfs mount (`/proc/self/mounts`):
       the row stays `processing` and an error is logged (decision).
-- [ ] Finish: ffprobe the output (h264, plus aac when the input had audio) → encrypt to
+- [x] Finish: ffprobe the output (h264, plus aac when the input had audio) → encrypt to
       `RECORDINGS_DIR/<id>/recording.blq1` (temp, rename, fsync) → `ready` with `storageKey`, `sizeBytes` (plaintext),
       `durationMs`, `width`, `height`, `processedAt`, `expiresAt = processedAt + recording.retentionDays` → delete the
       chunk files. Failure → `failed` with a short `error` (`invalid_media`, `timeout`, `ffmpeg_failed`,
       `too_large`) and chunks deleted.
 ### recording-server — serving, lists, tasks, pages
-- [ ] Access: recorder, room owner or admin; anyone else 404 `NOT_FOUND` (no existence oracle). `GET /api/recordings`
+- [x] Access: recorder, room owner or admin; anyone else 404 `NOT_FOUND` (no existence oracle). `GET /api/recordings`
       (`paginationQuerySchema`) → `Paginated<RecordingSummary>` of own recordings and recordings of owned rooms, newest
       first; `GET /api/recordings/:id` → `{ recording }`; `DELETE` → 409 `CONFLICT` while `recording` or
       `processing`, else files and row deleted, 204, audited.
-- [ ] `GET /api/recordings/:id/file`: `recording`/`processing` → 409 `RECORDING_NOT_READY`; `failed` or local → 404.
+- [x] `GET /api/recordings/:id/file`: `recording`/`processing` → 409 `RECORDING_NOT_READY`; `failed` or local → 404.
       Pure `range.ts`: single `bytes=a-b`, `a-`, `-n`; several ranges → ignored, 200 full; unsatisfiable → 416 with
       `Content-Range: bytes */<size>`. Decrypt only the covering segments (the first before headers are sent; a later
       integrity failure destroys the socket). Headers: `Content-Type: video/mp4`, `X-Content-Type-Options: nosniff`,
       `Content-Security-Policy: sandbox; default-src 'none'`, `Cache-Control: no-store`, `Accept-Ranges: bytes`,
       `Content-Disposition: inline` (`attachment` with `?download=1`) with `filename="blinq-recording.mp4"` plus an
       RFC 5987 `filename*=UTF-8''…` built from room name and date. Stream with backpressure, never buffer the file.
-- [ ] Audit: an admin who is neither recorder nor owner → `recording.admin_playback` / `recording.admin_download`, at
+- [x] Audit: an admin who is neither recorder nor owner → `recording.admin_playback` / `recording.admin_download`, at
       most once per admin, recording and kind per 10 min because players repeat Range requests (decision).
-- [ ] `GET /api/admin/recordings` (`requireAdmin`; `q` matches room name or creator) → `Paginated<RecordingSummary>`;
+- [x] `GET /api/admin/recordings` (`requireAdmin`; `q` matches room name or creator) → `Paginated<RecordingSummary>`;
       `DELETE /api/admin/recordings/:id` in any state (cancels the job, ends an active row with `publishRoomState`),
       audited `admin.recording_deleted`.
-- [ ] Quota (`quota.ts`): usage = sum of the user's server rows (`sizeBytes` when ready, else `uploadedBytes`);
+- [x] Quota (`quota.ts`): usage = sum of the user's server rows (`sizeBytes` when ready, else `uploadedBytes`);
       `recording.userQuotaGb` 0 = unlimited.
-- [ ] `server/tasks/recordings/finalize-stale.ts` (`recordings:finalize-stale`, every 2 min) → `finalizeStale({ clock,
+- [x] `server/tasks/recordings/finalize-stale.ts` (`recordings:finalize-stale`, every 2 min) → `finalizeStale({ clock,
       publishRoomState })`: server rows still `recording` with no chunk for 2 min (`lastChunkAt ?? startedAt`), whose
       recorder row is `left`/`removed`, or whose meeting ended → `partial = true` and `processing` (`failed` without
       chunks), `publishRoomState` if the indicator was on; local rows of ended meetings → `ready`; `processing` rows
       missing from the queue → enqueue.
-- [ ] `server/tasks/recordings/retention.ts` (`recordings:retention`, daily) → `applyRetention({ clock })`: delete rows
+- [x] `server/tasks/recordings/retention.ts` (`recordings:retention`, daily) → `applyRetention({ clock })`: delete rows
       and files past `expiresAt`, `failed` and local rows older than `recording.retentionDays`, orphan directories
       older than 1 day.
-- [ ] Pages: `app/pages/recordings/index.vue` (room, date, duration, size, status incl. Partial; local rows "Saved on the
+- [x] Pages: `app/pages/recordings/index.vue` (room, date, duration, size, status incl. Partial; local rows "Saved on the
       recorder's device" without playback; Play, Download via `?download=1`, Delete; polls every 5 s while a row is
       `recording`/`processing`), `app/pages/recordings/[id].vue` (`<video controls preload="metadata">` on the file URL,
       partial notice "This recording ended unexpectedly and may be incomplete.", expiry, download, delete),
@@ -237,27 +237,28 @@ saves the file on the recorder's device, uploads nothing and stays end-to-end en
 
 ## Definition of Done
 ### recording-server
-- [ ] [auto] Stored bytes are ciphertext (no `ftyp` or EBML magic) — evidence: `tests/api/recordings/chunks.test.ts`.
-- [ ] [auto] Tampering, truncation or reordering ⇒ error — evidence: `server/services/recordings/blq1.test.ts`,
+- [x] [auto] Stored bytes are ciphertext (no `ftyp` or EBML magic) — evidence: `tests/api/recordings/chunks.test.ts`.
+- [x] [auto] Tampering, truncation or reordering ⇒ error — evidence: `server/services/recordings/blq1.test.ts`,
       `tests/api/recordings/file.test.ts`.
-- [ ] [auto] Range responses are exact — evidence: `server/services/recordings/blq1.test.ts`,
+- [x] [auto] Range responses are exact — evidence: `server/services/recordings/blq1.test.ts`,
       `tests/api/recordings/file.test.ts`.
-- [ ] [auto] Guests and participants get 403 — evidence: `tests/api/recordings/start-stop.test.ts`.
-- [ ] [auto] Start and stop publish the room state (`recording` set, then cleared) — evidence:
-      `tests/api/recordings/start-stop.test.ts`.
-- [ ] [auto] Retention and partial finalize work with an injected clock — evidence: `tests/api/recordings/tasks.test.ts`.
-- [ ] [auto] A malicious-input fixture (wrong container, huge dimensions) is rejected — evidence:
+- [x] [auto] Guests and participants get 403 — evidence: `tests/api/recordings/start-stop.test.ts`.
+- [x] [auto] Start and stop publish the room state (`recording` set, then cleared) — evidence:
+      `tests/api/recordings/start-stop.test.ts` (in-process with a DB-derived fake publisher; the fake-RoomService
+      `updateRoomMetadata` check skips itself until `rooms-backend` provides `/api/__test/livekit-calls`).
+- [x] [auto] Retention and partial finalize work with an injected clock — evidence: `tests/api/recordings/tasks.test.ts`.
+- [x] [auto] A malicious-input fixture (wrong container, huge dimensions) is rejected — evidence:
       `tests/api/recordings/malicious.test.ts`.
-- [ ] [auto] Admin playback is audited — evidence: `tests/api/recordings/access.test.ts`.
-- [ ] [auto] No IDOR on list, get, file and delete — evidence: `tests/api/recordings/access.test.ts`.
-- [ ] [auto] ffmpeg runs with every hardening flag and the output is faststart H.264/AAC without input metadata —
+- [x] [auto] Admin playback is audited — evidence: `tests/api/recordings/access.test.ts`.
+- [x] [auto] No IDOR on list, get, file and delete — evidence: `tests/api/recordings/access.test.ts`.
+- [x] [auto] ffmpeg runs with every hardening flag and the output is faststart H.264/AAC without input metadata —
       evidence: `server/services/recordings/ffmpeg-args.test.ts`, `tests/api/recordings/processing.test.ts`.
-- [ ] [auto] Chunk size, order and quota limits hold; file responses carry the exact headers — evidence:
+- [x] [auto] Chunk size, order and quota limits hold; file responses carry the exact headers — evidence:
       `tests/api/recordings/chunks.test.ts`, `tests/api/recordings/file.test.ts`.
-- [ ] [auto] `lint`, `typecheck`, `test`, `test:api`, `build` and `check:english` are green — evidence: ci.yml.
-- [ ] [agent-manual] No plaintext reaches persistent disk: only `.blq1` files exist under `RECORDINGS_DIR` while a job
+- [x] [auto] `lint`, `typecheck`, `test`, `test:api`, `build` and `check:english` are green — evidence: ci.yml.
+- [x] [agent-manual] No plaintext reaches persistent disk: only `.blq1` files exist under `RECORDINGS_DIR` while a job
       runs — evidence: `find <RECORDINGS_DIR> -type f` during `processing.test.ts`, pasted into the report.
-- [ ] [agent-manual] `/recordings`, `/recordings/[id]` and `/admin/recordings` list, play, download and delete seeded
+- [x] [agent-manual] `/recordings`, `/recordings/[id]` and `/admin/recordings` list, play, download and delete seeded
       recordings — evidence: report notes (automated later by `recording/playback`).
 ### recording-client
 - [ ] [auto] Both formats (forced webm and mp4) reach `ready`; ffprobe shows ≈ 10 s with audio and video; the audio is not
