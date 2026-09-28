@@ -78,6 +78,11 @@ const envSchema = z
     FFPROBE_PATH: z.string().default('ffprobe'),
     FFMPEG_THREADS: z.coerce.number().int().min(1).max(32).default(2),
     FFMPEG_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(24 * 60).default(120),
+    /**
+     * Production refuses to transcode unless RECORDING_WORK_DIR is a tmpfs (plaintext must not touch persistent disk).
+     * Development and tests (macOS has no tmpfs) default to allowing a disk work dir, with a warning.
+     */
+    RECORDING_ALLOW_DISK_WORKDIR: bool.optional(),
 
     // --- Logging ---------------------------------------------------------------------------------------------------
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
@@ -119,6 +124,7 @@ const envSchema = z
       LIVEKIT_PUBLIC_URL: livekitPublicUrl,
       RECORDINGS_DIR: v.RECORDINGS_DIR ?? (isDev ? '.data/recordings' : '/data/recordings'),
       RECORDING_WORK_DIR: v.RECORDING_WORK_DIR ?? (isDev ? '.data/work' : '/work'),
+      RECORDING_ALLOW_DISK_WORKDIR: v.RECORDING_ALLOW_DISK_WORKDIR ?? isDev,
       smtpEnabled: Boolean(v.SMTP_HOST),
     }
   })

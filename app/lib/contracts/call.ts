@@ -4,7 +4,7 @@
  * is discovered with import.meta.glob — adding a feature never edits the core call page.
  */
 import type { Component, ComputedRef, ShallowRef } from 'vue'
-import type { Room } from 'livekit-client'
+import type { Room, Track, TrackProcessor } from 'livekit-client'
 import type { AppMessageType } from '../e2ee/envelope'
 import type { ParticipantKind, ParticipantRole, RoomMetadata } from '#shared/schemas/livekit'
 
@@ -80,13 +80,39 @@ export interface AudioControl {
   remoteAudioTracks(): MediaStreamTrack[]
 }
 
-/** Media processing hooks (media-fx inserts processors; call-core owns the tracks). */
+/**
+ * An audio stage media-fx inserts into call-core's mic chain: source → [insert] → gain (own mic gain) → output.
+ * `connect` receives the chain's AudioContext and input node and returns the node that feeds the gain stage.
+ */
+export interface MicInsert {
+  id: string
+  connect(context: AudioContext, input: AudioNode): Promise<AudioNode>
+  dispose(): void
+}
+
+/** Browser-level processing constraints applied to the microphone capture (call-core restarts/constrains the track). */
+export interface MicProcessingConstraints {
+  noiseSuppression: boolean
+  echoCancellation: boolean
+  autoGainControl: boolean
+}
+
+/**
+ * Media processing hooks (media-fx inserts processors; call-core owns the tracks). They work both in pre-join
+ * (preview tracks) and in-call; call-core re-applies them after device switches and republishing.
+ */
 export interface MediaControl {
   /** Current local camera MediaStreamTrack (after processors), or null. */
   cameraTrack(): MediaStreamTrack | null
   micTrack(): MediaStreamTrack | null
   /** Shared 48 kHz AudioContext used for the mic chain. */
   audioContext(): AudioContext
+  /** Attach (or with null remove) a video processor, e.g. @livekit/track-processors BackgroundProcessor. No republish. */
+  setCameraProcessor(processor: TrackProcessor<Track.Kind.Video> | null): Promise<void>
+  /** Insert (or with null remove) an audio stage before the gain node, e.g. the RNNoise worklet. No republish. */
+  setMicInsert(insert: MicInsert | null): Promise<void>
+  /** Browser noise suppression / echo cancellation / AGC for the capture itself. */
+  setMicProcessing(constraints: MicProcessingConstraints): Promise<void>
 }
 
 export interface CallEventMap {
@@ -163,6 +189,14 @@ export interface SettingsSection {
   component: Component
 }
 
+/** Full-screen views for terminal phases (e.g. removed/ended screens with host follow-ups). Highest order wins. */
+export interface PhaseScreen {
+  id: string
+  phases: CallPhase[]
+  order: number
+  component: Component
+}
+
 export interface CallFeature {
   id: string
   controlBar?: ControlBarItem[]
@@ -170,6 +204,7 @@ export interface CallFeature {
   tileBadges?: TileBadge[]
   preJoin?: PreJoinSlot[]
   settings?: SettingsSection[]
+  phaseScreens?: PhaseScreen[]
   /** Called once when the call context is ready; return a cleanup function. */
   setup?: (ctx: CallContext) => (() => void) | undefined
 }

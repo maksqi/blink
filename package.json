@@ -9,11 +9,11 @@
     "node": "^22.19.0 || ^24.11.0 || >=26.0.0"
   },
   "scripts": {
-    "dev": "pnpm cli migrate && nuxt dev",
+    "dev": "pnpm vendor && pnpm cli migrate && nuxt dev",
     "dev:deps": "LIVEKIT_NODE_IP=$(sh scripts/detect-ip.sh) docker compose -f docker-compose.dev.yml up -d --wait",
     "dev:deps:logs": "LIVEKIT_NODE_IP=$(sh scripts/detect-ip.sh) docker compose -f docker-compose.dev.yml logs -f --tail=100",
-    "build": "nuxt build && node scripts/build-cli.mjs",
-    "build:test": "BLINQ_TEST_HOOKS=1 nuxt build && node scripts/build-cli.mjs",
+    "build": "pnpm vendor && nuxt build && node scripts/build-cli.mjs",
+    "build:test": "pnpm vendor && BLINQ_TEST_HOOKS=1 nuxt build && node scripts/build-cli.mjs",
     "preview": "node --env-file-if-exists=.env --env-file-if-exists=.env.local .output/server/index.mjs",
     "postinstall": "nuxt prepare",
     "cli": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local server/cli.ts",

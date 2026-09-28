@@ -11,6 +11,11 @@ export interface BlinqTestHooks {
   publishUnencryptedTrack?: () => Promise<void>
   /** Force a MediaRecorder MIME type (recording format tests). */
   forceRecordingMime?: (mime: string | null) => void
+  /**
+   * Runs the RNNoise chain over seeded synthetic noise in an OfflineAudioContext and returns input/output RMS in dBFS
+   * (media-fx). Used by the >= 10 dB reduction test.
+   */
+  measureNoiseSuppression?: () => Promise<{ inputDb: number; outputDb: number }>
   /** Arbitrary state snapshots features choose to expose. */
   state: Record<string, unknown>
 }
