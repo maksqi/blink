@@ -1,2 +1,3 @@
-User-Agent: *
-Disallow:
+# A private, self-hosted meeting server: nothing here is meant for search engines.
+User-agent: *
+Disallow: /

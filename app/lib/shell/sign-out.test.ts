@@ -1,0 +1,82 @@
+import { describe, expect, it, vi } from 'vitest'
+import { clearKeyVault, signOut, type KeyListStorage } from './sign-out'
+
+function listStorage(entries: Record<string, string>): KeyListStorage & { data: Map<string, string> } {
+  const data = new Map(Object.entries(entries))
+  return {
+    data,
+    get length() {
+      return data.size
+    },
+    key: (index) => [...data.keys()][index] ?? null,
+    removeItem: (key) => {
+      data.delete(key)
+    },
+  }
+}
+
+function deps(logout: () => Promise<unknown>) {
+  const calls: string[] = []
+  return {
+    calls,
+    logout: vi.fn(async () => {
+      calls.push('logout')
+      return logout()
+    }),
+    clearUser: vi.fn(() => calls.push('clearUser')),
+    navigate: vi.fn(() => calls.push('navigate')),
+    onError: vi.fn(),
+  }
+}
+
+describe('signOut', () => {
+  it('signs out on the server, clears local state, then leaves', async () => {
+    const vault = listStorage({ 'blinq:keys:u1': '{}', 'blinq-color-mode': 'dark' })
+    const d = deps(async () => undefined)
+    await signOut({ ...d, vault })
+
+    expect(d.calls).toEqual(['logout', 'clearUser', 'navigate'])
+    expect(d.onError).not.toHaveBeenCalled()
+    expect([...vault.data.keys()]).toEqual(['blinq-color-mode'])
+  })
+
+  it('reports a failed server call and still signs out locally', async () => {
+    const error = Object.assign(new Error('Something went wrong on the server.'), { status: 501 })
+    const d = deps(async () => {
+      throw error
+    })
+    await signOut(d)
+
+    expect(d.onError).toHaveBeenCalledExactlyOnceWith(error)
+    expect(d.calls).toEqual(['logout', 'clearUser', 'navigate'])
+  })
+
+  it('treats an already ended session as success', async () => {
+    const d = deps(async () => {
+      throw Object.assign(new Error('Please sign in.'), { status: 401 })
+    })
+    await signOut(d)
+    expect(d.onError).not.toHaveBeenCalled()
+    expect(d.navigate).toHaveBeenCalledOnce()
+  })
+})
+
+describe('clearKeyVault', () => {
+  it('removes every vault entry and nothing else', () => {
+    const storage = listStorage({ 'blinq:keys:a': '1', 'blinq:keys:b': '2', other: '3', 'blinq:keysx': '4' })
+    clearKeyVault(storage)
+    expect([...storage.data.keys()]).toEqual(['other', 'blinq:keysx'])
+  })
+
+  it('ignores missing or unusable storage', () => {
+    expect(() => clearKeyVault(null)).not.toThrow()
+    const broken: KeyListStorage = {
+      get length(): number {
+        throw new Error('SecurityError')
+      },
+      key: () => null,
+      removeItem: () => {},
+    }
+    expect(() => clearKeyVault(broken)).not.toThrow()
+  })
+})

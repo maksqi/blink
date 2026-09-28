@@ -150,16 +150,16 @@ their owned paths and never touch frozen files.
       `blinq_test_api`, start `.output/server/index.mjs`, `provide('apiBaseUrl')`; helpers for cookie jars, `Origin`
       header, factories (users, admins, sessions, rooms with a known key, invites, meetings), Mailpit client.
 ### W0b — ui-shell
-- [ ] Layouts `app/layouts/{default,auth,admin,call}.vue`; shell and nav in `app/components/app/**` (user menu, theme
+- [x] Layouts `app/layouts/{default,auth,admin,call}.vue`; shell and nav in `app/components/app/**` (user menu, theme
       toggle, admin entries only for admins); responsive (nav in a sheet on phones).
-- [ ] Theme: light/dark/system via color-mode, system by default, persisted, no flash on SSR (the color-mode head
+- [x] Theme: light/dark/system via color-mode, system by default, persisted, no flash on SSR (the color-mode head
       script runs before paint and carries the CSP nonce).
-- [ ] `app/error.vue` (404/403/500, no stack traces), `app/assets/css/tailwind.css` (theme tokens, Inter variable
+- [x] `app/error.vue` (404/403/500, no stack traces), `app/assets/css/tailwind.css` (theme tokens, Inter variable
       font self-hosted), `app/pages/index.vue` (landing; signed-in users go to `/dashboard`).
-- [ ] `app/plugins/00.fragment.client.ts` (`enforce: 'pre'`): before the initial navigation, reads `location.hash`,
+- [x] `app/plugins/00.fragment.client.ts` (`enforce: 'pre'`): before the initial navigation, reads `location.hash`,
       keeps secrets in sessionStorage (`blinq:fragment:<path>`), strips the hash with `history.replaceState`, and
       provides `$fragment.take(path)` for pages (decision); parsing uses `parseRoomFragment` / `parseTokenFragment`.
-- [ ] Post-login redirects accept only relative `route.path` values starting with a single `/`.
+- [x] Post-login redirects accept only relative `route.path` values starting with a single `/`.
 ### W0b — devops-ci
 - [x] `ci.yml`: install + `git diff --exit-code`, lint, typecheck, unit, `check:english`, gitleaks, actionlint,
       `build` and `build:test` (prod bundle has no `__blinqTest`, `/dev/call` returns 404), API tests (Postgres service,
