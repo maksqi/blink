@@ -67,7 +67,7 @@ merges, runs the full gate, and commits locally. **Nothing is pushed** until the
 
 **Merge gate** (after every merge):
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:api`, `pnpm build` and `pnpm check:english` pass.
-- A clean `docker build` succeeds.
+- A clean `docker build` succeeds; `sh scripts/smoke-prod.sh` passes (4–6 min with cached images).
 - The E2E smoke passes.
 - This table is updated, the result is committed, and the worktree is removed.
 
@@ -117,7 +117,7 @@ orchestrator. "Frozen" paths change only through the orchestrator, after an agen
 | `rooms-backend` | `server/api/{rooms,join,calls,webhooks}/**` (except `server/api/calls/[roomId]/recording/**`), `server/services/{rooms,invites,join,lobby,calls,meetings,livekit,guests}/**`, `server/tasks/rooms/**`, `server/plugins/rooms*.ts` (sync bus subscriber), `server/testing/**` (fake LiveKit adapter endpoint, test/dev builds only), `tests/api/{rooms,join,calls,webhooks}/**`, `tests/e2e/fixtures/join.ts` (DB-backed join fixture via the real join API) |
 | `call-core` | `app/dev/**` (harness pages, registered only in dev/test builds), `app/components/call/**` (except the Wave-2 feature folders listed below), `app/lib/{livekit,layout}/**`, `app/lib/call/**` (except Wave-2 feature folders), `app/stores/call*.ts`, `app/composables/call/**`, `tests/e2e/call/**`, `tests/e2e/fixtures/livekit.ts` |
 | `recording-server` | `server/api/recordings/**`, `server/api/calls/[roomId]/recording/**`, `server/api/admin/recordings/**`, `server/services/recordings/**`, `server/tasks/recordings/**`, `server/plugins/recordings*.ts` (sync bus subscriber), `app/pages/recordings/**`, `app/pages/admin/recordings.vue`, `app/components/recordings/**`, `tests/api/recordings/**`, `tests/fixtures/media/**` |
-| `infra` | `Dockerfile`, `.dockerignore` (request), `docker/{app,caddy}/**`, `docker-compose.yml`, `scripts/{init-env.sh,preflight.sh,smoke-prod.sh}`, `tests/smoke-prod/**`, `README.md`, `docs/DEPLOYMENT.md` |
+| `infra` | `Dockerfile`, `.dockerignore`, `.github/workflows/docker.yml`, `docker/{app,caddy}/**`, `docker-compose.yml`, `scripts/{init-env.sh,preflight.sh,smoke-prod.sh}`, `tests/smoke-prod/**`, `README.md`, `docs/DEPLOYMENT.md` |
 
 ### W2
 

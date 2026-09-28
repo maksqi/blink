@@ -9,7 +9,8 @@ let database: Database | undefined
 
 /**
  * Shared Drizzle instance (core query builder only — do not use relational `db.query.*`).
- * Production connects over the Postgres unix socket: `postgres://user:pass@localhost/db?host=/var/run/postgresql`.
+ * Production connects over the Postgres unix socket: DATABASE_URL=`postgres:///db` plus PGHOST=/var/run/postgresql,
+ * PGUSER and PGPASSWORD (postgres.js ignores a `?host=` query parameter).
  */
 export function useDb(): Database {
   if (!database) {
