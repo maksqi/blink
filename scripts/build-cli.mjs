@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Bundles server/cli.ts into .output/server/cli.mjs (next to Nitro's traced node_modules, so the native
- * @node-rs/argon2 binding resolves at runtime). Runs after `nuxt build`.
+ * @node-rs/argon2 binding resolves at runtime). Runs after `nuxt build`. Nitro traces @node-rs/argon2 because
+ * server/plugins/30.lifecycle.ts imports server/utils/password.ts; keep a server-side import of it.
  */
 import { build } from 'esbuild'
 

@@ -18,7 +18,8 @@ import { serverEnv } from './context'
 
 export function useServerEnvInProcess(): void {
   beforeAll(() => {
-    for (const [key, value] of Object.entries(serverEnv())) vi.stubEnv(key, value)
+    // NODE_ENV stays Vitest's own; every value env() derives from it is set explicitly in serverEnv().
+    for (const [key, value] of Object.entries(serverEnv())) if (key !== 'NODE_ENV') vi.stubEnv(key, value)
     resetEnvCache()
   })
   afterAll(async () => {
