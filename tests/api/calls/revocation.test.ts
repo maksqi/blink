@@ -52,7 +52,8 @@ describe('user.revoked', () => {
     expect(await status(bystander.id)).toBe('joined')
     const removals = fake.calls.filter((c) => c.method === 'removeParticipant' && c.args[0] === room.id)
     expect(removals.map((c) => c.args[1])).toEqual([joined.lkIdentity])
-    expect(Date.parse(removals[0]!.args[2].revokeTokensIssuedBefore)).toBeGreaterThan(Date.now())
+    const revoke = removals[0]!.args[2] as { revokeTokensIssuedBefore: string }
+    expect(Date.parse(revoke.revokeTokensIssuedBefore)).toBeGreaterThan(Date.now())
     expect(decided).toContain(`${waiting.id}:ended`)
   })
 })

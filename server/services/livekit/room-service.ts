@@ -7,8 +7,8 @@
  *   `listParticipants` answers [] for a missing room. `sendData` never broadcasts: an empty destination list sends
  *   nothing (LiveKit would deliver it to everyone).
  * - `roomService()`: the process-wide adapter for `LIVEKIT_URL`. `fake://…` selects the in-memory fake
- *   (fake-room-service.ts), but only in test and dev builds (`__BLINQ_TEST_HOOKS__` or `import.meta.dev`); a
- *   production build refuses it.
+ *   (fake-room-service.ts), but only in test builds (`__BLINQ_TEST_HOOKS__`, also `BLINQ_TEST_HOOKS=1 pnpm dev`); a
+ *   production build refuses it (decision).
  * - `activeFakeRoomService()`: the fake in use, or null (`GET /api/__test/livekit-calls`).
  * - `setRoomServiceForTesting(adapter?)`: in-process tests inject an adapter; call without an argument to reset.
  * - `isLivekitNotFound(error)`.
@@ -154,10 +154,16 @@ export function createLivekitRoomService(options: { url: string; apiKey: string;
 
 // ---- Process-wide selection ------------------------------------------------------------------------------------------
 
-/** True in `pnpm build:test` output and `nuxt dev`; false in production builds and plain Vitest. */
+// Build-time flag (shared/types/build-flags.d.ts), declared here too so type checks that include this file without the
+// Nuxt types (tests/tsconfig.json) know it. Nitro replaces the identifier at build time.
+declare const __BLINQ_TEST_HOOKS__: boolean
+
+/**
+ * True only in test builds (`pnpm build:test`, or `BLINQ_TEST_HOOKS=1 pnpm dev`); false in production builds and in
+ * plain Vitest, where the identifier does not exist.
+ */
 export function testHooksEnabled(): boolean {
-  const flag = typeof __BLINQ_TEST_HOOKS__ !== 'undefined' && __BLINQ_TEST_HOOKS__
-  return flag || Boolean(import.meta.dev)
+  return typeof __BLINQ_TEST_HOOKS__ !== 'undefined' && __BLINQ_TEST_HOOKS__
 }
 
 export function isFakeLivekitUrl(url: string): boolean {
