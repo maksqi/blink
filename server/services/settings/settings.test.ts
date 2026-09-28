@@ -56,9 +56,10 @@ describe('applySettingsPatch', () => {
     expect(next['recording.enabled']).toBe(false)
   })
 
-  it('documents why the raw body is needed: settingsUpdateSchema fills defaults for missing keys', () => {
+  it('settingsUpdateSchema keeps only the keys that were sent (no defaults filled in)', () => {
     const parsed = settingsUpdateSchema.parse({ 'recording.enabled': false })
-    expect(parsed['guests.allowed']).toBe(true)
+    expect(parsed).toEqual({ 'recording.enabled': false })
+    expect('guests.allowed' in parsed).toBe(false)
   })
 
   it('reports unchanged values as no change', () => {
