@@ -1,0 +1,71 @@
+name: docker
+
+# Compose validation now; the image build and the production smoke test switch on by themselves once infra
+# (Stage 09a) adds the Dockerfile and scripts/smoke-prod.sh. Actions are pinned by commit SHA.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  compose:
+    name: Compose files are valid
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: docker compose config
+        run: |
+          LIVEKIT_NODE_IP=127.0.0.1 docker compose -f docker-compose.dev.yml config --quiet
+          docker compose -f docker/e2e/compose.yml config --quiet
+          COMPOSE_PROFILES=linux docker compose -f docker/e2e/compose.yml config --quiet
+          # The production compose file (Stage 09a) is checked with the documented placeholders of .env.example.
+          for file in compose.yml compose.yaml docker-compose.yml docker-compose.yaml; do
+            if [ -f "$file" ]; then
+              docker compose --env-file .env.example -f "$file" config --quiet
+            fi
+          done
+
+  image:
+    name: Image build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Is there a Dockerfile yet?
+        id: dockerfile
+        run: |
+          if [ -f Dockerfile ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No Dockerfile yet (Stage 09a, infra); skipping the image build."
+          fi
+      - name: Set up Docker Buildx
+        if: steps.dockerfile.outputs.present == 'true'
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the image (not pushed)
+        if: steps.dockerfile.outputs.present == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: blinq:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Production smoke test (prod compose, TLS_MODE=internal)
+        if: steps.dockerfile.outputs.present == 'true' && hashFiles('scripts/smoke-prod.sh') != ''
+        run: sh scripts/smoke-prod.sh
