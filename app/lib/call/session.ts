@@ -145,7 +145,7 @@ export class CallSession {
   private keys: MeetingKeys | null = null
   private keysEpoch: string | null = null
   private keysPromise: Promise<MeetingKeys> | null = null
-  private grant: JoinGrant | null = null
+  private connectedOnce = false
   private leaving = false
   private disposed = false
   private previewStarted = false
@@ -285,8 +285,9 @@ export class CallSession {
     if (!room || this.disposed) return
     if (this.store.phase === 'connecting' || this.store.phase === 'inCall' || this.store.phase === 'reconnecting')
       return
+    // A session connects once (its local tracks end with the call); rejoining needs a new session.
+    if (this.connectedOnce) return
     if (!joinClickMarked()) this.markJoinClick()
-    this.grant = grant
     this.leaving = false
     this.store.roomId = grant.roomId
     this.store.error = null
@@ -317,6 +318,7 @@ export class CallSession {
       return
     }
     if (this.disposed) return
+    this.connectedOnce = true
     markJoin(JOIN_MARKS.connected)
     this.store.localIdentity = room.localParticipant.identity
     this.store.connectedAt = Date.now()
@@ -693,10 +695,8 @@ export class CallSession {
       .on(RoomEvent.ActiveSpeakersChanged, (speakers) => this.onActiveSpeakers(speakers))
       .on(RoomEvent.ConnectionQualityChanged, views)
       .on(RoomEvent.ParticipantNameChanged, views)
-      .on(RoomEvent.ParticipantAttributesChanged, () => {
-        this.scheduleViews()
-        this.audio.refreshVolumes()
-      })
+      // Host volume (`vol`) changes are applied when the views are rebuilt.
+      .on(RoomEvent.ParticipantAttributesChanged, views)
       .on(RoomEvent.ParticipantPermissionsChanged, (_previous, participant) => {
         if (participant.isLocal) this.syncPermissions()
       })
@@ -917,6 +917,8 @@ export class CallSession {
       this.store.participants = next
     this.store.blocked = this.subscriptions?.plan.blockedIdentities ?? []
     this.store.e2eeEnabled = this.e2ee && room.isE2EEEnabled
+    // Element volume = local volume × the (possibly changed) host volume from the fresh views.
+    this.audio.refreshVolumes()
   }
 
   private onPlan(plan: SubscriptionPlan) {

@@ -141,6 +141,13 @@ if (__BLINQ_TEST_HOOKS__ && session) {
         session.room?.simulateScenario(scenario),
       /** Graceful leave, so test teardown does not kill a live connection. */
       leave: () => session.leave(),
+      /** The MediaControl media-fx plugs into (processors, mic insert, mic processing). */
+      media: session.context.media,
+      /** Local publication sids by source: processors must never republish. */
+      publications: () =>
+        Object.fromEntries(
+          [...(session.room?.localParticipant.trackPublications.values() ?? [])].map((p) => [p.source, p.trackSid]),
+        ),
     }
   }
 }
