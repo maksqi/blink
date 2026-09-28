@@ -1,4 +1,12 @@
-// Stub (W0a). Owner: rooms-backend (Stage 04). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('rooms-backend')
+// POST /api/calls/:roomId/participants/:identity/remove (rooms-backend): participant.remove — final for the meeting;
+// LiveKit removes the identity and revokes its tokens. 204.
+import { removeParticipant } from '../../../../../services/calls/actions'
+import { authorizeCall } from '../../../../../services/calls/authorize'
+
+export default defineEventHandler(async (event) => {
+  const ctx = await authorizeCall(event, getRouterParam(event, 'roomId') ?? '', 'participant.remove', {
+    targetIdentity: getRouterParam(event, 'identity'),
+  })
+  await removeParticipant(event, ctx)
+  return sendNoContent(event)
 })

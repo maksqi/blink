@@ -1,4 +1,11 @@
-// Stub (W0a). Owner: rooms-backend (Stage 04). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('rooms-backend')
+// POST /api/calls/:roomId/participants/:identity/lower-hand (rooms-backend): participant.lowerHand. 204.
+import { lowerHand } from '../../../../../services/calls/actions'
+import { authorizeCall } from '../../../../../services/calls/authorize'
+
+export default defineEventHandler(async (event) => {
+  const ctx = await authorizeCall(event, getRouterParam(event, 'roomId') ?? '', 'participant.lowerHand', {
+    targetIdentity: getRouterParam(event, 'identity'),
+  })
+  await lowerHand(event, ctx)
+  return sendNoContent(event)
 })

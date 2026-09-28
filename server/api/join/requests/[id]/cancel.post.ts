@@ -1,4 +1,8 @@
-// Stub (W0a). Owner: rooms-backend (Stage 04). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('rooms-backend')
+// POST /api/join/requests/:id/cancel (rooms-backend): the request owner withdraws a waiting request. 204 (also when it
+// was already decided); anyone else 403 FORBIDDEN.
+import { cancelRequest } from '../../../../services/lobby/lobby'
+
+export default defineEventHandler(async (event) => {
+  await cancelRequest(event, getRouterParam(event, 'id') ?? '')
+  return sendNoContent(event)
 })
