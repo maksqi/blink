@@ -1,0 +1,249 @@
+# blinq production stack (docs/DEPLOYMENT.md). Start it with: docker compose up -d --wait
+#
+# - caddy, app and livekit use host networking: LiveKit needs it for WebRTC, and Caddy and the app reach LiveKit on
+#   loopback (docs/ARCHITECTURE.md §2). The app, LiveKit's HTTP API and Caddy's health endpoint listen on 127.0.0.1
+#   only, so Caddy is the only public entry for HTTP.
+# - postgres has no network at all: the app talks to it through the unix socket in the shared pgsocket volume.
+# - No service publishes ports. Each service receives only the variables it needs (no env_file), so Caddy and
+#   Postgres never see the app's secrets.
+# - Values come from .env (sh scripts/init-env.sh; every variable is documented in .env.example). A missing required
+#   value stops `docker compose` with a message that names it; everything else has the .env.example default.
+name: blinq
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '5'
+
+# Shared by every service: restart policy, log rotation and the baseline hardening.
+x-service: &service
+  restart: unless-stopped
+  logging: *logging
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  postgres:
+    <<: *service
+    image: postgres:18-alpine
+    network_mode: none
+    # The official entrypoint starts as root, fixes the ownership of its directories and then drops to the postgres
+    # user; it needs these capabilities for that (decision).
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    read_only: true
+    tmpfs:
+      - /tmp
+    stop_grace_period: 30s
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-blinq}
+      POSTGRES_USER: ${POSTGRES_USER:-blinq}
+      # Takes effect only when the pgdata volume is created; later changes need ALTER USER (docs/DEPLOYMENT.md §12).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (sh scripts/init-env.sh)}
+      # scram-sha-256 for socket connections too (initdb would make the local lines "trust" otherwise).
+      POSTGRES_INITDB_ARGS: --auth-local=scram-sha-256 --auth-host=scram-sha-256
+      TZ: ${TZ:-UTC}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - pgsocket:/var/run/postgresql
+    healthcheck:
+      # TCP inside the container's own (loopback-only) network namespace: the temporary init server listens only on
+      # the socket, so this cannot report healthy before initialization has finished.
+      test: ['CMD-SHELL', 'pg_isready -q -h 127.0.0.1 -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+      start_interval: 1s
+
+  livekit:
+    <<: *service
+    image: livekit/livekit-server:v1.13.7
+    network_mode: host
+    user: '65534:65534'
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      # Strict parsing: one unknown key stops the server, so check `docker compose logs livekit` after every change.
+      # Compose has no if/else, so the optional parts use two forms: `key:${VAR:+ value}` renders the value only when
+      # VAR is set (otherwise the key is YAML null, which keeps LiveKit's default), and a line starting with
+      # `${VAR:+#}` turns into a YAML comment when VAR is set. `docker compose config` prints the rendered result.
+      LIVEKIT_CONFIG: |
+        port: ${LIVEKIT_HTTP_PORT:-7880}
+        # HTTP, WebSocket signaling and RoomService only. ICE and TURN listen on every interface.
+        bind_addresses:
+          - 127.0.0.1
+        rtc:
+          tcp_port: ${LIVEKIT_RTC_TCP_PORT:-7881}
+          port_range_start: ${LIVEKIT_RTC_PORT_RANGE_START:-50000}
+          port_range_end: ${LIVEKIT_RTC_PORT_RANGE_END:-60000}
+          # LIVEKIT_NODE_IP set: advertise exactly that address. Empty: find the public address with STUN at startup.
+          ${LIVEKIT_NODE_IP:+#}use_external_ip: true
+          node_ip:${LIVEKIT_NODE_IP:+ ${LIVEKIT_NODE_IP}}
+          # Never offer candidates on Docker's default bridge. This stack creates no bridge networks of its own.
+          interfaces:
+            excludes:
+              - docker0
+        turn:
+          enabled: true
+          udp_port: ${LIVEKIT_TURN_UDP_PORT:-3478}
+          relay_range_start: 30000
+          relay_range_end: 40000
+          # TURN/TLS: Caddy terminates TLS for TURN_DOMAIN on port 443 and forwards plaintext with PROXY protocol v2,
+          # which LiveKit accepts from loopback only. Without TURN_DOMAIN these stay empty (TLS port 0).
+          domain:${TURN_DOMAIN:+ ${TURN_DOMAIN}}
+          tls_port:${TURN_DOMAIN:+ ${LIVEKIT_TURN_TLS_PORT:-5349}}
+          external_tls:${TURN_DOMAIN:+ true}
+          proxy_protocol:${TURN_DOMAIN:+ true}
+          # TURN never relays to private addresses unless allowed: allow the SFU's own address (LAN installs, the smoke
+          # test). A public address is not affected by this list.
+          allow_restricted_peer_cidrs:${LIVEKIT_NODE_IP:+ [${LIVEKIT_NODE_IP}/32]}
+        keys:
+          "${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY in .env (sh scripts/init-env.sh)}": "${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET in .env (sh scripts/init-env.sh)}"
+        webhook:
+          api_key: "${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY in .env (sh scripts/init-env.sh)}"
+          urls:
+            - http://127.0.0.1:${APP_PORT:-3000}/api/webhooks/livekit
+        room:
+          auto_create: false
+          empty_timeout: 300
+          departure_timeout: 20
+          max_participants: 25
+          enable_remote_unmute: false
+        # Estimates until Stage 10 measures them (docs/PERFORMANCE.md): about two full 25-person rooms (tracks in and
+        # out) and 500 Mbit/s.
+        limit:
+          num_tracks: 2600
+          bytes_per_sec: 62500000
+        logging:
+          level: info
+          pion_level: error
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:${LIVEKIT_HTTP_PORT:-7880}/']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      # With LIVEKIT_NODE_IP empty, the STUN lookup at startup can take a few seconds.
+      start_period: 60s
+      start_interval: 1s
+
+  app:
+    <<: *service
+    build:
+      context: .
+    image: blinq-app:local
+    network_mode: host
+    # Reaps orphaned ffmpeg processes and forwards signals to the server.
+    init: true
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      # Recording work area: plaintext media exists only in RAM while a job runs.
+      - /work:size=${RECORDING_WORK_TMPFS_SIZE:-4g},mode=0700,uid=10001,gid=10001
+      - /tmp:size=64m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      livekit:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      # Loopback only: the app refuses to start on a public address (Caddy is the only public entry).
+      NITRO_HOST: 127.0.0.1
+      NITRO_PORT: ${APP_PORT:-3000}
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env (sh scripts/init-env.sh)}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      TURN_DOMAIN: ${TURN_DOMAIN:-}
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET in .env (sh scripts/init-env.sh)}
+      RECORDING_ENCRYPTION_KEY: ${RECORDING_ENCRYPTION_KEY:?set RECORDING_ENCRYPTION_KEY in .env (sh scripts/init-env.sh)}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:?set LIVEKIT_API_KEY in .env (sh scripts/init-env.sh)}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:?set LIVEKIT_API_SECRET in .env (sh scripts/init-env.sh)}
+      LIVEKIT_URL: http://127.0.0.1:${LIVEKIT_HTTP_PORT:-7880}
+      # The unix socket in the pgsocket volume. postgres.js ignores a ?host= parameter; with no host in the URL it takes
+      # the socket directory, user and password from the libpq variables below (decision).
+      DATABASE_URL: postgres:///${POSTGRES_DB:-blinq}
+      PGHOST: /var/run/postgresql
+      PGUSER: ${POSTGRES_USER:-blinq}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (sh scripts/init-env.sh)}
+      # Used only while no admin account exists (cli bootstrap); remove ADMIN_PASSWORD after the first login.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      FFMPEG_THREADS: ${FFMPEG_THREADS:-2}
+      FFMPEG_TIMEOUT_MINUTES: ${FFMPEG_TIMEOUT_MINUTES:-120}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-pretty}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - recordings:/data/recordings
+      - pgsocket:/var/run/postgresql
+    healthcheck:
+      # GET /api/ready on loopback: the database answers and every migration is applied.
+      test: ['CMD', 'node', '/app/docker/healthcheck.mjs']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      # First start: migrations and bootstrap run before the server listens.
+      start_period: 120s
+      start_interval: 2s
+
+  caddy:
+    <<: *service
+    build:
+      context: docker/caddy
+    image: blinq-caddy:local
+    network_mode: host
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+      # The rendered Caddyfile (docker/caddy/entrypoint.sh).
+      - /run
+    # Started (not healthy): Caddy requests certificates while the app is still migrating.
+    depends_on:
+      app:
+        condition: service_started
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env (sh scripts/init-env.sh)}
+      TURN_DOMAIN: ${TURN_DOMAIN:-}
+      TLS_MODE: ${TLS_MODE:-acme}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      ACME_CA: ${ACME_CA:-}
+      TLS_CERT_FILE: ${TLS_CERT_FILE:-}
+      TLS_KEY_FILE: ${TLS_KEY_FILE:-}
+      APP_PORT: ${APP_PORT:-3000}
+      LIVEKIT_HTTP_PORT: ${LIVEKIT_HTTP_PORT:-7880}
+      LIVEKIT_TURN_TLS_PORT: ${LIVEKIT_TURN_TLS_PORT:-5349}
+      CADDY_HEALTH_PORT: ${CADDY_HEALTH_PORT:-2020}
+    volumes:
+      # Certificates, ACME account and (TLS_MODE=internal) the local CA. Back it up with the rest.
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:${CADDY_HEALTH_PORT:-2020}/']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+      start_interval: 1s
+
+volumes:
+  pgdata:
+  pgsocket:
+  caddy_data:
+  caddy_config:
+  recordings:
