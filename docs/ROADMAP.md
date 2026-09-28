@@ -12,14 +12,14 @@ and verifying a stage.
 |---|---|---|---|---|---|
 | [00](stages/00-docs-and-planning.md) | Docs and planning | orchestrator + doc agents | W0-docs | — | done |
 | [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | done |
-| [02](stages/02-auth-and-accounts.md) | Auth and accounts | auth | W1 | 01 | todo |
+| [02](stages/02-auth-and-accounts.md) | Auth and accounts | auth | W1 | 01 | done |
 | [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | todo |
-| [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | todo |
-| [05](stages/05-call-core.md) | Call core | call-core | W1 | 01 | in progress |
+| [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | backend done; UI todo (W2) |
+| [05](stages/05-call-core.md) | Call core | call-core | W1 | 01 | done |
 | [06](stages/06-host-controls-collaboration.md) | Host controls and collaboration | collab-ui | W2 | 04 (backend), 05 | todo |
 | [07](stages/07-media-processing.md) | Media processing | media-fx | W2 | 05 | todo |
-| [08](stages/08-recording.md) | Recording | recording-server (W1), recording-client (W2) | W1 / W2 | 01; client also 05 and 08 (server) | todo |
-| [09](stages/09-production-deployment.md) | Production deployment | infra (9a, W1); user (9b) | W1 / final | 01 (9a); 10 (9b) | in progress (9a) |
+| [08](stages/08-recording.md) | Recording | recording-server (W1), recording-client (W2) | W1 / W2 | 01; client also 05 and 08 (server) | server done; client todo (W2) |
+| [09](stages/09-production-deployment.md) | Production deployment | infra (9a, W1); user (9b) | W1 / final | 01 (9a); 10 (9b) | 9a done; 9b needs a real server (user) |
 | [10](stages/10-hardening-qa-release.md) | Hardening, QA and release | e2e, security-review, quality-review, fix agents, docs | W3 | all | todo |
 
 ## Dependency graph
@@ -77,7 +77,7 @@ Wave base SHAs (filled in by the orchestrator):
 |---|---|
 | W0b | c923e6d |
 | W1 | 051a570 (call-core, infra); see change log for auth, rooms-backend, recording-server |
-| W2 | — |
+| W2 | f0d2471 or later (start from current main) |
 | W3 | — |
 
 ## Ownership map
@@ -157,3 +157,6 @@ Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
 - 2026-09-28 — Stage 00 done (all docs committed); W0a committed; W0b started from c923e6d.
 - 2026-09-28 — W0b merged (devops-ci, ui-shell, server-core); Stage 01 done. Gate: lint, typecheck, 359 unit tests,
   154 API tests, production build checks, CLI bootstrap. call-core and infra started from 051a570.
+- 2026-09-28 — Wave 1 merged: auth, rooms-backend, recording-server, infra (smoke-prod passed locally), call-core
+  (36/36 call E2E, join ~0.3 s). Gate on main: lint, typecheck, 870 unit tests, production build checks. Next: Wave 2
+  (admin, rooms-ui, collab-ui, media-fx, recording-client) in a fresh session, then Wave 3.
