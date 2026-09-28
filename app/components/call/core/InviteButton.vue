@@ -5,12 +5,19 @@
  */
 import { CheckIcon, CopyIcon, Share2Icon, UserPlusIcon } from '@lucide/vue'
 import { computed, shallowRef } from 'vue'
-import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { Spinner } from '@/components/ui/spinner'
 import { useCallSession } from '~/composables/call'
+import { callToast } from '~/lib/call/notify'
 import { ApiError } from '~/composables/useApi'
 
 const session = useCallSession()
@@ -26,7 +33,7 @@ async function create() {
   try {
     link.value = await session.createInviteLink()
   } catch (error) {
-    toast.error(error instanceof ApiError ? error.message : "The invite link couldn't be created. Try again.")
+    callToast.error(error instanceof ApiError ? error.message : "The invite link couldn't be created. Try again.")
   } finally {
     creating.value = false
   }
@@ -39,7 +46,7 @@ async function copy() {
     copied.value = true
     setTimeout(() => (copied.value = false), 2000)
   } catch {
-    toast.error("Couldn't copy. Select the link and copy it yourself.")
+    callToast.error("Couldn't copy. Select the link and copy it yourself.")
   }
 }
 
@@ -61,22 +68,22 @@ function onOpenChange(value: boolean) {
 <template>
   <Popover :open="open" @update:open="onOpenChange">
     <PopoverTrigger as-child>
-          <button
-            type="button"
-            aria-label="Invite people"
-            title="Invite people"
-            data-control="invite"
-            class="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-white/10 px-3 text-white transition-colors hover:bg-white/18 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <UserPlusIcon class="size-5" aria-hidden="true" />
-          </button>
+      <button
+        type="button"
+        aria-label="Invite people"
+        title="Invite people"
+        data-control="invite"
+        class="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-white/10 px-3 text-white transition-colors hover:bg-white/18 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        <UserPlusIcon class="size-5" aria-hidden="true" />
+      </button>
     </PopoverTrigger>
     <PopoverContent side="top" align="end" :side-offset="10" class="w-[min(24rem,calc(100vw-2rem))]">
       <PopoverHeader>
         <PopoverTitle>Invite people</PopoverTitle>
         <PopoverDescription>
-          Anyone with this link can ask to join for the next 24 hours. It contains the meeting key, so share it only with
-          people you trust.
+          Anyone with this link can ask to join for the next 24 hours. It contains the meeting key, so share it only
+          with people you trust.
         </PopoverDescription>
       </PopoverHeader>
       <div class="mt-3 flex items-center gap-2">
@@ -88,12 +95,25 @@ function onOpenChange(value: boolean) {
           class="font-mono text-xs"
           @focus="($event.target as HTMLInputElement).select()"
         />
-        <Button size="icon" variant="secondary" :disabled="!link" :aria-label="copied ? 'Copied' : 'Copy link'" @click="copy">
+        <Button
+          size="icon"
+          variant="secondary"
+          :disabled="!link"
+          :aria-label="copied ? 'Copied' : 'Copy link'"
+          @click="copy"
+        >
           <Spinner v-if="creating" />
           <CheckIcon v-else-if="copied" />
           <CopyIcon v-else />
         </Button>
-        <Button v-if="canShare" size="icon" variant="secondary" :disabled="!link" aria-label="Share link" @click="share">
+        <Button
+          v-if="canShare"
+          size="icon"
+          variant="secondary"
+          :disabled="!link"
+          aria-label="Share link"
+          @click="share"
+        >
           <Share2Icon />
         </Button>
       </div>

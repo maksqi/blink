@@ -34,11 +34,11 @@ const groups = computed(() => session.store.safetyCode?.split('-') ?? [])
         :aria-label="`Safety code ${session.store.safetyCode ?? ''}`"
         role="group"
       >
-        <span v-for="(group, index) in groups" :key="index" class="rounded-md bg-background px-2 py-1">{{ group }}</span>
+        <span v-for="(group, index) in groups" :key="index" class="rounded-md bg-background px-2 py-1" v-text="group" />
       </div>
       <p class="text-sm text-muted-foreground">
-        The code proves only that you share the same key. It does not prove who someone is: anyone with the link has
-        the key. If a code differs, leave and ask the host for a new link.
+        The code proves only that you share the same key. It does not prove who someone is: anyone with the link has the
+        key. If a code differs, leave and ask the host for a new link.
       </p>
       <DialogFooter>
         <Button @click="ui.safetyCodeOpen.value = false">Done</Button>

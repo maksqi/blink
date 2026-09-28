@@ -59,7 +59,11 @@ describe('computeSubscriptions', () => {
     })
 
     it('never produces a subscribed decision for NONE in any combination of inputs', () => {
-      const publications = [pub('p_a', 'camera', false), pub('p_a', 'screen_share', false), pub('p_a', 'microphone', false)]
+      const publications = [
+        pub('p_a', 'camera', false),
+        pub('p_a', 'screen_share', false),
+        pub('p_a', 'microphone', false),
+      ]
       for (const documentVisible of [true, false]) {
         for (const localEncrypted of [true, false]) {
           for (const withTiles of [true, false]) {
@@ -81,14 +85,21 @@ describe('computeSubscriptions', () => {
 
   it('subscribes to nothing when this client does not encrypt', () => {
     const plan = computeSubscriptions(
-      input({ localEncrypted: false, publications: [pub('p_alice', 'camera'), pub('p_alice', 'microphone')], tiles: [tile('p_alice', 640, 360)] }),
+      input({
+        localEncrypted: false,
+        publications: [pub('p_alice', 'camera'), pub('p_alice', 'microphone')],
+        tiles: [tile('p_alice', 640, 360)],
+      }),
     )
     expect(plan.decisions.every((d) => !d.subscribed && !d.blocked)).toBe(true)
   })
 
   it('keeps audio flowing everywhere, including background tabs', () => {
     const plan = computeSubscriptions(
-      input({ documentVisible: false, publications: [pub('p_alice', 'microphone'), pub('p_alice', 'screen_share_audio')] }),
+      input({
+        documentVisible: false,
+        publications: [pub('p_alice', 'microphone'), pub('p_alice', 'screen_share_audio')],
+      }),
     )
     expect(decision(plan, 'p_alice', 'microphone')).toMatchObject({ subscribed: true, enabled: true })
     expect(decision(plan, 'p_alice', 'screen_share_audio')).toMatchObject({ subscribed: true, enabled: true })
@@ -101,14 +112,21 @@ describe('computeSubscriptions', () => {
       const plan = computeSubscriptions(
         input({ publications, tiles: [tile('p_alice', 640, 360), tile('p_bob', 640, 360, { visible: false })] }),
       )
-      expect(decision(plan, 'p_alice', 'camera')).toMatchObject({ subscribed: true, enabled: true, width: 640, height: 360 })
+      expect(decision(plan, 'p_alice', 'camera')).toMatchObject({
+        subscribed: true,
+        enabled: true,
+        width: 640,
+        height: 360,
+      })
       expect(decision(plan, 'p_bob', 'camera')).toMatchObject({ subscribed: true, enabled: false })
       expect(decision(plan, 'p_carol', 'camera')).toMatchObject({ subscribed: true, enabled: false })
       expect(decision(plan, 'p_carol', 'camera').width).toBeUndefined()
     })
 
     it('pauses every video while the document is hidden', () => {
-      const plan = computeSubscriptions(input({ publications, documentVisible: false, tiles: [tile('p_alice', 640, 360)] }))
+      const plan = computeSubscriptions(
+        input({ publications, documentVisible: false, tiles: [tile('p_alice', 640, 360)] }),
+      )
       expect(plan.decisions.every((d) => d.subscribed && !d.enabled)).toBe(true)
     })
 
@@ -133,7 +151,10 @@ describe('computeSubscriptions', () => {
 
     it('uses the largest tile when a participant is rendered twice', () => {
       const plan = computeSubscriptions(
-        input({ publications: [pub('p_alice', 'camera')], tiles: [tile('p_alice', 200, 112), tile('p_alice', 1200, 675)] }),
+        input({
+          publications: [pub('p_alice', 'camera')],
+          tiles: [tile('p_alice', 200, 112), tile('p_alice', 1200, 675)],
+        }),
       )
       expect(decision(plan, 'p_alice', 'camera')).toMatchObject({ width: 1200, height: 675 })
     })
@@ -176,14 +197,21 @@ describe('computeSubscriptions', () => {
 
     it('leaves sizes alone within the budget', () => {
       const plan = computeSubscriptions(
-        input({ publications: many.slice(0, 4).map((id) => pub(id, 'camera')), tiles: many.slice(0, 4).map((id) => tile(id, 640, 360)) }),
+        input({
+          publications: many.slice(0, 4).map((id) => pub(id, 'camera')),
+          tiles: many.slice(0, 4).map((id) => tile(id, 640, 360)),
+        }),
       )
       expect(plan.decisions.every((d) => d.width === 640 && d.height === 360)).toBe(true)
     })
 
     it('honors a custom budget', () => {
       const plan = computeSubscriptions(
-        input({ publications: [pub('p_a', 'camera'), pub('p_b', 'camera')], tiles: [tile('p_a', 1280, 720), tile('p_b', 1280, 720)], pixelBudget: 640 * 360 * 2 }),
+        input({
+          publications: [pub('p_a', 'camera'), pub('p_b', 'camera')],
+          tiles: [tile('p_a', 1280, 720), tile('p_b', 1280, 720)],
+          pixelBudget: 640 * 360 * 2,
+        }),
       )
       expect(decision(plan, 'p_a', 'camera')).toMatchObject({ width: 640, height: 360 })
     })
@@ -198,7 +226,12 @@ describe('computeSubscriptions', () => {
           demands: [{ identity: 'p_alice', source: 'camera', width: 384, height: 216 }],
         }),
       )
-      expect(decision(plan, 'p_alice', 'camera')).toMatchObject({ subscribed: true, enabled: true, width: 384, height: 216 })
+      expect(decision(plan, 'p_alice', 'camera')).toMatchObject({
+        subscribed: true,
+        enabled: true,
+        width: 384,
+        height: 216,
+      })
       expect(decision(plan, 'p_bob', 'camera').enabled).toBe(false)
     })
 
@@ -220,14 +253,22 @@ describe('computeSubscriptions', () => {
 
     it('ignore invalid sizes', () => {
       const plan = computeSubscriptions(
-        input({ publications: [pub('p_alice', 'camera')], demands: [{ identity: 'p_alice', source: 'camera', width: 0, height: 0 }] }),
+        input({
+          publications: [pub('p_alice', 'camera')],
+          demands: [{ identity: 'p_alice', source: 'camera', width: 0, height: 0 }],
+        }),
       )
       expect(decision(plan, 'p_alice', 'camera').enabled).toBe(false)
     })
   })
 
   it('returns decisions in a stable order', () => {
-    const publications = [pub('p_b', 'microphone'), pub('p_a', 'camera'), pub('p_b', 'camera'), pub('p_a', 'microphone')]
+    const publications = [
+      pub('p_b', 'microphone'),
+      pub('p_a', 'camera'),
+      pub('p_b', 'camera'),
+      pub('p_a', 'microphone'),
+    ]
     const a = computeSubscriptions(input({ publications }))
     const b = computeSubscriptions(input({ publications: [...publications].reverse() }))
     expect(a.decisions.map((d) => d.trackSid)).toEqual(b.decisions.map((d) => d.trackSid))

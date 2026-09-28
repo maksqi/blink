@@ -27,7 +27,9 @@ const store = session.store
 
 const inputKind = computed<DeviceKind>(() => (props.kind === 'camera' ? 'videoinput' : 'audioinput'))
 const inputs = computed(() => store.devices[inputKind.value])
-const outputs = computed(() => (props.kind === 'microphone' && supportsAudioOutputSelection() ? store.devices.audiooutput : []))
+const outputs = computed(() =>
+  props.kind === 'microphone' && supportsAudioOutputSelection() ? store.devices.audiooutput : [],
+)
 const selectedInput = computed(() => store.selectedDevice(inputKind.value) ?? '')
 const selectedOutput = computed(() => store.outputDevice ?? outputs.value[0]?.deviceId ?? '')
 

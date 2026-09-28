@@ -150,7 +150,10 @@ export class LocalMedia {
       this.update({ cameraBusy: true })
       try {
         await this.camera.setDeviceId(deviceId)
-        this.update({ cameraDeviceId: this.camera.isMuted ? deviceId : await this.deviceIdOf(this.camera), cameraError: null })
+        this.update({
+          cameraDeviceId: this.camera.isMuted ? deviceId : await this.deviceIdOf(this.camera),
+          cameraError: null,
+        })
         this.options.onTracks()
       } catch (error) {
         this.update({ cameraError: captureErrorOf(error) })
@@ -168,7 +171,7 @@ export class LocalMedia {
       try {
         // Muted mics restart on the next unmute (LiveKit's pending device change); restart now so the meter follows.
         await this.mic.restartTrack({ deviceId, ...this.processing })
-        this.update({ micDeviceId: await this.deviceIdOf(this.mic) ?? deviceId, micError: null })
+        this.update({ micDeviceId: (await this.deviceIdOf(this.mic)) ?? deviceId, micError: null })
         this.options.onTracks()
       } catch (error) {
         this.update({ micError: captureErrorOf(error) })
@@ -203,7 +206,7 @@ export class LocalMedia {
     return this.queueMic(async () => {
       this.processing = { ...constraints }
       if (!this.mic) return
-      const deviceId = this.status.micDeviceId ?? await this.deviceIdOf(this.mic)
+      const deviceId = this.status.micDeviceId ?? (await this.deviceIdOf(this.mic))
       await this.mic.restartTrack({ ...(deviceId ? { deviceId } : {}), ...this.processing })
       this.options.onTracks()
     })

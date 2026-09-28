@@ -6,11 +6,7 @@
  * `participantAttributesSchema`; an invalid value falls back per field to the least-privileged default (participant,
  * guest, no hand, volume 100) instead of breaking the view.
  */
-import {
-  participantAttributesSchema,
-  type ParticipantKind,
-  type ParticipantRole,
-} from '#shared/schemas/livekit'
+import { participantAttributesSchema, type ParticipantKind, type ParticipantRole } from '#shared/schemas/livekit'
 import type { ConnectionQualityLevel, ParticipantView } from '../contracts/call'
 import { parseVolumeAttribute } from '../livekit/audio-engine'
 
@@ -70,7 +66,9 @@ export function toParticipantView(participant: ParticipantLike, options: ViewOpt
   const attributes = parseAttributes(participant.attributes)
   let mediaEncrypted = true
   if (participant.isLocal) mediaEncrypted = options.localEncrypted
-  else for (const publication of participant.trackPublications.values()) if (!publication.isEncrypted) mediaEncrypted = false
+  else
+    for (const publication of participant.trackPublications.values())
+      if (!publication.isEncrypted) mediaEncrypted = false
 
   return {
     identity: participant.identity,

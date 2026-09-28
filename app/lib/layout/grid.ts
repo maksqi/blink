@@ -46,7 +46,14 @@ export interface GridLayout {
  * Picks the column count that gives the largest 16:9 tiles for one full page. Every page uses the same grid, so tiles
  * keep their size when paging.
  */
-export function computeGrid({ count, width, height, phone, gap = DEFAULT_GAP, aspect = TILE_ASPECT }: GridInput): GridLayout {
+export function computeGrid({
+  count,
+  width,
+  height,
+  phone,
+  gap = DEFAULT_GAP,
+  aspect = TILE_ASPECT,
+}: GridInput): GridLayout {
   const pageSize = phone ? PHONE_PAGE_SIZE : DESKTOP_PAGE_SIZE
   const total = Math.max(0, Math.floor(count))
   const pages = Math.max(1, Math.ceil(total / pageSize))
@@ -66,7 +73,11 @@ export function computeGrid({ count, width, height, phone, gap = DEFAULT_GAP, as
     const tileWidth = Math.max(0, Math.min(cellWidth, cellHeight * aspect))
     const empty = cols * rows - n
     // Larger tiles win; on a tie (both limited by the same side) fewer empty cells look tidier.
-    if (!best || tileWidth > best.tileWidth + 0.5 || (Math.abs(tileWidth - best.tileWidth) <= 0.5 && empty < best.empty)) {
+    if (
+      !best ||
+      tileWidth > best.tileWidth + 0.5 ||
+      (Math.abs(tileWidth - best.tileWidth) <= 0.5 && empty < best.empty)
+    ) {
       best = { cols, rows, tileWidth, empty }
     }
   }

@@ -7,7 +7,13 @@
 import { EllipsisIcon } from '@lucide/vue'
 import { useMediaQuery } from '@vueuse/core'
 import { computed } from 'vue'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useCall, useCallUi } from '~/composables/call'
@@ -69,7 +75,13 @@ function togglePanel(id: string) {
 
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
-          <button type="button" aria-label="More options" title="More options" data-control="more" class="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/18 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          <button
+            type="button"
+            aria-label="More options"
+            title="More options"
+            data-control="more"
+            class="inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/18 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
             <EllipsisIcon class="size-5" aria-hidden="true" />
           </button>
         </DropdownMenuTrigger>
@@ -78,7 +90,9 @@ function togglePanel(id: string) {
             <DropdownMenuItem v-for="panel in panels" :key="panel.id" @select="togglePanel(panel.id)">
               <component :is="panel.icon" aria-hidden="true" />
               {{ panel.title }}
-              <span v-if="badgeOf(panel)" class="ml-auto text-xs text-muted-foreground tabular-nums">{{ badgeOf(panel) }}</span>
+              <span v-if="badgeOf(panel)" class="ml-auto text-xs text-muted-foreground tabular-nums">{{
+                badgeOf(panel)
+              }}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </template>
@@ -99,7 +113,9 @@ function togglePanel(id: string) {
             :class="
               cn(
                 'relative inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full px-3 text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                ui.panel.value === panel.id ? 'bg-primary/25 text-primary hover:bg-primary/30' : 'bg-white/10 hover:bg-white/18',
+                ui.panel.value === panel.id
+                  ? 'bg-primary/25 text-primary hover:bg-primary/30'
+                  : 'bg-white/10 hover:bg-white/18',
               )
             "
             @click="togglePanel(panel.id)"

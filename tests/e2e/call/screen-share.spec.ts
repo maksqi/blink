@@ -13,7 +13,8 @@ test.describe('screen share', () => {
     })
 
     await presenter.page.evaluate(() => {
-      const hooks = (window as unknown as { __blinqTest: { useFakeScreenSource?: (enabled: boolean) => void } }).__blinqTest
+      const hooks = (window as unknown as { __blinqTest: { useFakeScreenSource?: (enabled: boolean) => void } })
+        .__blinqTest
       hooks.useFakeScreenSource?.(true)
     })
     await presenter.page.getByRole('button', { name: 'Share screen' }).click()
@@ -21,7 +22,9 @@ test.describe('screen share', () => {
     await expect.poll(async () => (await callState(presenter.page))?.screenShare.active).toBe(true)
 
     // The viewer switches to the presentation layout with the share on stage…
-    const stage = viewer.page.locator(`[data-testid="participant-tile"][data-source="screen_share"][data-identity="${presenter.identity}"]`)
+    const stage = viewer.page.locator(
+      `[data-testid="participant-tile"][data-source="screen_share"][data-identity="${presenter.identity}"]`,
+    )
     await expect(stage).toBeVisible()
     await expect(stage.locator('video')).toBeVisible()
     // …and receives the full 1920×1080 layer.

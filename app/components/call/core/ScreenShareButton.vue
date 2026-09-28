@@ -5,9 +5,9 @@
  */
 import { MonitorUpIcon, MonitorXIcon } from '@lucide/vue'
 import { computed } from 'vue'
-import { toast } from 'vue-sonner'
 import CallControlButton from './CallControlButton.vue'
 import { useCallSession } from '~/composables/call'
+import { callToast } from '~/lib/call/notify'
 
 const session = useCallSession()
 const store = session.store
@@ -25,7 +25,7 @@ async function toggle() {
     if (active.value) await session.stopScreenShare()
     else await session.startScreenShare()
   } catch {
-    toast.error("Screen sharing didn't start. Try again or pick another window.")
+    callToast.error("Screen sharing didn't start. Try again or pick another window.")
   }
 }
 </script>

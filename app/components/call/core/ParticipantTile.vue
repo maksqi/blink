@@ -65,7 +65,7 @@ const avatarSize = computed(() =>
 )
 const label = computed(() => {
   const name = props.participant.isLocal ? `${props.participant.name} (you)` : props.participant.name
-  return isScreen.value ? `${name}: screen` : name
+  return isScreen.value ? `${props.participant.name} is presenting` : name
 })
 const badges = callRegistry.tileBadges
 </script>
@@ -153,7 +153,9 @@ const badges = callRegistry.tileBadges
       <TileMenu v-if="!isScreen" :participant="participant" />
     </div>
 
-    <div class="absolute bottom-1.5 left-1.5 z-10 flex max-w-[calc(100%-0.75rem)] items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-white">
+    <div
+      class="absolute bottom-1.5 left-1.5 z-10 flex max-w-[calc(100%-0.75rem)] items-center gap-1 rounded-md bg-black/55 px-1.5 py-0.5 text-white"
+    >
       <MicOffIcon
         v-if="!participant.micEnabled && !isScreen"
         class="size-3.5 shrink-0 text-red-300"

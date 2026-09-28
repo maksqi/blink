@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { MicIcon, MicOffIcon } from '@lucide/vue'
 import { computed } from 'vue'
-import { toast } from 'vue-sonner'
 import CallControlButton from './CallControlButton.vue'
 import DeviceMenu from './DeviceMenu.vue'
 import { useCallSession } from '~/composables/call'
+import { callToast } from '~/lib/call/notify'
 import { CAPTURE_ERROR_TEXT } from '~/lib/call/devices'
 
 const session = useCallSession()
@@ -22,7 +22,7 @@ async function toggle() {
   try {
     await session.toggleMic()
   } catch {
-    if (store.media.micError) toast.error(CAPTURE_ERROR_TEXT.microphone[store.media.micError])
+    if (store.media.micError) callToast.error(CAPTURE_ERROR_TEXT.microphone[store.media.micError])
   }
 }
 </script>

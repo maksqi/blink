@@ -34,7 +34,12 @@ describe('parseAttributes', () => {
   })
 
   it('falls back per field to the least-privileged defaults', () => {
-    expect(parseAttributes(undefined)).toEqual({ role: 'participant', kind: 'guest', handRaisedAt: null, volumeForEveryone: 100 })
+    expect(parseAttributes(undefined)).toEqual({
+      role: 'participant',
+      kind: 'guest',
+      handRaisedAt: null,
+      volumeForEveryone: 100,
+    })
     expect(parseAttributes({ role: 'admin', kind: 'user', hand: '12', vol: '250' })).toEqual({
       role: 'participant',
       kind: 'user',
@@ -69,7 +74,12 @@ describe('toParticipantView', () => {
 
   it('marks a remote participant with any unencrypted publication', () => {
     const view = toParticipantView(
-      participant({ trackPublications: new Map([['a', { isEncrypted: true }], ['b', { isEncrypted: false }]]) }),
+      participant({
+        trackPublications: new Map([
+          ['a', { isEncrypted: true }],
+          ['b', { isEncrypted: false }],
+        ]),
+      }),
       options,
     )
     expect(view.mediaEncrypted).toBe(false)
@@ -99,12 +109,21 @@ describe('toParticipantView', () => {
 describe('outcomeForDisconnect', () => {
   it('maps LiveKit reasons to phases', () => {
     expect(outcomeForDisconnect(DisconnectReason.CLIENT_INITIATED, false)).toEqual({ phase: 'left', reason: 'left' })
-    expect(outcomeForDisconnect(DisconnectReason.DUPLICATE_IDENTITY, false)).toEqual({ phase: 'left', reason: 'other-tab' })
-    expect(outcomeForDisconnect(DisconnectReason.PARTICIPANT_REMOVED, false)).toEqual({ phase: 'removed', reason: 'removed' })
+    expect(outcomeForDisconnect(DisconnectReason.DUPLICATE_IDENTITY, false)).toEqual({
+      phase: 'left',
+      reason: 'other-tab',
+    })
+    expect(outcomeForDisconnect(DisconnectReason.PARTICIPANT_REMOVED, false)).toEqual({
+      phase: 'removed',
+      reason: 'removed',
+    })
     expect(outcomeForDisconnect(DisconnectReason.ROOM_DELETED, false)).toEqual({ phase: 'ended', reason: 'ended' })
     expect(outcomeForDisconnect(DisconnectReason.ROOM_CLOSED, false)).toEqual({ phase: 'ended', reason: 'ended' })
     expect(outcomeForDisconnect(DisconnectReason.SERVER_SHUTDOWN, false)).toEqual({ phase: 'error', reason: 'server' })
-    expect(outcomeForDisconnect(DisconnectReason.SIGNAL_CLOSE, false)).toEqual({ phase: 'error', reason: 'connection-lost' })
+    expect(outcomeForDisconnect(DisconnectReason.SIGNAL_CLOSE, false)).toEqual({
+      phase: 'error',
+      reason: 'connection-lost',
+    })
     expect(outcomeForDisconnect(undefined, false)).toEqual({ phase: 'error', reason: 'connection-lost' })
   })
 

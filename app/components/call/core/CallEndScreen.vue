@@ -17,7 +17,11 @@ const view = computed(() => {
     case 'ended':
       return { icon: DoorOpenIcon, title: 'The meeting has ended', text: 'The host ended the meeting for everyone.' }
     case 'removed':
-      return { icon: UserXIcon, title: 'You were removed from the meeting', text: 'A host removed you. You cannot rejoin this meeting.' }
+      return {
+        icon: UserXIcon,
+        title: 'You were removed from the meeting',
+        text: 'A host removed you. You cannot rejoin this meeting.',
+      }
     case 'error':
       return {
         icon: CircleAlertIcon,
@@ -28,11 +32,17 @@ const view = computed(() => {
       return { icon: LogOutIcon, title: 'You left the meeting', text: 'Your camera and microphone are off.' }
   }
 })
-const canRejoin = computed(() => ctx.phase.value !== 'removed' && ctx.phase.value !== 'ended' && Boolean(ui.rejoin.value))
+const canRejoin = computed(
+  () => ctx.phase.value !== 'removed' && ctx.phase.value !== 'ended' && Boolean(ui.rejoin.value),
+)
 </script>
 
 <template>
-  <div class="flex min-h-full flex-1 items-center justify-center p-6" data-testid="call-end-screen" :data-phase="ctx.phase.value">
+  <div
+    class="flex min-h-full flex-1 items-center justify-center p-6"
+    data-testid="call-end-screen"
+    :data-phase="ctx.phase.value"
+  >
     <div class="flex max-w-sm flex-col items-center text-center">
       <span class="flex size-14 items-center justify-center rounded-2xl bg-white/8 text-white/90 ring-1 ring-white/10">
         <component :is="view.icon" class="size-7" aria-hidden="true" />

@@ -18,7 +18,9 @@ const shortcuts = [
     <DialogContent class="sm:max-w-md" data-testid="hotkey-help">
       <DialogHeader>
         <DialogTitle>Keyboard shortcuts</DialogTitle>
-        <DialogDescription>They work anywhere in the call except in text fields. Other keyboard layouts use the same keys.</DialogDescription>
+        <DialogDescription>
+          They work anywhere in the call except in text fields. Other keyboard layouts use the same keys.
+        </DialogDescription>
       </DialogHeader>
       <dl class="divide-y divide-border">
         <div v-for="shortcut in shortcuts" :key="shortcut.text" class="flex items-center justify-between gap-4 py-2.5">

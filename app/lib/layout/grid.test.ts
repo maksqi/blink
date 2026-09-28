@@ -86,9 +86,17 @@ describe('computeGrid', () => {
   })
 
   it('handles degenerate input without throwing', () => {
-    expect(computeGrid({ count: 0, width: 800, height: 600, phone: false })).toMatchObject({ cols: 1, rows: 1, pages: 1 })
+    expect(computeGrid({ count: 0, width: 800, height: 600, phone: false })).toMatchObject({
+      cols: 1,
+      rows: 1,
+      pages: 1,
+    })
     expect(computeGrid({ count: 4, width: 0, height: 0, phone: false }).tileWidth).toBe(0)
-    expect(computeGrid({ count: 40, width: 1200, height: 700, phone: false })).toMatchObject({ cols: 5, rows: 5, pages: 2 })
+    expect(computeGrid({ count: 40, width: 1200, height: 700, phone: false })).toMatchObject({
+      cols: 5,
+      rows: 5,
+      pages: 2,
+    })
   })
 })
 

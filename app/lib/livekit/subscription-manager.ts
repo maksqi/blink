@@ -3,13 +3,7 @@
  * tiles and the feature demands, and applies the difference with `setSubscribed`, `setEnabled` and
  * `setVideoDimensions`. Implements `SubscriptionControl` for features (recording uses `setDemand`).
  */
-import {
-  RoomEvent,
-  Track,
-  type RemoteParticipant,
-  type RemoteTrackPublication,
-  type Room,
-} from 'livekit-client'
+import { RoomEvent, Track, type RemoteParticipant, type RemoteTrackPublication, type Room } from 'livekit-client'
 import type { CallEventBus, SubscriptionControl, VideoDemand } from '../contracts/call'
 import {
   computeSubscriptions,
@@ -168,7 +162,11 @@ export class SubscriptionManager implements SubscriptionControl {
     this.demands.clear()
   }
 
-  private applyDecision(_participant: RemoteParticipant, publication: RemoteTrackPublication, decision: SubscriptionDecision) {
+  private applyDecision(
+    _participant: RemoteParticipant,
+    publication: RemoteTrackPublication,
+    decision: SubscriptionDecision,
+  ) {
     if (!decision.subscribed) {
       if (publication.isDesired) publication.setSubscribed(false)
       this.applied.delete(decision.trackSid)
@@ -180,7 +178,8 @@ export class SubscriptionManager implements SubscriptionControl {
     // LiveKit keeps dimensions only once the track exists; re-send after every (re)subscription.
     if (!publication.track) return
     const last = this.applied.get(decision.trackSid)
-    if (last && last.width === decision.width && last.height === decision.height && last.track === publication.track) return
+    if (last && last.width === decision.width && last.height === decision.height && last.track === publication.track)
+      return
     publication.setVideoDimensions({ width: decision.width, height: decision.height })
     if (last?.track !== publication.track) publication.emitTrackUpdate()
     this.applied.set(decision.trackSid, { width: decision.width, height: decision.height, track: publication.track })

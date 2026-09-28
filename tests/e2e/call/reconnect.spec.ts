@@ -13,8 +13,9 @@ test.describe('reconnect', () => {
       await waitForRemoteFrames(host.page, peer.identity, 5)
 
       await host.page.evaluate(async (name) => {
-        const harness = (window as unknown as { __blinqTest: { state: { harness: { simulate(s: string): Promise<void> } } } })
-          .__blinqTest.state.harness
+        const harness = (
+          window as unknown as { __blinqTest: { state: { harness: { simulate(s: string): Promise<void> } } } }
+        ).__blinqTest.state.harness
         await harness.simulate(name)
       }, scenario)
 

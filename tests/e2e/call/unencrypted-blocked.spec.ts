@@ -13,7 +13,8 @@ test.describe('unencrypted media', () => {
       camera: false,
     })
     await mallory.page.evaluate(async () => {
-      const hooks = (window as unknown as { __blinqTest: { publishUnencryptedTrack?: () => Promise<void> } }).__blinqTest
+      const hooks = (window as unknown as { __blinqTest: { publishUnencryptedTrack?: () => Promise<void> } })
+        .__blinqTest
       if (!hooks.publishUnencryptedTrack) throw new Error('publishUnencryptedTrack is missing')
       await hooks.publishUnencryptedTrack()
     })

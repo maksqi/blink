@@ -23,7 +23,15 @@ const props = withDefaults(
     text?: string
     class?: string
   }>(),
-  { pressed: undefined, tone: 'default', disabled: false, disabledReason: undefined, shortcut: undefined, text: undefined, class: undefined },
+  {
+    pressed: undefined,
+    tone: 'default',
+    disabled: false,
+    disabledReason: undefined,
+    shortcut: undefined,
+    text: undefined,
+    class: undefined,
+  },
 )
 
 defineOptions({ inheritAttrs: false })

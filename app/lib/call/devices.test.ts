@@ -9,7 +9,12 @@ import {
   type PrefsStorage,
 } from './devices'
 
-const device = (kind: MediaDeviceKind, deviceId: string, label = '', groupId = 'g') => ({ kind, deviceId, label, groupId })
+const device = (kind: MediaDeviceKind, deviceId: string, label = '', groupId = 'g') => ({
+  kind,
+  deviceId,
+  label,
+  groupId,
+})
 
 function memoryStorage(initial: Record<string, string> = {}): PrefsStorage & { data: Record<string, string> } {
   const data = { ...initial }

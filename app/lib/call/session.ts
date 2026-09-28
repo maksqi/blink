@@ -148,6 +148,7 @@ export class CallSession {
   private grant: JoinGrant | null = null
   private leaving = false
   private disposed = false
+  private previewStarted = false
   private readonly scope: EffectScope
   private readonly cleanups: Array<() => void> = []
   private featureCleanup: (() => void) | null = null
@@ -217,7 +218,8 @@ export class CallSession {
       slug: options.slug,
       chatKey: () => this.keys?.chatKey ?? null,
       transport: {
-        localIdentity: () => (this.room?.state === ConnectionState.Connected ? this.room.localParticipant.identity : null),
+        localIdentity: () =>
+          this.room?.state === ConnectionState.Connected ? this.room.localParticipant.identity : null,
         publish: async (bytes, publishOptions) => {
           if (!this.room) throw new Error('Not connected to the call')
           await this.room.localParticipant.publishData(bytes, { reliable: true, ...publishOptions })
@@ -254,6 +256,9 @@ export class CallSession {
   /** Opens camera and microphone for the pre-join preview (with the remembered devices). */
   async startPreview(): Promise<void> {
     if (!this.support.ok || this.disposed) return
+    // A remounted pre-join keeps the user's choices; it only refreshes the device lists.
+    if (this.previewStarted) return this.refreshDevices()
+    this.previewStarted = true
     const prefs = readDevicePrefs(browserStorage())
     const forcedOff = this.store.muteOnJoin
     const wantCamera = this.options.camera !== false && !forcedOff
@@ -278,7 +283,8 @@ export class CallSession {
   async connect(grant: JoinGrant): Promise<void> {
     const room = this.room
     if (!room || this.disposed) return
-    if (this.store.phase === 'connecting' || this.store.phase === 'inCall' || this.store.phase === 'reconnecting') return
+    if (this.store.phase === 'connecting' || this.store.phase === 'inCall' || this.store.phase === 'reconnecting')
+      return
     if (!joinClickMarked()) this.markJoinClick()
     this.grant = grant
     this.leaving = false
@@ -453,7 +459,11 @@ export class CallSession {
             degradationPreference: choice.contentHint === 'detail' ? 'maintain-resolution' : 'balanced',
           })
         } else if (this.store.permissions.screenShareAudio) {
-          await room.localParticipant.publishTrack(track, { source: Track.Source.ScreenShareAudio, dtx: false, red: false })
+          await room.localParticipant.publishTrack(track, {
+            source: Track.Source.ScreenShareAudio,
+            dtx: false,
+            red: false,
+          })
         } else {
           track.stop()
         }
@@ -521,10 +531,13 @@ export class CallSession {
   async createInviteLink(): Promise<string> {
     const roomId = this.store.roomId
     if (!roomId) throw new Error('Not in a call')
-    const { invite } = await this.api<{ invite: { token: string } }>(`/api/rooms/${encodeURIComponent(roomId)}/invites`, {
-      method: 'POST',
-      body: { expiresIn: LAST_INVITE_EXPIRY },
-    })
+    const { invite } = await this.api<{ invite: { token: string } }>(
+      `/api/rooms/${encodeURIComponent(roomId)}/invites`,
+      {
+        method: 'POST',
+        body: { expiresIn: LAST_INVITE_EXPIRY },
+      },
+    )
     const base = this.options.publicUrl ?? window.location.origin
     return buildRoomLink(base, this.options.slug, this.key, invite.token)
   }
@@ -573,7 +586,8 @@ export class CallSession {
       cameraTrack: () => this.local.cameraTrack(),
       micTrack: () => this.local.micTrack(),
       audioContext: () => this.local.audioContext,
-      setCameraProcessor: (processor: TrackProcessor<Track.Kind.Video> | null) => this.local.setCameraProcessor(processor),
+      setCameraProcessor: (processor: TrackProcessor<Track.Kind.Video> | null) =>
+        this.local.setCameraProcessor(processor),
       setMicInsert: (insert: MicInsert | null) => this.local.setMicInsert(insert),
       setMicProcessing: (constraints: MicProcessingConstraints) => this.local.setMicProcessing(constraints),
     }
@@ -665,7 +679,9 @@ export class CallSession {
         this.audio.removeTrack(publication.trackSid)
         tracksChanged()
       })
-      .on(RoomEvent.TrackSubscribed, (track, publication, participant) => this.onTrackSubscribed(track, publication, participant))
+      .on(RoomEvent.TrackSubscribed, (track, publication, participant) =>
+        this.onTrackSubscribed(track, publication, participant),
+      )
       .on(RoomEvent.TrackUnsubscribed, (_track, publication) => {
         this.audio.removeTrack(publication.trackSid)
         tracksChanged()
@@ -723,7 +739,12 @@ export class CallSession {
     }
     if (track.kind === Track.Kind.Audio) {
       const source = publication.source === Track.Source.ScreenShareAudio ? 'screen_share_audio' : 'microphone'
-      this.audio.addTrack(participant.identity, source, track as unknown as Parameters<AudioEngine['addTrack']>[2], true)
+      this.audio.addTrack(
+        participant.identity,
+        source,
+        track as unknown as Parameters<AudioEngine['addTrack']>[2],
+        true,
+      )
     }
     this.bumpTracks()
     this.scheduleViews()
@@ -886,10 +907,14 @@ export class CallSession {
       this.views.set(view.identity, kept)
       next.push(kept)
     }
-    for (const identity of [...this.views.keys()]) if (!next.some((view) => view.identity === identity)) this.views.delete(identity)
-    next.sort((a, b) => (a.isLocal !== b.isLocal ? (a.isLocal ? -1 : 1) : a.joinedAt - b.joinedAt || a.identity.localeCompare(b.identity)))
+    for (const identity of [...this.views.keys()])
+      if (!next.some((view) => view.identity === identity)) this.views.delete(identity)
+    next.sort((a, b) =>
+      a.isLocal !== b.isLocal ? (a.isLocal ? -1 : 1) : a.joinedAt - b.joinedAt || a.identity.localeCompare(b.identity),
+    )
     const current = this.store.participants
-    if (current.length !== next.length || current.some((view, index) => view !== next[index])) this.store.participants = next
+    if (current.length !== next.length || current.some((view, index) => view !== next[index]))
+      this.store.participants = next
     this.store.blocked = this.subscriptions?.plan.blockedIdentities ?? []
     this.store.e2eeEnabled = this.e2ee && room.isE2EEEnabled
   }
@@ -925,7 +950,11 @@ export class CallSession {
       this.store.devices = lists
       // A device that vanished (unplugged headset): move to the next one.
       const media = this.store.media
-      if (this.local.camera && media.cameraDeviceId && !lists.videoinput.some((d) => d.deviceId === media.cameraDeviceId)) {
+      if (
+        this.local.camera &&
+        media.cameraDeviceId &&
+        !lists.videoinput.some((d) => d.deviceId === media.cameraDeviceId)
+      ) {
         const next = pickDevice(lists.videoinput)
         if (next) void this.local.switchCamera(next).catch(() => undefined)
       }

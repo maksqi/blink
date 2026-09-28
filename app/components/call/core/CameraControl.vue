@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { VideoIcon, VideoOffIcon } from '@lucide/vue'
 import { computed } from 'vue'
-import { toast } from 'vue-sonner'
 import CallControlButton from './CallControlButton.vue'
 import DeviceMenu from './DeviceMenu.vue'
 import { useCallSession } from '~/composables/call'
+import { callToast } from '~/lib/call/notify'
 import { CAPTURE_ERROR_TEXT } from '~/lib/call/devices'
 
 const session = useCallSession()
@@ -22,7 +22,7 @@ async function toggle() {
   try {
     await session.toggleCamera()
   } catch {
-    if (store.media.cameraError) toast.error(CAPTURE_ERROR_TEXT.camera[store.media.cameraError])
+    if (store.media.cameraError) callToast.error(CAPTURE_ERROR_TEXT.camera[store.media.cameraError])
   }
 }
 </script>

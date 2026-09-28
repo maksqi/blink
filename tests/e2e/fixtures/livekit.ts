@@ -222,7 +222,11 @@ export const test = base.extend<LiveKitFixtures>({
         // The test runner applies the project's `use` options (user agent included) to every context, also in another
         // engine: give a second engine its own desktop profile, or the SDK takes Firefox for Chrome.
         const profile = engine === ownEngine ? {} : devices[engine === 'firefox' ? 'Desktop Firefox' : 'Desktop Chrome']
-        context = await target.newContext({ ...profile, baseURL, viewport: options.viewport ?? { width: 1280, height: 720 } })
+        context = await target.newContext({
+          ...profile,
+          baseURL,
+          viewport: options.viewport ?? { width: 1280, height: 720 },
+        })
         contexts.push(context)
         await guards.watch(context)
         page = await context.newPage()
@@ -255,8 +259,9 @@ export const test = base.extend<LiveKitFixtures>({
     for (const joined of joinedPages) {
       await joined
         .evaluate(async () => {
-          const hooks = (window as unknown as { __blinqTest?: { state: { harness?: { leave?: () => Promise<void> } } } })
-            .__blinqTest
+          const hooks = (
+            window as unknown as { __blinqTest?: { state: { harness?: { leave?: () => Promise<void> } } } }
+          ).__blinqTest
           await hooks?.state.harness?.leave?.()
         })
         .catch(() => undefined)
@@ -278,7 +283,13 @@ export interface CallStateSnapshot {
   undecryptable: string[]
   media: { micOn: boolean; cameraOn: boolean }
   screenShare: { active: boolean }
-  participants: Array<{ identity: string; micEnabled: boolean; cameraEnabled: boolean; screenSharing: boolean; mediaEncrypted: boolean }>
+  participants: Array<{
+    identity: string
+    micEnabled: boolean
+    cameraEnabled: boolean
+    screenSharing: boolean
+    mediaEncrypted: boolean
+  }>
   safetyCode: string | null
 }
 
@@ -346,7 +357,12 @@ export async function subscriptions(page: Page, identity?: string): Promise<Subs
 }
 
 /** Waits until `page` has decoded at least `minFrames` more frames of `identity`'s camera than when called. */
-export async function waitForRemoteFrames(page: Page, identity: string, minFrames = 10, timeout = 20_000): Promise<number> {
+export async function waitForRemoteFrames(
+  page: Page,
+  identity: string,
+  minFrames = 10,
+  timeout = 20_000,
+): Promise<number> {
   let start: number | undefined
   let latest = 0
   await expect

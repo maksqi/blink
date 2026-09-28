@@ -77,7 +77,10 @@ export function buildRegistry(modules: FeatureModules | CallFeature[], options: 
     features.push(feature)
   }
 
-  function collect<T extends { id: string; order: number }>(kind: string, pick: (feature: CallFeature) => T[] | undefined): T[] {
+  function collect<T extends { id: string; order: number }>(
+    kind: string,
+    pick: (feature: CallFeature) => T[] | undefined,
+  ): T[] {
     const ids = new Set<string>()
     const items: T[] = []
     for (const feature of features) {
@@ -138,7 +141,10 @@ export function setupFeatures(
 }
 
 /** The phase screen for `phase`: the highest order wins. */
-export function phaseScreenFor(registry: Pick<CallRegistry, 'phaseScreens'>, phase: CallPhase): PhaseScreen | undefined {
+export function phaseScreenFor(
+  registry: Pick<CallRegistry, 'phaseScreens'>,
+  phase: CallPhase,
+): PhaseScreen | undefined {
   let best: PhaseScreen | undefined
   for (const screen of registry.phaseScreens) {
     if (screen.phases.includes(phase) && (!best || screen.order >= best.order)) best = screen
@@ -147,7 +153,10 @@ export function phaseScreenFor(registry: Pick<CallRegistry, 'phaseScreens'>, pha
 }
 
 /** Items whose `visible(ctx)` passes (a throwing predicate hides the item). */
-export function visibleItems<T extends { visible?: (ctx: CallContext) => boolean }>(items: readonly T[], ctx: CallContext): T[] {
+export function visibleItems<T extends { visible?: (ctx: CallContext) => boolean }>(
+  items: readonly T[],
+  ctx: CallContext,
+): T[] {
   return items.filter((item) => {
     if (!item.visible) return true
     try {

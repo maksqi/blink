@@ -6,7 +6,14 @@
 import { LockKeyholeIcon, ShieldAlertIcon, ShieldCheckIcon, ShieldOffIcon } from '@lucide/vue'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useCallSession, useCallUi } from '~/composables/call'
 
@@ -91,9 +98,17 @@ const view = computed(() => {
       </PopoverHeader>
       <div v-if="store.safetyCode" class="mt-3 rounded-lg bg-muted px-3 py-2.5">
         <p class="text-xs text-muted-foreground">Safety code</p>
-        <p class="mt-1 font-mono text-base tracking-[0.12em] tabular-nums" data-testid="safety-code">{{ store.safetyCode }}</p>
+        <p class="mt-1 font-mono text-base tracking-[0.12em] tabular-nums" data-testid="safety-code">
+          {{ store.safetyCode }}
+        </p>
       </div>
-      <Button v-if="store.safetyCode" variant="secondary" size="sm" class="mt-3 w-full" @click="ui.safetyCodeOpen.value = true">
+      <Button
+        v-if="store.safetyCode"
+        variant="secondary"
+        size="sm"
+        class="mt-3 w-full"
+        @click="ui.safetyCodeOpen.value = true"
+      >
         How to compare codes
       </Button>
     </PopoverContent>

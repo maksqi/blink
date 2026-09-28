@@ -50,7 +50,8 @@ function hookGestureResume() {
   if (gestureHooked || typeof document === 'undefined') return
   gestureHooked = true
   const resume = () => void resumeSharedAudioContext()
-  for (const type of ['pointerdown', 'keydown', 'touchend']) document.addEventListener(type, resume, { capture: true, passive: true })
+  for (const type of ['pointerdown', 'keydown', 'touchend'])
+    document.addEventListener(type, resume, { capture: true, passive: true })
 }
 
 export class MicChain implements TrackProcessor<Track.Kind.Audio, AudioProcessorOptions> {

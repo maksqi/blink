@@ -11,12 +11,7 @@ import { emptyDeviceLists, type DeviceKind, type DeviceLists, type DevicePermiss
 import type { LocalMediaStatus } from '~/lib/livekit/local-media'
 
 export type CallErrorReason =
-  | 'unsupported-browser'
-  | 'unsupported-e2ee'
-  | 'connect-failed'
-  | 'connection-lost'
-  | 'server'
-  | 'invalid-key'
+  'unsupported-browser' | 'unsupported-e2ee' | 'connect-failed' | 'connection-lost' | 'server' | 'invalid-key'
 
 export interface CallError {
   reason: CallErrorReason

@@ -46,7 +46,12 @@ const strip = computed(() => {
 })
 
 const layout = computed(() =>
-  computeSpeakerLayout({ width: width.value, height: height.value, stripCount: strip.value.length, phone: props.phone }),
+  computeSpeakerLayout({
+    width: width.value,
+    height: height.value,
+    stripCount: strip.value.length,
+    phone: props.phone,
+  }),
 )
 const stageBox = computed(() => fitBox(layout.value.stage.width, layout.value.stage.height))
 const vertical = computed(() => layout.value.strip.orientation === 'vertical')

@@ -93,16 +93,25 @@ function readParams(hash: string): HarnessParams | string {
     recording: params.get('rec') === '1',
     muteOnJoin: params.get('muteOnJoin') === '1',
     media: {
-      maxCameraResolution: pick(params.get('maxCam'), ['720p', '1080p'] as const, DEFAULT_MEDIA_LIMITS.maxCameraResolution),
-      maxScreenShareResolution: pick(params.get('maxShare'), ['720p', '1080p'] as const, DEFAULT_MEDIA_LIMITS.maxScreenShareResolution),
+      maxCameraResolution: pick(
+        params.get('maxCam'),
+        ['720p', '1080p'] as const,
+        DEFAULT_MEDIA_LIMITS.maxCameraResolution,
+      ),
+      maxScreenShareResolution: pick(
+        params.get('maxShare'),
+        ['720p', '1080p'] as const,
+        DEFAULT_MEDIA_LIMITS.maxScreenShareResolution,
+      ),
       maxScreenShareFps: [5, 15, 30].includes(fps) ? fps : DEFAULT_MEDIA_LIMITS.maxScreenShareFps,
     },
   }
 }
 
 // Read the fragment once and strip it before anything else can pick it up.
-const parsed = readParams(window.location.hash)
-if (window.location.hash) history.replaceState(history.state, '', window.location.pathname + window.location.search)
+const fragment = window.location.hash
+const parsed = readParams(fragment)
+if (fragment) history.replaceState(history.state, '', window.location.pathname + window.location.search)
 
 const config = typeof parsed === 'string' ? null : parsed
 const problem = typeof parsed === 'string' ? parsed : null
@@ -140,7 +149,9 @@ async function onJoin() {
   if (session && config) await session.connect(config.grant)
 }
 
+/** Rejoin = a fresh page with the same parameters (a session connects once). */
 function reload() {
+  window.location.replace(`${window.location.pathname}${fragment}`)
   window.location.reload()
 }
 

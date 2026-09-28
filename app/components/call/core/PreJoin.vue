@@ -5,7 +5,15 @@
  * The tracks opened here are the ones published on join. The Join click starts the join-time measurement and emits
  * `join`; the host page then runs the join request and calls `session.connect(grant)`.
  */
-import { CircleAlertIcon, CircleDotIcon, LockKeyholeIcon, MicIcon, MicOffIcon, VideoIcon, VideoOffIcon } from '@lucide/vue'
+import {
+  CircleAlertIcon,
+  CircleDotIcon,
+  LockKeyholeIcon,
+  MicIcon,
+  MicOffIcon,
+  VideoIcon,
+  VideoOffIcon,
+} from '@lucide/vue'
 import { supportsAudioOutputSelection } from 'livekit-client'
 import { computed, onMounted, provide, shallowRef } from 'vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -67,7 +75,9 @@ const slots = callRegistry.preJoin
 const locked = computed(() => store.muteOnJoin)
 
 const preview = computed(() => props.session.previewTrack())
-const cameraError = computed(() => (store.media.cameraError ? CAPTURE_ERROR_TEXT.camera[store.media.cameraError] : null))
+const cameraError = computed(() =>
+  store.media.cameraError ? CAPTURE_ERROR_TEXT.camera[store.media.cameraError] : null,
+)
 const micError = computed(() => (store.media.micError ? CAPTURE_ERROR_TEXT.microphone[store.media.micError] : null))
 
 const devices = computed(() => {
@@ -121,15 +131,28 @@ onMounted(() => {
       data-testid="prejoin"
     >
       <section aria-label="Preview" class="flex flex-col gap-3">
-        <div class="relative aspect-video w-full overflow-hidden rounded-2xl bg-card shadow-2xl shadow-black/30 ring-1 ring-white/8">
-          <VideoTrackView v-if="preview" :track="preview" mirror class="absolute inset-0" data-testid="prejoin-preview" />
-          <div v-else class="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground">
+        <div
+          class="relative aspect-video w-full overflow-hidden rounded-2xl bg-card shadow-2xl shadow-black/30 ring-1 ring-white/8"
+        >
+          <VideoTrackView
+            v-if="preview"
+            :track="preview"
+            mirror
+            class="absolute inset-0"
+            data-testid="prejoin-preview"
+          />
+          <div
+            v-else
+            class="absolute inset-0 flex flex-col items-center justify-center gap-2 p-6 text-center text-sm text-muted-foreground"
+          >
             <VideoOffIcon class="size-8 text-white/50" aria-hidden="true" />
             <p v-if="cameraError" class="max-w-xs text-white/80">{{ cameraError }}</p>
             <p v-else-if="store.media.cameraBusy">Starting camera…</p>
             <p v-else>Your camera is off</p>
           </div>
-          <div class="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 bg-linear-to-t from-black/60 to-transparent px-3 pt-8 pb-3">
+          <div
+            class="absolute inset-x-0 bottom-0 flex items-center justify-center gap-3 bg-linear-to-t from-black/60 to-transparent px-3 pt-8 pb-3"
+          >
             <CallControlButton
               label="Microphone"
               :icon="store.media.micOn ? MicIcon : MicOffIcon"
@@ -163,7 +186,11 @@ onMounted(() => {
           <p v-if="title" class="mt-1 truncate text-sm text-muted-foreground">{{ title }}</p>
         </div>
 
-        <Alert v-if="recordingActive" class="border-red-400/30 bg-red-500/10 text-red-100" data-testid="prejoin-recording">
+        <Alert
+          v-if="recordingActive"
+          class="border-red-400/30 bg-red-500/10 text-red-100"
+          data-testid="prejoin-recording"
+        >
           <CircleDotIcon class="text-red-400" />
           <AlertTitle>This meeting is being recorded</AlertTitle>
           <AlertDescription>Everyone in the meeting can see that it is being recorded.</AlertDescription>
@@ -205,7 +232,9 @@ onMounted(() => {
 
         <component :is="slot.component" v-for="slot in slots" :key="slot.id" />
 
-        <p v-if="locked" class="text-sm text-muted-foreground">The host has everyone join with microphone and camera off.</p>
+        <p v-if="locked" class="text-sm text-muted-foreground">
+          The host has everyone join with microphone and camera off.
+        </p>
         <p v-if="micError" class="flex items-start gap-2 text-sm text-amber-200">
           <CircleAlertIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           {{ micError }}

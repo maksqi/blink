@@ -10,7 +10,9 @@ const FRAME = 'blinq:join:first-remote-frame'
 const nightly = process.env.E2E_NIGHTLY === '1'
 
 function metrics(page: Page): Promise<Record<string, number>> {
-  return page.evaluate(() => (window as unknown as { __blinqTest: { metrics: Record<string, number> } }).__blinqTest.metrics)
+  return page.evaluate(
+    () => (window as unknown as { __blinqTest: { metrics: Record<string, number> } }).__blinqTest.metrics,
+  )
 }
 
 async function measure(page: Page): Promise<number> {

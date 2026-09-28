@@ -11,7 +11,9 @@ export interface DisposableEventBus extends CallEventBus {
   clear(): void
 }
 
-export function createEventBus(onError: (error: unknown) => void = (error) => console.error(error)): DisposableEventBus {
+export function createEventBus(
+  onError: (error: unknown) => void = (error) => console.error(error),
+): DisposableEventBus {
   const handlers = new Map<keyof CallEventMap, Set<Handler<keyof CallEventMap>>>()
 
   return {

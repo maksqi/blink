@@ -73,10 +73,19 @@ function setup() {
 }
 
 function message(overrides: Partial<AppMessage> = {}): AppMessage {
-  return { id: crypto.randomUUID(), type: 'chat', from: ALICE, ts: 1_700_000_000_000, body: { text: 'hello' }, ...overrides }
+  return {
+    id: crypto.randomUUID(),
+    type: 'chat',
+    from: ALICE,
+    ts: 1_700_000_000_000,
+    body: { text: 'hello' },
+    ...overrides,
+  }
 }
 
-async function packet(overrides: Partial<IncomingPacket> & { message?: AppMessage; key?: CryptoKey } = {}): Promise<IncomingPacket> {
+async function packet(
+  overrides: Partial<IncomingPacket> & { message?: AppMessage; key?: CryptoKey } = {},
+): Promise<IncomingPacket> {
   const msg = overrides.message ?? message()
   const payload = overrides.payload ?? (await sealAppMessage(overrides.key ?? chatKey, SLUG, msg))
   return {
@@ -221,7 +230,12 @@ describe('server hints (blinq.srv.v1)', () => {
   it('are dropped when a participant sends them, encrypted or not', async () => {
     const { messaging, hints, drops } = setup()
     for (const encryptionType of [Encryption_Type.NONE, Encryption_Type.GCM]) {
-      await messaging.handlePacket({ payload: hint('ask-unmute'), senderIdentity: ALICE, topic: DATA_TOPICS.server, encryptionType })
+      await messaging.handlePacket({
+        payload: hint('ask-unmute'),
+        senderIdentity: ALICE,
+        topic: DATA_TOPICS.server,
+        encryptionType,
+      })
     }
     expect(hints).toEqual([])
     expect(drops).toEqual(['hint-from-participant', 'hint-from-participant'])
@@ -232,7 +246,10 @@ describe('server hints (blinq.srv.v1)', () => {
     const server = { senderIdentity: undefined, topic: DATA_TOPICS.server, encryptionType: Encryption_Type.NONE }
     await messaging.handlePacket({ ...server, payload: hint('grant.token') })
     await messaging.handlePacket({ ...server, payload: utf8('not json') })
-    await messaging.handlePacket({ ...server, payload: utf8(JSON.stringify({ type: 'room.changed', token: 'x'.repeat(2000) })) })
+    await messaging.handlePacket({
+      ...server,
+      payload: utf8(JSON.stringify({ type: 'room.changed', token: 'x'.repeat(2000) })),
+    })
     await messaging.handlePacket({ ...server, payload: new Uint8Array([0xff, 0xfe]) })
     expect(hints).toEqual([])
     expect(drops).toEqual(['hint-invalid', 'hint-invalid', 'hint-invalid', 'hint-invalid'])

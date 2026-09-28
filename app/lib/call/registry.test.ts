@@ -131,10 +131,18 @@ describe('visibleItems', () => {
       'beta-button',
       'alpha-late',
     ])
-    expect(visibleItems(registry.controlBar, context('prejoin').ctx).map((i) => i.id)).toEqual(['beta-button', 'alpha-late'])
-    const throwing = [{ id: 'x', visible: () => {
-      throw new Error('nope')
-    } }]
+    expect(visibleItems(registry.controlBar, context('prejoin').ctx).map((i) => i.id)).toEqual([
+      'beta-button',
+      'alpha-late',
+    ])
+    const throwing = [
+      {
+        id: 'x',
+        visible: () => {
+          throw new Error('nope')
+        },
+      },
+    ]
     expect(visibleItems(throwing, context().ctx)).toEqual([])
   })
 })

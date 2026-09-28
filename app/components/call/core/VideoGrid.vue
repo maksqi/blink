@@ -34,7 +34,13 @@ const rowWidth = computed(() => grid.value.cols * grid.value.tileWidth + (grid.v
 </script>
 
 <template>
-  <div ref="container" class="relative flex size-full min-h-0 flex-col" data-testid="video-grid" :data-cols="grid.cols" :data-rows="grid.rows">
+  <div
+    ref="container"
+    class="relative flex size-full min-h-0 flex-col"
+    data-testid="video-grid"
+    :data-cols="grid.cols"
+    :data-rows="grid.rows"
+  >
     <div class="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
       <div
         class="flex flex-wrap content-center justify-center"
@@ -48,11 +54,7 @@ const rowWidth = computed(() => grid.value.cols * grid.value.tileWidth + (grid.v
         />
       </div>
     </div>
-    <nav
-      v-if="pages > 1"
-      aria-label="Pages"
-      class="flex h-10 shrink-0 items-center justify-center gap-3"
-    >
+    <nav v-if="pages > 1" aria-label="Pages" class="flex h-10 shrink-0 items-center justify-center gap-3">
       <button
         type="button"
         aria-label="Previous page"

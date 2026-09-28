@@ -73,5 +73,9 @@ export async function publishUnencryptedTrack(room: Room): Promise<void> {
   const source = canvasSource(640, 360, 15, 'unencrypted')
   const track = new LocalVideoTrack(source.track, undefined, true)
   track.on('ended', () => source.stop())
-  await room.localParticipant.publishTrack(track, { source: Track.Source.Camera, name: 'unencrypted-test', simulcast: false })
+  await room.localParticipant.publishTrack(track, {
+    source: Track.Source.Camera,
+    name: 'unencrypted-test',
+    simulcast: false,
+  })
 }

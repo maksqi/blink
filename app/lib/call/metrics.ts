@@ -30,7 +30,9 @@ export function markJoinClick(): void {
   for (const name of Object.values(JOIN_MARKS)) performance.clearMarks(name)
   const hooks = testHooks()
   if (hooks) {
-    const kept = Object.entries(hooks.metrics).filter(([name]) => !(Object.values(JOIN_MARKS) as string[]).includes(name))
+    const kept = Object.entries(hooks.metrics).filter(
+      ([name]) => !(Object.values(JOIN_MARKS) as string[]).includes(name),
+    )
     hooks.metrics = Object.fromEntries(kept)
   }
   markJoin(JOIN_MARKS.click)

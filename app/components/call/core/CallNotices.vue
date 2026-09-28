@@ -12,7 +12,9 @@ const session = useCallSession()
 const store = session.store
 
 const blockedNames = computed(() =>
-  store.blocked.map((identity) => store.participants.find((p) => p.identity === identity)?.name ?? 'Someone').join(', '),
+  store.blocked
+    .map((identity) => store.participants.find((p) => p.identity === identity)?.name ?? 'Someone')
+    .join(', '),
 )
 </script>
 

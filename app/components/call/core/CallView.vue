@@ -57,7 +57,9 @@ const { width, height } = useWindowSize()
 const phone = computed(() => viewportClass(width.value, height.value) === 'phone')
 const wide = useMediaQuery('(min-width: 1024px)')
 
-const presenting = computed(() => store.participants.some((p) => p.screenSharing && !p.isLocal) || store.screenShare.active)
+const presenting = computed(
+  () => store.participants.some((p) => p.screenSharing && !p.isLocal) || store.screenShare.active,
+)
 const mode = computed(() => (presenting.value || store.pinned ? 'speaker' : store.layout))
 
 const panels = computed(() => visibleItems(callRegistry.panels, ctx))
@@ -115,9 +117,17 @@ useCallHotkeys({
           <E2EEBadge />
           <div class="flex min-w-0 flex-1 items-baseline gap-2">
             <h1 class="truncate text-sm font-medium">{{ title || 'Meeting' }}</h1>
-            <span v-if="elapsed" class="shrink-0 text-xs text-muted-foreground tabular-nums" data-testid="call-elapsed">{{ elapsed }}</span>
+            <span
+              v-if="elapsed"
+              class="shrink-0 text-xs text-muted-foreground tabular-nums"
+              data-testid="call-elapsed"
+              >{{ elapsed }}</span
+            >
           </div>
-          <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-1 text-xs text-white/85" aria-label="Participants">
+          <span
+            class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-1 text-xs text-white/85"
+            aria-label="Participants"
+          >
             <UsersIcon class="size-3.5" aria-hidden="true" />
             <span class="tabular-nums" data-testid="participant-count">{{ store.participants.length }}</span>
           </span>
@@ -125,7 +135,11 @@ useCallHotkeys({
 
         <div class="relative flex min-h-0 flex-1 gap-2 px-2 sm:px-3">
           <main class="relative min-h-0 min-w-0 flex-1" aria-label="Participants video">
-            <div v-if="phase === 'connecting'" class="flex size-full items-center justify-center" data-testid="call-connecting">
+            <div
+              v-if="phase === 'connecting'"
+              class="flex size-full items-center justify-center"
+              data-testid="call-connecting"
+            >
               <div class="flex flex-col items-center gap-3 text-sm text-muted-foreground">
                 <Spinner class="size-6" />
                 Joining the meeting…
@@ -159,14 +173,21 @@ useCallHotkeys({
 
           <ReconnectBanner />
           <CallNotices />
-          <div v-if="phase === 'reconnecting'" class="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <div
+            v-if="phase === 'reconnecting'"
+            class="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
             <LoaderCircleIcon class="size-8 text-white/40 motion-safe:animate-spin" aria-hidden="true" />
           </div>
         </div>
 
         <ControlBar />
 
-        <Sheet v-if="!wide" :open="Boolean(openPanel)" @update:open="(value: boolean) => !value && (ui.panel.value = null)">
+        <Sheet
+          v-if="!wide"
+          :open="Boolean(openPanel)"
+          @update:open="(value: boolean) => !value && (ui.panel.value = null)"
+        >
           <SheetContent side="right" class="w-full max-w-md p-0 sm:max-w-md">
             <SheetHeader class="border-b">
               <SheetTitle>{{ openPanel?.title }}</SheetTitle>

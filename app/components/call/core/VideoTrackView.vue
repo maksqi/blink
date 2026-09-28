@@ -50,6 +50,8 @@ onBeforeUnmount(detach)
     playsinline
     muted
     disablepictureinpicture
-    :class="cn('size-full bg-transparent', fit === 'contain' ? 'object-contain' : 'object-cover', mirror && '-scale-x-100')"
+    :class="
+      cn('size-full bg-transparent', fit === 'contain' ? 'object-contain' : 'object-cover', mirror && '-scale-x-100')
+    "
   />
 </template>

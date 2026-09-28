@@ -61,7 +61,10 @@ describe('HotkeyMatcher', () => {
 
   it('opens help with ?', () => {
     const matcher = new HotkeyMatcher()
-    expect(matcher.handle(down('?', 'Slash', { shiftKey: true }), unmuted)).toEqual({ action: 'help', preventDefault: true })
+    expect(matcher.handle(down('?', 'Slash', { shiftKey: true }), unmuted)).toEqual({
+      action: 'help',
+      preventDefault: true,
+    })
     // A layout where Shift+Slash is not "?" still opens help.
     expect(matcher.handle(down(',', 'Slash', { shiftKey: true }), unmuted).action).toBe('help')
   })
@@ -107,7 +110,10 @@ describe('HotkeyMatcher', () => {
       expect(matcher.pushToTalkActive).toBe(true)
       // Repeats are swallowed; the mic is live (unmuted) in between.
       for (let i = 0; i < 5; i++) {
-        expect(matcher.handle(down(' ', 'Space', { repeat: true }), unmuted)).toEqual({ action: null, preventDefault: true })
+        expect(matcher.handle(down(' ', 'Space', { repeat: true }), unmuted)).toEqual({
+          action: null,
+          preventDefault: true,
+        })
       }
       expect(matcher.handle(up(' ', 'Space'), unmuted)).toEqual({ action: 'ptt-end', preventDefault: true })
       expect(matcher.pushToTalkActive).toBe(false)
@@ -133,7 +139,9 @@ describe('HotkeyMatcher', () => {
     it('leaves Space to focused buttons and switches', () => {
       const matcher = new HotkeyMatcher()
       expect(matcher.handle(down(' ', 'Space', { target: { tagName: 'BUTTON' } }), muted).action).toBeNull()
-      expect(matcher.handle(down(' ', 'Space', { target: { tagName: 'DIV', role: 'switch' } }), muted).action).toBeNull()
+      expect(
+        matcher.handle(down(' ', 'Space', { target: { tagName: 'DIV', role: 'switch' } }), muted).action,
+      ).toBeNull()
       // Letters still work on a focused button.
       expect(matcher.handle(down('m', 'KeyM', { target: { tagName: 'BUTTON' } }), muted).action).toBe('toggle-mic')
     })

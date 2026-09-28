@@ -31,7 +31,9 @@ export function emptyDeviceLists(): DeviceLists {
  * Groups `enumerateDevices()` output by kind. Entries without an id (no permission yet) are dropped; missing labels
  * become "Camera 2" style names so the pickers never show blanks.
  */
-export function toDeviceLists(devices: ReadonlyArray<Pick<MediaDeviceInfo, 'deviceId' | 'kind' | 'label' | 'groupId'>>): DeviceLists {
+export function toDeviceLists(
+  devices: ReadonlyArray<Pick<MediaDeviceInfo, 'deviceId' | 'kind' | 'label' | 'groupId'>>,
+): DeviceLists {
   const lists = emptyDeviceLists()
   for (const device of devices) {
     const kind = device.kind as DeviceKind

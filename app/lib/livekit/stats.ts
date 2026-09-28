@@ -60,7 +60,11 @@ export async function collectInboundStats(room: Room): Promise<InboundStats> {
         receiver
           .getStats()
           .then((stats) => {
-            const base = { identity: participant.identity, source: sourceName(publication.source), trackSid: publication.trackSid }
+            const base = {
+              identity: participant.identity,
+              source: sourceName(publication.source),
+              trackSid: publication.trackSid,
+            }
             if (publication.kind === Track.Kind.Video) {
               const report = inboundRtp(stats, 'video')
               if (!report) return
