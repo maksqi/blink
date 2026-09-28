@@ -222,6 +222,8 @@ don't overload the machine.
 - **Typed `$fetch` routes:** Nitro's route inference explodes on dynamic string paths. Use `useApi()` (loosely
   typed, the caller supplies the response type) instead of raw `$fetch` with template strings.
 - **Postgres 18 image**: mount `/var/lib/postgresql` (not `/data`).
+- **zod 4 and CSP.** zod 4 JIT-compiles object parsers with `Function()`, which the production CSP blocks.
+  `app/plugins/00.0-zod-jitless.client.ts` turns the JIT off in the browser. Keep it; never add `'unsafe-eval'`.
 
 **LiveKit**
 - Use the `encryption` room option (media + data). `e2ee` is deprecated.

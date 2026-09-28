@@ -11,16 +11,6 @@ import { routeNeedsSession, signInLocation, useAuth } from '~/composables/useAut
 
 const RECHECK_INTERVAL_MS = 60_000
 
-// zod 4 compiles object parsers with `Function()` unless `jitless` is set. The production CSP has no 'unsafe-eval',
-// so the attempt is blocked and reported as a violation on every page that builds an object schema (the auth forms).
-// zod keeps its settings on this global and reads `jitless` when a schema is created, so it is set at module
-// evaluation, before any page chunk builds a schema, and without importing zod (its chunk may carry schemas).
-if (import.meta.client) {
-  const holder = globalThis as { __zod_globalConfig?: { jitless?: boolean } }
-  holder.__zod_globalConfig ??= {}
-  holder.__zod_globalConfig.jitless = true
-}
-
 export default defineNuxtPlugin({
   name: 'blinq:auth',
   async setup() {

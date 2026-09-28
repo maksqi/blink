@@ -19,7 +19,11 @@ export type BusEvent =
   | { type: 'room.state'; roomId: string }
   | { type: 'recording.changed'; roomId: string; recordingId: string }
   /** A user was disabled, deleted or had all sessions revoked: remove them from live calls. */
-  | { type: 'user.revoked'; userId: string }
+  | {
+      type: 'user.revoked'
+      userId: string
+      reason?: 'password_changed' | 'password_reset' | 'disabled' | 'deleted' | 'sessions_revoked' | 'role_changed'
+    }
 
 export interface EventBus {
   publish(event: BusEvent): void

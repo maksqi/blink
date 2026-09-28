@@ -175,6 +175,9 @@ app on the host. It also makes LiveKit webhooks reach the app in CI.
   cookies and CSRF checks use the Caddy origin.
 - LiveKit advertises the LAN IP because Firefox rejects loopback ICE candidates. E2E runs with 1 worker; every test
   creates its own rooms.
+- All E2E traffic reaches the app from one IP (the Caddy container), so per-IP limits are a shared budget across a
+  whole run: for example `auth-ip` allows 10 attempts per minute. Keep failing-login specs few, or give them distinct
+  accounts and wait out windows instead of relying on retries.
 
 ### 6.2 Running locally
 

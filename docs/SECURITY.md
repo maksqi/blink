@@ -133,7 +133,9 @@ All derivations use HKDF-SHA256 via WebCrypto. The exact info strings are in [`A
 - **Recovery:** `cli.mjs reset-password <email>` reads the new password from stdin (never argv), revokes sessions,
   clears throttling and writes an audit entry.
 - **Registration:** `invite_only` (default), `open`, or `domain`. Domain mode requires SMTP and email verification,
-  so anyone can't claim `@company.com`. Admin-role invites must be bound to an email and expire within 24 h.
+  so anyone can't claim `@company.com`. Known trade-off: in open mode, registering an existing address answers 409
+  (`CONFLICT`, reason `email_taken`), which reveals that the address has an account; login and password reset never
+  reveal it. Admin-role invites must be bound to an email and expire within 24 h.
 - **Brute force:**
   - Purpose-built limiters keyed by IP (IPv6 aggregated to /64), account and room, with exponential backoff and
     `Retry-After`.

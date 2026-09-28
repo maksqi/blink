@@ -128,7 +128,11 @@ type SessionInfo = { id: string; current: boolean; createdAt: IsoDate; lastSeenA
 Rules: unknown emails pay the argon2 cost and get the same 401 as a wrong password; disabled and unverified states are
 revealed only after a correct password. Reset, verify and account-invite tokens are single use; reset 1 h, verify 24 h
 (decision); account invites expire per `adminCreateInviteSchema`. Tokens travel in the URL fragment and the request
-body, never in a query string.
+body, never in a query string. `AUTH_PASSWORD_WEAK` carries `details.reason`: `too_short`, `too_long`, `common` or
+`same_as_current`. Wrong current passwords on `POST /api/auth/password` count toward the login backoff (429).
+`SessionInfo.id` is the session hash (never the token). Audit actions: `auth.login`, `auth.login_failed`,
+`auth.logout`, `auth.password_changed`, `auth.password_reset`, `auth.invite_accepted`, `auth.session_revoked`,
+`user.profile_updated`, `admin.user_created`, `admin.user_updated`, `admin.invite_created`, `admin.invite_revoked`.
 
 ## 4. Me
 
@@ -283,6 +287,13 @@ File responses always send `Content-Type: video/mp4`, `X-Content-Type-Options: n
 `Content-Security-Policy: sandbox; default-src 'none'`, `Cache-Control: no-store` and an RFC 5987 filename;
 `?download=1` switches to `Content-Disposition: attachment`. Unprocessed or failed recordings are never served. Every
 admin playback or download is audited.
+
+Upload protocol details: `seq` counts from 0 with one request in flight; resending a `seq` replaces it. `CONFLICT`
+reasons: `not_recording` (stop uploading), `chunk_gap` (resend from `details.expected`), `chunk_count_mismatch`
+(`details.stored`), `recording_busy` (another recording is active). Unknown recording ids answer 403 on the chunk and
+complete routes. `416` responses carry `Content-Range: bytes */<size>`. `sizeBytes` is null until the recording is
+ready. Stop answers `RECORDING_NOT_ALLOWED` for guests and participants; stop only ends the indicator, chunks are still
+accepted until `complete`.
 
 ## 9. Admin
 
