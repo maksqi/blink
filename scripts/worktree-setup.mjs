@@ -25,7 +25,8 @@ const capture = (cmd, args) => execFileSync(cmd, args, { encoding: 'utf8' }).tri
 run('pnpm', ['install', '--frozen-lockfile', '--prefer-offline'])
 
 // 2. Per-agent database on the shared dev Postgres container.
-const psql = (sql) => capture('docker', ['exec', 'blinq-dev-postgres-1', 'psql', '-U', 'blinq', '-d', 'postgres', '-tAc', sql])
+const psql = (sql) =>
+  capture('docker', ['exec', 'blinq-dev-postgres-1', 'psql', '-U', 'blinq', '-d', 'postgres', '-tAc', sql])
 try {
   if (psql(`SELECT 1 FROM pg_database WHERE datname = '${database}'`) !== '1') {
     psql(`CREATE DATABASE "${database}" OWNER blinq`)
@@ -45,7 +46,12 @@ const overrides = {
 const lines = readFileSync('.env', 'utf8')
   .split('\n')
   .filter((line) => !Object.keys(overrides).some((key) => line.startsWith(`${key}=`)))
-writeFileSync('.env', `${lines.join('\n').trimEnd()}\n\n# worktree-setup (${agent})\n${Object.entries(overrides).map(([k, v]) => `${k}=${v}`).join('\n')}\n`)
+writeFileSync(
+  '.env',
+  `${lines.join('\n').trimEnd()}\n\n# worktree-setup (${agent})\n${Object.entries(overrides)
+    .map(([k, v]) => `${k}=${v}`)
+    .join('\n')}\n`,
+)
 
 // 4. Migrations.
 run('pnpm', ['cli', 'migrate'])
@@ -55,4 +61,4 @@ if (existsSync('scripts/vendor-assets.mjs')) run('node', ['scripts/vendor-assets
 
 console.log(`\nworktree ready: agent=${agent} port=${port} database=${database}`)
 console.log(`start the app with: pnpm dev   (http://localhost:${port})`)
-console.log('run E2E with:       sh scripts/e2e.sh --project=chromium tests/e2e/<area>   (stop pnpm dev first; docs/TESTING.md)')
+console.log('run E2E with:       sh scripts/e2e.sh --project=chromium tests/e2e/<area>   (stop pnpm dev first)')
