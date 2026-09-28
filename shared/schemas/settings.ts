@@ -40,8 +40,15 @@ export type SettingKey = keyof Settings
 
 export const SETTINGS_DEFAULTS: Settings = settingsSchema.parse({})
 
-/** PUT /api/admin/settings accepts a partial update; the server re-validates the merged result. */
-export const settingsUpdateSchema = settingsSchema.partial().strict()
+/**
+ * PUT /api/admin/settings accepts a partial update; the server re-validates the merged result.
+ * Built from the unwrapped field types: with zod 4, `.partial()` over `.default()` fields would fill in defaults for
+ * keys the client did not send and silently reset them.
+ */
+const updateShape = Object.fromEntries(
+  Object.entries(settingsSchema.shape).map(([key, field]) => [key, field.unwrap().optional()]),
+) as { [K in keyof typeof settingsSchema.shape]: z.ZodOptional<ReturnType<(typeof settingsSchema.shape)[K]['unwrap']>> }
+export const settingsUpdateSchema = z.object(updateShape).strict()
 export type SettingsUpdate = z.infer<typeof settingsUpdateSchema>
 
 /** GET /api/config — public, cacheable client configuration (no secrets). */

@@ -41,6 +41,10 @@ const envSchema = z
     // --- Public identity -------------------------------------------------------------------------------------
     DOMAIN: optionalString,
     PUBLIC_URL: optionalString,
+    /** TURN over TLS hostname (optional). The app only reports it; Caddy and LiveKit consume it. */
+    TURN_DOMAIN: optionalString,
+    /** Test setups only: allow NITRO_HOST to be non-loopback (e.g. E2E behind a Linux bridge). Never in production. */
+    ALLOW_PUBLIC_BIND: bool.default(false),
 
     // --- Secrets -----------------------------------------------------------------------------------------------
     APP_SECRET: secret('APP_SECRET', 32),

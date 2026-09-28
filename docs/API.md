@@ -35,7 +35,7 @@ review.
 - **CSRF**: every `POST`, `PUT`, `PATCH` and `DELETE` needs `Origin` equal to the origin of `PUBLIC_URL`, and
   `Sec-Fetch-Site: same-origin` when that header is present; otherwise 403 `CSRF_REJECTED`. `Host` and
   `X-Forwarded-Host` are never trusted. `POST /api/webhooks/livekit` is exempt (signature auth, never public).
-- **Client IP** comes from the loopback proxy (`X-Forwarded-For`, last hop, trusted only from 127.0.0.1). IPv6
+- **Client IP** comes from the loopback proxy (the first `X-Forwarded-For` entry, trusted only when the TCP peer is loopback — Caddy replaces untrusted values). IPv6
   addresses are keyed by their /64.
 
 ### 1.2 Rate limits (decision on all numbers)
