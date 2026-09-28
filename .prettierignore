@@ -1,0 +1,13 @@
+pnpm-lock.yaml
+.nuxt
+.output
+.data
+node_modules
+coverage
+playwright-report
+test-results
+public/vendor
+server/database/migrations
+app/components/ui
+.claude
+**/*.md

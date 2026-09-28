@@ -1,0 +1,16 @@
+# blinq is a single-package repository.
+# This file marks the workspace root so pnpm never walks up into an unrelated parent workspace,
+# and it holds the pnpm settings for the project.
+
+# Only install package versions that have been public for at least one day (supply-chain safety).
+minimumReleaseAge: 1440
+
+# pnpm 11 blocks dependency install scripts unless explicitly allowed (true) or denied (false) here.
+# Review every new entry: install scripts run with the developer's privileges.
+allowBuilds:
+  # Verifies/links the platform-specific esbuild binary (used by tsx and the CLI bundler).
+  esbuild: true
+  # Selects the Vue 3 build of vue-demi (transitive via reka-ui and @tanstack/vue-form).
+  vue-demi: true
+  # Installs the platform-specific native resolver binary (transitive via @nuxt/eslint -> eslint-plugin-import-x).
+  unrs-resolver: true

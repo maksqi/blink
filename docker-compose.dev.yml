@@ -1,0 +1,88 @@
+# Shared local development stack. Start it with `pnpm dev:deps`.
+# Never run `docker compose down` on it while sub-agents are working.
+# Dev-only credentials below match .env.dev.example. They are not secrets and must never be used in production.
+name: blinq-dev
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: blinq
+      POSTGRES_PASSWORD: blinq-dev
+      POSTGRES_DB: blinq
+    ports:
+      # 55432 because a local Postgres often owns 5432.
+      - "127.0.0.1:${DEV_PG_PORT:-55432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      # TCP check: the temporary init server only listens on the socket, so this cannot report healthy too early.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U blinq -d blinq"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+
+  livekit:
+    image: livekit/livekit-server:v1.13.7
+    restart: unless-stopped
+    command: ["--node-ip", "${LIVEKIT_NODE_IP:?start via pnpm dev:deps (sets LIVEKIT_NODE_IP from scripts/detect-ip.sh)}"]
+    environment:
+      LIVEKIT_CONFIG: |
+        port: 7880
+        rtc:
+          tcp_port: 7881
+          udp_port: 7882
+          use_external_ip: false
+        keys:
+          devkey: dev-only-livekit-secret-not-for-production-000000
+        webhook:
+          api_key: devkey
+          urls:
+            - http://host.docker.internal:3000/api/webhooks/livekit
+            - http://host.docker.internal:3001/api/webhooks/livekit
+            - http://host.docker.internal:3002/api/webhooks/livekit
+            - http://host.docker.internal:3003/api/webhooks/livekit
+            - http://host.docker.internal:3004/api/webhooks/livekit
+            - http://host.docker.internal:3005/api/webhooks/livekit
+        room:
+          auto_create: false
+          empty_timeout: 300
+          departure_timeout: 20
+          max_participants: 25
+          enable_remote_unmute: false
+        logging:
+          level: info
+          pion_level: error
+    ports:
+      - "127.0.0.1:7880:7880"
+      # Media ports are bound to the LAN IP that LiveKit advertises in its ICE candidates.
+      - "${LIVEKIT_NODE_IP}:7881:7881"
+      - "${LIVEKIT_NODE_IP}:7882:7882/udp"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:7880/"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  mailpit:
+    image: axllent/mailpit:v1.31.3
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  pgdata:

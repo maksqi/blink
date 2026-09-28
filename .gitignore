@@ -1,0 +1,49 @@
+# Nuxt / Nitro build output
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+
+# Dependencies
+node_modules
+
+# Logs
+logs
+*.log
+
+# Tests
+coverage
+playwright-report
+test-results
+blob-report
+tests/e2e/.auth
+
+# Misc
+.DS_Store
+.fleet
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Local env files (secrets)
+.env
+.env.*
+!.env.example
+!.env.dev.example
+
+# Claude Code worktrees for parallel sub-agents
+.claude/worktrees/
+.claude/settings.local.json
+
+# Vendored browser assets are copied from node_modules at install/build time
+public/vendor/*
+!public/vendor/mediapipe/
+public/vendor/mediapipe/*
+!public/vendor/mediapipe/*.tflite
+!public/vendor/mediapipe/README.md
+
+# Local data (dev recordings, temp)
+/data
+/tmp

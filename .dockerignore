@@ -1,0 +1,31 @@
+# Secrets never enter the build context.
+.env
+.env.*
+!.env.example
+!.env.dev.example
+
+# VCS, agents, editors
+.git
+.claude
+.github
+.idea
+.vscode
+.DS_Store
+
+# Build output and caches (rebuilt inside the image)
+node_modules
+.nuxt
+.output
+.nitro
+.cache
+.data
+dist
+coverage
+playwright-report
+test-results
+blob-report
+
+# Local data
+data
+tmp
+*.log
