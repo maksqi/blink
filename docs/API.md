@@ -350,6 +350,12 @@ update rows and meetings.
 
 ## 11. Test-only (none in production)
 
+Approved as built by rooms-backend: `LIVEKIT_URL=fake://…` selects the in-memory adapter only in test builds
+(plain `pnpm dev` refuses it); `GET /api/__test/livekit-calls[?room=]` returns `[{ method, args, at }]` and is 404 in
+every other build. Client-facing join/lobby/in-call behavior decisions are listed in the last section of
+`docs/stages/04-rooms-invites-join.md`.
+
+
 Production builds contain no test endpoints. `pnpm build:test` (`BLINQ_TEST_HOOKS=1`) adds only the page `/dev/call`
 (`app/dev/CallHarness.vue`) and `window.__blinqTest` (`app/lib/contracts/test-hooks.ts`); CI asserts both are absent
 from the production build. Proposed for API tests (decision, needs orchestrator approval before anyone builds it): in

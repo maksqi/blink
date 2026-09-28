@@ -30,6 +30,8 @@ export interface JoinInfo {
   yourRole: ParticipantRole
   signedIn: boolean
   guestsAllowed: boolean
+  /** Room policy for pre-join defaults (filled by the join service; optional until every caller sends it). */
+  muteOnJoin?: boolean
 }
 
 export interface JoinGrant {

@@ -123,7 +123,7 @@ All derivations use HKDF-SHA256 via WebCrypto. The exact info strings are in [`A
   - Absolute lifetime of 30 days, idle lifetime of 7 days. The validation cache is at most 30 s.
   - Rotated on login and privilege change. Revoked on password change, disable or admin action; this also removes
     the user from live LiveKit rooms.
-- **Guest sessions:** a per-room cookie `__Host-blinq_g_<slug>`, expiring with the meeting or after 24 h.
+- **Guest sessions:** a per-room cookie `__Host-blinq_g_<slug>`, valid for 12 h.
 - **Bootstrap admin:**
   - Created from `ADMIN_EMAIL`/`ADMIN_PASSWORD` only when no admin exists and bootstrap has never run.
   - The account must change its password on first login; until then every other API answers
