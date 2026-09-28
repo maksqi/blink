@@ -103,6 +103,7 @@ describe('redactText', () => {
     ['jwt eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl done', `jwt ${REDACTED} done`],
     ['hash $argon2id$v=19$m=19456,t=2,p=1$c2FsdA$aGFzaA end', `hash ${REDACTED} end`],
     [`plain ${token} text`, `plain ${REDACTED} text`],
+    ['Failed query: select 1 where id = $1\nparams: a@example.test,abc', `Failed query: select 1 where id = $1\nparams: ${REDACTED}`],
   ])('%s', (input, expected) => {
     expect(redactText(input)).toBe(expected)
   })

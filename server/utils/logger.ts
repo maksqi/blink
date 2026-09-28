@@ -167,6 +167,8 @@ const TEXT_RULES: Array<[RegExp, string]> = [
   // JWTs (LiveKit tokens, webhook signatures).
   [/\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/g, REDACTED],
   [/\$argon2(?:id|i|d)\$[^\s"']+/g, REDACTED],
+  // Drizzle puts bound query parameters (hashes, emails, ...) into error messages: "Failed query: ...\nparams: ...".
+  [/(\nparams: )[^\n]*/g, `$1${REDACTED}`],
   // Opaque 32-byte tokens and join proofs (43 base64url characters).
   [/(?<![A-Za-z0-9_-])[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])/g, REDACTED],
 ]
