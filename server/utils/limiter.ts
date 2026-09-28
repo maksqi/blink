@@ -209,6 +209,7 @@ export async function checkLoginAllowed(keys: string[], now: Date = new Date()):
 
 export async function recordLoginFailure(keys: string[], now: Date = new Date()): Promise<void> {
   const db = useDb()
+  // Raw sql fragments get ISO strings: the postgres-js driver does not serialize Date parameters there.
   const staleBefore = new Date(now.getTime() - LOGIN_FAILURE_WINDOW_MS)
   for (const key of new Set(keys)) {
     // One atomic upsert per key, so parallel failures never lose a count.
@@ -218,17 +219,20 @@ export async function recordLoginFailure(keys: string[], now: Date = new Date())
       .onConflictDoUpdate({
         target: loginThrottle.key,
         set: {
-          failures: sql`case when ${loginThrottle.updatedAt} < ${staleBefore} then 1 else ${loginThrottle.failures} + 1 end`,
+          failures: sql`case when ${loginThrottle.updatedAt} < ${staleBefore.toISOString()}::timestamptz then 1 else ${loginThrottle.failures} + 1 end`,
           updatedAt: now,
         },
       })
       .returning({ failures: loginThrottle.failures })
     const delay = backoffDelayMs(row?.failures ?? 1)
     if (delay > 0) {
-      const next = new Date(now.getTime() + delay)
+      const next = new Date(now.getTime() + delay).toISOString()
       await db
         .update(loginThrottle)
-        .set({ nextAllowedAt: sql`greatest(coalesce(${loginThrottle.nextAllowedAt}, ${next}), ${next})`, updatedAt: now })
+        .set({
+          nextAllowedAt: sql`greatest(coalesce(${loginThrottle.nextAllowedAt}, ${next}::timestamptz), ${next}::timestamptz)`,
+          updatedAt: now,
+        })
         .where(eq(loginThrottle.key, key))
     }
   }
