@@ -23,7 +23,14 @@ export default async function setup(project: TestProject) {
   await buildTestServer(join(logDir, 'api-build.log'))
 
   const urls = resolveDatabaseUrls()
-  await recreateDatabase(urls.admin, urls.testName)
+  try {
+    await recreateDatabase(urls.admin, urls.testName)
+  } catch (error) {
+    const where = new URL(urls.admin).host
+    throw new Error(`Cannot prepare the test database on ${where} (is the dev stack running? pnpm dev:deps): ${String(error)}`, {
+      cause: error,
+    })
+  }
   const env = buildServerEnv({
     databaseUrl: urls.test,
     recordingsDir: join(dataDir, 'recordings'),

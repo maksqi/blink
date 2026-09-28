@@ -8,13 +8,19 @@
  *   Usable from test files too (e.g. a second server without a database).
  * - `runCli(args, env, stdin?)`: runs the bundled `.output/server/cli.mjs`.
  */
-import { execFileSync, spawn } from 'node:child_process'
+import { type ChildProcess, execFileSync, spawn } from 'node:child_process'
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { dirname, join } from 'node:path'
 import { REPO_ROOT } from './environment'
 
 const LOCK_DIR = process.env.BLINQ_LOCK_DIR ?? '/tmp/blinq-heavy.lock'
+
+// Servers write to log files, so they would outlive a crashed test run: kill whatever is left when we exit.
+const servers = new Set<ChildProcess>()
+process.once('exit', () => {
+  for (const child of servers) child.kill('SIGKILL')
+})
 
 function tail(file: string, lines = 60): string {
   if (!existsSync(file)) return ''
@@ -110,10 +116,12 @@ export async function startTestServer(
     },
   })
   closeSync(fd)
+  servers.add(child)
   let exited: number | null | undefined
   const exit = new Promise<void>((resolve) =>
     child.once('exit', (code) => {
       exited = code
+      servers.delete(child)
       resolve()
     }),
   )
