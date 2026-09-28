@@ -1,4 +1,8 @@
-// Stub (W0a). Owner: auth (Stage 02). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('auth')
+// GET /api/auth/sessions (auth, docs/API.md §3): the caller's active sessions.
+import { listOwnSessions } from '../../../services/auth/sessions'
+import { requireUser } from '../../../utils/auth'
+
+export default defineEventHandler(async (event) => {
+  await requireUser(event)
+  return { items: await listOwnSessions(event) }
 })

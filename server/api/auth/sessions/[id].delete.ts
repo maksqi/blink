@@ -1,4 +1,9 @@
-// Stub (W0a). Owner: auth (Stage 02). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('auth')
+// DELETE /api/auth/sessions/:id (auth, docs/API.md §3): revoke one of the caller's own sessions (204).
+import { revokeOwnSession } from '../../../services/auth/sessions'
+import { requireUser } from '../../../utils/auth'
+
+export default defineEventHandler(async (event) => {
+  await requireUser(event)
+  await revokeOwnSession(event, getRouterParam(event, 'id') ?? '')
+  return null
 })
