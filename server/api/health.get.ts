@@ -1,4 +1,2 @@
-// Stub (W0a). Owner: server-core (Stage 01). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('server-core')
-})
+// GET /api/health (server-core): liveness only, never touches the database (docs/API.md §2).
+export default defineEventHandler(() => ({ status: 'ok' as const }))
