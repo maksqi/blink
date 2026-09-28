@@ -125,7 +125,8 @@ Not public (loopback or socket only; keep them closed):
 | 2020/tcp | Caddy health | bound to 127.0.0.1 | `CADDY_HEALTH_PORT` |
 | unix socket | PostgreSQL | no network at all (`network_mode: none`) | — |
 
-`sh scripts/smoke-prod.sh` checks exactly this list on the running stack (`ss`-style listener check).
+The production smoke test (`sh scripts/smoke-prod.sh`) starts a test stack and fails if anything outside these two
+tables listens.
 
 ### Firewall
 

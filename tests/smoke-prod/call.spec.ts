@@ -6,10 +6,10 @@ import { AccessToken, RoomServiceClient } from 'livekit-server-sdk'
 import { smoke } from './support'
 
 /**
- * Transport-level call (decision, until the /m/[slug] UI exists; Stage 10 switches this to the real UI flow): the room
- * is created through RoomService on loopback, tokens are minted here, and livekit-client's UMD build is injected into
- * a same-origin page. That injection is the only reason this spec (and no other) runs with bypassCSP. Signaling goes
- * through Caddy (wss://DOMAIN/rtc), media straight to LiveKit on the host network.
+ * Transport-level calls (decision, until the /m/[slug] UI exists; Stage 10 switches them to the real UI flow): the
+ * room is created through RoomService on loopback, tokens are minted here, and livekit-client's UMD build is injected
+ * into a same-origin page. That injection is the only reason this spec (and no other) runs with bypassCSP. Signaling
+ * goes through Caddy (wss://DOMAIN/rtc), media straight to LiveKit on the host network.
  */
 
 const LIVEKIT_UMD = readFileSync(
@@ -30,13 +30,67 @@ interface Candidate {
   candidateType: string
 }
 
+interface IceSummary {
+  /** Host candidates the SFU offered. */
+  offered: Candidate[]
+  /** The selected pair of every connected peer connection. */
+  selected: { local: Candidate; remote: Candidate }[]
+}
+
 test('a Chromium and a Firefox participant exchange audio and video through Caddy and LiveKit', async () => {
   test.setTimeout(150_000)
+  await withCall({ relayOnly: false }, async (participants) => {
+    await expectMediaBothWays(participants)
+
+    // What the SFU offered: every IPv4 host candidate is LIVEKIT_NODE_IP (so no Docker bridge address leaks) and every
+    // UDP one uses a port from the configured range. LiveKit also offers the host's own IPv6 addresses.
+    const [start, end] = smoke.rtcPortRange()
+    for (const [name, page] of participants) {
+      const { offered, selected } = await iceSummary(page)
+      const detail = JSON.stringify({ offered, selected })
+      test.info().annotations.push({ type: `ICE (${name})`, description: detail })
+      const ipv4 = offered.filter((candidate) => /^\d+\.\d+\.\d+\.\d+$/.test(candidate.address))
+      expect(ipv4.length, `${name}: the SFU offers IPv4 candidates: ${detail}`).toBeGreaterThan(0)
+      for (const candidate of ipv4) {
+        expect(candidate.address, `${name}: IPv4 candidates advertise LIVEKIT_NODE_IP: ${detail}`).toBe(smoke.nodeIp())
+      }
+      for (const candidate of offered.filter((c) => c.protocol === 'udp')) {
+        expect(candidate.port, `${name}: UDP media ports are in ${start}-${end}: ${detail}`).toBeGreaterThanOrEqual(
+          start,
+        )
+        expect(candidate.port, `${name}: UDP media ports are in ${start}-${end}: ${detail}`).toBeLessThanOrEqual(end)
+      }
+      expect(selected.length, `${name}: the connections to the SFU have a selected pair: ${detail}`).toBeGreaterThan(0)
+    }
+  })
+})
+
+// Relay only, as behind a firewall that allows no direct media: both browsers reach the SFU through LiveKit's embedded
+// TURN server. The SFU's address is private here, so this also proves turn.allow_restricted_peer_cidrs. Browsers
+// reject the internal CA for TURN over TLS, so they relay over TURN/UDP; TURN/TLS itself is checked in routing.spec.ts.
+test('a relay-only Chromium and Firefox call goes through LiveKit TURN', async () => {
+  test.setTimeout(150_000)
+  await withCall({ relayOnly: true }, async (participants) => {
+    await expectMediaBothWays(participants)
+    for (const [name, page] of participants) {
+      const { selected } = await iceSummary(page)
+      const detail = JSON.stringify(selected)
+      test.info().annotations.push({ type: `relay (${name})`, description: detail })
+      expect(selected.length, `${name}: connected through TURN: ${detail}`).toBeGreaterThan(0)
+      for (const pair of selected) expect(pair.local.candidateType, `${name}: ${detail}`).toBe('relay')
+    }
+  })
+})
+
+/** Creates a room, puts a Chromium and a Firefox participant into it, runs `body`, and cleans everything up. */
+async function withCall(
+  options: { relayOnly: boolean },
+  body: (participants: [string, Page][]) => Promise<void>,
+): Promise<void> {
   const roomName = `smoke-${Date.now()}-${randomBytes(3).toString('hex')}`
   const rooms = new RoomServiceClient(smoke.livekitUrl(), smoke.livekitKey(), smoke.livekitSecret())
   // LiveKit runs with room.auto_create false: an unknown room cannot be joined.
   await rooms.createRoom({ name: roomName, emptyTimeout: 60, maxParticipants: 2 })
-
   const browsers: Browser[] = []
   try {
     const chrome = await chromium.launch({
@@ -55,58 +109,35 @@ test('a Chromium and a Firefox participant exchange audio and video through Cadd
       },
     })
     browsers.push(fox)
-
-    const participants: [string, Page][] = [
-      ['chromium', await enterRoom(chrome, 'smoke-chromium', roomName, ['camera', 'microphone'])],
-      ['firefox', await enterRoom(fox, 'smoke-firefox', roomName, [])],
-    ]
-
-    for (const [name, page] of participants) {
-      await expect
-        .poll(
-          async () => {
-            const now = await received(page)
-            return now.videoBytes > 0 && now.audioBytes > 0 && now.framesDecoded > 0
-          },
-          { timeout: 60_000, message: `${name} decodes the other side's video and receives its audio` },
-        )
-        .toBe(true)
-      // Media keeps flowing.
-      const before = await received(page)
-      await page.waitForTimeout(2_000)
-      const after = await received(page)
-      expect(after.framesDecoded, `${name}: remote video frames keep arriving`).toBeGreaterThan(before.framesDecoded)
-      expect(after.audioBytes, `${name}: remote audio keeps arriving`).toBeGreaterThan(before.audioBytes)
-    }
-
-    // What the SFU offered: every IPv4 host candidate is LIVEKIT_NODE_IP (so no Docker bridge address leaks) and every
-    // UDP one uses a port from the configured range. LiveKit also offers the host's own IPv6 addresses.
-    const [start, end] = smoke.rtcPortRange()
-    for (const [name, page] of participants) {
-      const { offered, selected } = await sfuCandidates(page)
-      const detail = JSON.stringify({ offered, selected })
-      test.info().annotations.push({ type: `SFU candidates (${name})`, description: detail })
-      const ipv4 = offered.filter((candidate) => /^\d+\.\d+\.\d+\.\d+$/.test(candidate.address))
-      expect(ipv4.length, `${name}: the SFU offers IPv4 candidates: ${detail}`).toBeGreaterThan(0)
-      for (const candidate of ipv4) {
-        expect(candidate.address, `${name}: IPv4 candidates advertise LIVEKIT_NODE_IP: ${detail}`).toBe(smoke.nodeIp())
-      }
-      for (const candidate of offered.filter((c) => c.protocol === 'udp')) {
-        expect(candidate.port, `${name}: UDP media ports are in ${start}-${end}: ${detail}`).toBeGreaterThanOrEqual(
-          start,
-        )
-        expect(candidate.port, `${name}: UDP media ports are in ${start}-${end}: ${detail}`).toBeLessThanOrEqual(end)
-      }
-      expect(
-        selected.length,
-        `${name}: every connection to the SFU has a selected candidate pair: ${detail}`,
-      ).toBeGreaterThan(0)
-    }
+    await body([
+      ['chromium', await enterRoom(chrome, 'smoke-chromium', roomName, ['camera', 'microphone'], options.relayOnly)],
+      ['firefox', await enterRoom(fox, 'smoke-firefox', roomName, [], options.relayOnly)],
+    ])
   } finally {
     await Promise.all(browsers.map((browser) => browser.close()))
     await rooms.deleteRoom(roomName).catch(() => {})
   }
-})
+}
+
+async function expectMediaBothWays(participants: [string, Page][]): Promise<void> {
+  for (const [name, page] of participants) {
+    await expect
+      .poll(
+        async () => {
+          const now = await received(page)
+          return now.videoBytes > 0 && now.audioBytes > 0 && now.framesDecoded > 0
+        },
+        { timeout: 60_000, message: `${name} decodes the other side's video and receives its audio` },
+      )
+      .toBe(true)
+    // Media keeps flowing.
+    const before = await received(page)
+    await page.waitForTimeout(2_000)
+    const after = await received(page)
+    expect(after.framesDecoded, `${name}: remote video frames keep arriving`).toBeGreaterThan(before.framesDecoded)
+    expect(after.audioBytes, `${name}: remote audio keeps arriving`).toBeGreaterThan(before.audioBytes)
+  }
+}
 
 async function token(identity: string, roomName: string): Promise<string> {
   const accessToken = new AccessToken(smoke.livekitKey(), smoke.livekitSecret(), {
@@ -118,7 +149,13 @@ async function token(identity: string, roomName: string): Promise<string> {
   return accessToken.toJwt()
 }
 
-async function enterRoom(browser: Browser, identity: string, roomName: string, permissions: string[]): Promise<Page> {
+async function enterRoom(
+  browser: Browser,
+  identity: string,
+  roomName: string,
+  permissions: string[],
+  relayOnly: boolean,
+): Promise<Page> {
   const context = await browser.newContext({
     baseURL: smoke.baseURL,
     bypassCSP: true,
@@ -128,7 +165,7 @@ async function enterRoom(browser: Browser, identity: string, roomName: string, p
   const page = await context.newPage()
   // Any page of the app gives the origin; the client library is injected into it.
   await page.goto('/login')
-  // Keep a reference to every peer connection, for the full ICE statistics (a receiver reports only its own pair).
+  // Keep every peer connection for the full ICE statistics (a receiver reports only its own pair).
   await page.evaluate(() => {
     const connections: RTCPeerConnection[] = []
     const Original = globalThis.RTCPeerConnection
@@ -142,13 +179,13 @@ async function enterRoom(browser: Browser, identity: string, roomName: string, p
   })
   await page.addScriptTag({ content: LIVEKIT_UMD })
   await page.evaluate(
-    async ({ url, jwt }) => {
+    async ({ url, jwt, relay }) => {
       // The part of the UMD global this page uses.
       type Attachable = { attach(): HTMLMediaElement }
       interface Client {
         Room: new () => {
           on(event: string, listener: (track: Attachable) => void): void
-          connect(url: string, token: string): Promise<void>
+          connect(url: string, token: string, options?: { rtcConfig?: RTCConfiguration }): Promise<void>
           localParticipant: { enableCameraAndMicrophone(): Promise<void> }
         }
         RoomEvent: { TrackSubscribed: string }
@@ -162,10 +199,11 @@ async function enterRoom(browser: Browser, identity: string, roomName: string, p
         element.muted = true
         document.body.append(element)
       })
-      await room.connect(url, jwt)
+      // The client keeps this policy when it applies the ICE servers from the join response.
+      await room.connect(url, jwt, relay ? { rtcConfig: { iceTransportPolicy: 'relay' } } : undefined)
       await room.localParticipant.enableCameraAndMicrophone()
     },
-    { url: `wss://${smoke.domain}`, jwt: await token(identity, roomName) },
+    { url: `wss://${smoke.domain}`, jwt: await token(identity, roomName), relay: relayOnly },
   )
   return page
 }
@@ -193,11 +231,8 @@ function received(page: Page): Promise<Received> {
   })
 }
 
-/**
- * The SFU's side of every peer connection of the page (publisher and subscriber): the host candidates it offered and
- * the remote candidate of each selected pair.
- */
-function sfuCandidates(page: Page): Promise<{ offered: Candidate[]; selected: Candidate[] }> {
+/** The ICE state of every connected peer connection of the page (publisher and subscriber). */
+function iceSummary(page: Page): Promise<IceSummary> {
   return page.evaluate(async () => {
     type Stat = Record<string, unknown>
     const toCandidate = (stat: Stat) => ({
@@ -208,21 +243,23 @@ function sfuCandidates(page: Page): Promise<{ offered: Candidate[]; selected: Ca
     })
     const connections = (globalThis as unknown as { __smokePeerConnections: RTCPeerConnection[] })
       .__smokePeerConnections
-    const offered: Candidate[] = []
-    const selected: Candidate[] = []
+    const summary: IceSummary = { offered: [], selected: [] }
     for (const connection of connections) {
       if (connection.connectionState !== 'connected') continue
       const report = await connection.getStats()
       const stats = [...report.values()] as Stat[]
-      offered.push(...stats.filter((s) => s.type === 'remote-candidate' && s.candidateType === 'host').map(toCandidate))
+      summary.offered.push(
+        ...stats.filter((s) => s.type === 'remote-candidate' && s.candidateType === 'host').map(toCandidate),
+      )
       // Chromium names the selected pair on the transport; Firefox flags it.
       const transport = stats.find((s) => s.type === 'transport' && typeof s.selectedCandidatePairId === 'string')
       const pair = transport
         ? (report.get(transport.selectedCandidatePairId as string) as Stat | undefined)
         : stats.find((s) => s.type === 'candidate-pair' && s.selected === true)
+      const local = pair ? (report.get(pair.localCandidateId as string) as Stat | undefined) : undefined
       const remote = pair ? (report.get(pair.remoteCandidateId as string) as Stat | undefined) : undefined
-      if (remote) selected.push(toCandidate(remote))
+      if (local && remote) summary.selected.push({ local: toCandidate(local), remote: toCandidate(remote) })
     }
-    return { offered, selected }
+    return summary
   })
 }

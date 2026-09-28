@@ -129,7 +129,8 @@ Set `TLS_MODE` in `.env`:
     on port 443 (verified by the smoke test, §15). Browsers check the TURN server's certificate like any HTTPS
     certificate: until the root is trusted, Chromium and Firefox abort TURN/TLS (Caddy logs `remote error: tls:
     unknown certificate authority`) and fall back to UDP and ICE/TCP, so calls from networks that allow only HTTPS
-    fail on those clients.
+    fail on those clients. TURN over UDP needs no certificate; on a LAN, LiveKit relays to its own private address
+    (the smoke test's relay-only call goes that way).
 - **`files`**: your own certificate. It must cover both `DOMAIN` and `TURN_DOMAIN` (SAN or wildcard). Mount it with a
   `docker-compose.override.yml`:
 
@@ -361,7 +362,8 @@ startup ("using explicit node IP" when `LIVEKIT_NODE_IP` is set, "found external
 - LiveKit also offers the server's IPv6 addresses. If the server has IPv6, open the same ports for IPv6 (ufw does by
   default).
 - Every IPv4 candidate carries `LIVEKIT_NODE_IP`, one per local interface; Docker's default bridge (`docker0`) is
-  excluded. Extra Docker bridge networks of other projects on the same host only add candidates that never connect.
+  excluded. Extra Docker bridge networks of other projects on the same host only add candidates that never connect,
+  but with `LIVEKIT_NODE_IP` empty they can also mislead the STUN detection: set it on such hosts.
 - Without `LIVEKIT_NODE_IP`, LiveKit asks public STUN servers (Twilio, Google) for the address at every start; set it
   to avoid that request.
 
@@ -423,7 +425,9 @@ project name `blinq-smoke`, a throwaway `.env.smoke` and `TLS_MODE=internal` wit
    security headers (HSTS, CSP nonce, the Permissions-Policy override, COOP and CORP, the 308 redirect, `Alt-Svc`),
    routing (`/api/webhooks/*` and `/twirp/*` are 404, 2 MB bodies get 413, 2 MB recording chunks do not), the
    certificates of both names, TURN over TLS through Caddy with PROXY protocol, the login page in Chromium and Firefox
-   under the enforced CSP, and a Chromium ↔ Firefox call with audio and video both ways.
+   under the enforced CSP, and two Chromium ↔ Firefox calls with audio and video both ways: a direct one (every IPv4
+   candidate of the SFU is `LIVEKIT_NODE_IP`, ports from the media range) and a relay-only one through LiveKit's
+   TURN, which relays to the SFU's private address (`turn.allow_restricted_peer_cidrs`).
 6. Restarts the app and checks that migrate and bootstrap ran again, idempotently, with exactly one admin.
 7. Compares the listening sockets with step 1: only the ports of §4 may be new, and 3000, 7880 and 2020 only on
    loopback; nothing on 2019 or 5432.
