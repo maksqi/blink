@@ -96,11 +96,13 @@ Only `shared/utils` and `shared/types` auto-import. Import everything else from 
 - `nuxt.config.ts`, `tsconfig*.json`, `eslint.config.*`, `vitest.config.*`, `playwright.config.*`,
   `drizzle.config.ts`, `components.json`
 - `server/utils/env.ts`, `server/utils/api-error.ts`, `.env.example`, `.env.dev.example`
-- `server/contracts/**`, `app/lib/contracts/**`, `app/lib/e2ee/**` (except `key-vault.ts`), `app/composables/useApi.ts`
+- `server/contracts/**`, `app/lib/contracts/**`, `app/lib/e2ee/**` (except `key-vault.ts`), `app/composables/useApi.ts`,
+  `app/composables/useAuthState.ts`
 - `server/database/schema/**`, `server/database/migrations/**` — never run `drizzle-kit generate` yourself
 - `app/components/ui/**` (shadcn), `app/layouts/**`, app navigation
 - `shared/**` contracts
-- `.github/workflows/**`, `docker-compose.dev.yml`, `.claude/**`
+- `.github/workflows/**`, `docker-compose.dev.yml`, `.claude/**` (local only: `.claude` is git-ignored globally on the
+  maintainer's machine, so `.claude/settings.json` with `worktree.baseRef: "head"` is not committed)
 
 If you need a change here, describe it precisely in your report (file, change, reason). The orchestrator applies
 it centrally.
