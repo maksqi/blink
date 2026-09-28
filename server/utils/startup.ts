@@ -21,6 +21,26 @@ export function bindAddressProblem(input: { host: string | undefined; allowPubli
   )
 }
 
+/**
+ * Fatal message for a failed `listen()` (port in use, permission denied, address not available), or null for any
+ * other error. Nitro's node-server traps uncaught exceptions without exiting, so the caller must exit.
+ */
+export function listenErrorMessage(error: unknown): string | null {
+  const e = error as { syscall?: unknown; code?: unknown; address?: unknown; port?: unknown; message?: unknown } | null
+  if (!e || typeof e !== 'object' || e.syscall !== 'listen') return null
+  const where = `${typeof e.address === 'string' ? e.address : 'all interfaces'}:${typeof e.port === 'number' ? e.port : '?'}`
+  switch (e.code) {
+    case 'EADDRINUSE':
+      return `Cannot listen on ${where}: the port is already in use (is another server still running?). Exiting.`
+    case 'EACCES':
+      return `Cannot listen on ${where}: permission denied. Exiting.`
+    case 'EADDRNOTAVAIL':
+      return `Cannot listen on ${where}: the address is not available on this machine. Exiting.`
+    default:
+      return `Cannot listen on ${where}: ${String(e.code ?? e.message ?? 'unknown error')}. Exiting.`
+  }
+}
+
 export function startupSummary(input: {
   version: string
   publicUrl: string
