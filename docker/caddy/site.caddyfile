@@ -1,0 +1,74 @@
+# The blinq site: the app and LiveKit signaling on one origin (docs/ARCHITECTURE.md §2), so the CSP can say
+# connect-src 'self'. Security headers other than HSTS come from the app (nuxt-security) and pass through unchanged.
+# trusted_proxies is never set: Caddy then replaces any client-sent X-Forwarded-For, which the app's limiters rely on.
+{$DOMAIN} {
+	import blinq_site_tls
+
+	# Every response, including errors and /rtc. A separate directive, because a header block that deletes a field
+	# is deferred and would miss the responses Caddy itself generates (413, 502).
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header -Server
+
+	# JSON access log on stdout. livekit-client sends its token as ?access_token=; t and k are the names of the invite
+	# token and room key, which live in the URL fragment and must never show up here even by mistake. Cookie,
+	# Set-Cookie and Authorization values are logged as REDACTED by Caddy's defaults (log_credentials stays off).
+	log {
+		output stdout
+		format filter {
+			wrap json
+			request>uri query {
+				replace access_token REDACTED
+				replace t REDACTED
+				replace k REDACTED
+			}
+			resp_headers>Set-Cookie delete
+		}
+	}
+
+	# Text-based responses only. Not text/event-stream (the waiting-room SSE), which must reach the browser at once.
+	encode {
+		zstd
+		gzip
+		match {
+			header Content-Type text/html*
+			header Content-Type text/css*
+			header Content-Type text/plain*
+			header Content-Type text/javascript*
+			header Content-Type application/javascript*
+			header Content-Type application/json*
+			header Content-Type application/manifest+json*
+			header Content-Type application/wasm*
+			header Content-Type image/svg+xml*
+		}
+	}
+
+	# LiveKit signaling (/rtc/v1, /rtc/v1/validate and the legacy /rtc paths). /twirp (RoomService) is never proxied:
+	# it reaches the app and gets a 404.
+	@rtc path /rtc /rtc/*
+	handle @rtc {
+		reverse_proxy 127.0.0.1:{$LIVEKIT_HTTP_PORT}
+	}
+
+	# LiveKit posts webhooks to the app on loopback; they are never reachable from outside.
+	@webhooks path /api/webhooks /api/webhooks/*
+	handle @webhooks {
+		respond 404
+	}
+
+	# Recording chunk uploads are the only large request bodies. The handlers are mutually exclusive on purpose: two
+	# request_body directives on one request would both wrap the body, and the smaller limit would win.
+	@chunks path_regexp ^/api/recordings/[^/]+/chunks/[^/]+$
+	handle @chunks {
+		request_body {
+			max_size 20MB
+		}
+		reverse_proxy 127.0.0.1:{$APP_PORT}
+	}
+
+	handle {
+		request_body {
+			max_size 1MB
+		}
+		reverse_proxy 127.0.0.1:{$APP_PORT}
+	}
+}

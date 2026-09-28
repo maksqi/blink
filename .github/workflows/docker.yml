@@ -1,7 +1,8 @@
 name: docker
 
-# Compose validation now; the image build and the production smoke test switch on by themselves once infra
-# (Stage 09a) adds the Dockerfile and scripts/smoke-prod.sh. Actions are pinned by commit SHA.
+# Production images and the production smoke test (Stage 09a; docs/DEPLOYMENT.md §15, docs/TESTING.md §8). Nothing is
+# pushed. No untrusted event input reaches a `run:` script. Actions are pinned by commit SHA; the comment names the
+# release.
 on:
   push:
     branches: [main]
@@ -24,48 +25,121 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: docker compose config
+      - name: Development and e2e compose files
         run: |
           LIVEKIT_NODE_IP=127.0.0.1 docker compose -f docker-compose.dev.yml config --quiet
           docker compose -f docker/e2e/compose.yml config --quiet
           COMPOSE_PROFILES=linux docker compose -f docker/e2e/compose.yml config --quiet
-          # The production compose file (Stage 09a) is checked with the documented placeholders of .env.example.
-          for file in compose.yml compose.yaml docker-compose.yml docker-compose.yaml; do
-            if [ -f "$file" ]; then
-              docker compose --env-file .env.example -f "$file" config --quiet
-            fi
-          done
+      - name: Production compose file (TURN on and off, a missing secret)
+        # Interpolation only, with the documented placeholders of .env.example; nothing starts.
+        run: |
+          docker compose --env-file .env.example -f docker-compose.yml config --quiet
+          TURN_DOMAIN='' LIVEKIT_NODE_IP=203.0.113.10 docker compose --env-file .env.example -f docker-compose.yml config --quiet
+          if APP_SECRET='' docker compose --env-file .env.example -f docker-compose.yml config --quiet 2> missing.txt; then
+            echo "::error::docker compose config accepted an empty APP_SECRET"
+            exit 1
+          fi
+          cat missing.txt
+          grep -q 'APP_SECRET' missing.txt
 
   image:
-    name: Image build
-    runs-on: ubuntu-24.04
+    name: Images (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    # Native runners: the app image carries the native @node-rs/argon2 binding of its architecture.
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Is there a Dockerfile yet?
-        id: dockerfile
-        run: |
-          if [ -f Dockerfile ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No Dockerfile yet (Stage 09a, infra); skipping the image build."
-          fi
+      - name: Version
+        id: version
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
       - name: Set up Docker Buildx
-        if: steps.dockerfile.outputs.present == 'true'
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - name: Build the image (not pushed)
-        if: steps.dockerfile.outputs.present == 'true'
+      - name: App image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           push: false
           load: true
-          tags: blinq:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: blinq-app:ci
+          build-args: |
+            BLINQ_VERSION=${{ steps.version.outputs.version }}
+            BLINQ_REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=app-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=app-${{ matrix.arch }}
+      - name: Caddy image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: docker/caddy
+          push: false
+          load: true
+          tags: blinq-caddy:ci
+          cache-from: type=gha,scope=caddy-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=caddy-${{ matrix.arch }}
+      - name: Native binaries load in the images
+        run: |
+          docker run --rm --entrypoint node blinq-app:ci -e "
+            require('/app/.output/server/node_modules/@node-rs/argon2')
+              .hash('probe', { algorithm: 2 })
+              .then((hash) => console.log('argon2 ok:', hash.slice(0, 9)))
+          "
+          docker run --rm --entrypoint /usr/local/bin/ffmpeg blinq-app:ci -hide_banner -version | head -n 1
+          docker run --rm --entrypoint caddy blinq-caddy:ci list-modules | grep -x 'layer4.handlers.proxy'
+
+  smoke:
+    name: Production smoke test (amd64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install (the Playwright container loads the pure-JS packages from node_modules)
+        run: pnpm install --frozen-lockfile
+      - name: Version
+        id: version
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: App image (blinq-app:local)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          push: false
+          load: true
+          tags: blinq-app:local
+          build-args: |
+            BLINQ_VERSION=${{ steps.version.outputs.version }}
+            BLINQ_REVISION=${{ github.sha }}
+          cache-from: type=gha,scope=app-amd64
+      - name: Caddy image (blinq-caddy:local)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: docker/caddy
+          push: false
+          load: true
+          tags: blinq-caddy:local
+          cache-from: type=gha,scope=caddy-amd64
       - name: Production smoke test (prod compose, TLS_MODE=internal)
-        if: steps.dockerfile.outputs.present == 'true' && hashFiles('scripts/smoke-prod.sh') != ''
-        run: sh scripts/smoke-prod.sh
+        run: sh scripts/smoke-prod.sh --no-build
+      - name: Upload the smoke logs and report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: smoke-prod
+          path: logs/smoke-prod/
+          retention-days: 7

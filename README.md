@@ -36,12 +36,15 @@ database ever sees your calls or chat in plaintext.
 
 ## Requirements
 
-- A Linux server (x86_64 or arm64) with Docker Engine ≥ 28.0.1 and the Compose plugin. Production uses host
-  networking, so Docker Desktop on macOS or Windows is not supported for production.
+- A Linux server (x86_64 or arm64; Ubuntu 24.04 LTS and Debian 13 are the reference systems) with Docker Engine
+  ≥ 28.0.1 and the Compose v2 plugin (`docker compose`). Production uses host networking, so Docker Desktop on macOS
+  or Windows is not supported for production.
 - A public IPv4 address. 1:1 NAT (common on cloud VMs) works with one extra UDP range (see [Ports](#ports)). Set
   `LIVEKIT_NODE_IP` to the public address.
 - DNS names that point at the server: `DOMAIN` for blinq, and `TURN_DOMAIN` (recommended) for TURN over TLS.
-- The public ports below, open in the host firewall and in any cloud security group.
+- The public ports below, free on the server (no other web server on 80 or 443) and open in the host firewall and in
+  any cloud security group.
+- `sh scripts/preflight.sh` checks all of this on the server before the first start.
 - Sizing: these are estimates until they are measured, see [docs/PERFORMANCE.md](docs/PERFORMANCE.md).
 
   | Use | vCPU | RAM | Bandwidth |
@@ -59,29 +62,44 @@ database ever sees your calls or chat in plaintext.
 
 ## Quick start
 
-> TODO(stage-09a): the `infra` agent completes this section (exact commands, `scripts/preflight.sh`, expected output)
-> and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+The short version for a fresh Linux server. [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) explains every step and option.
 
-1. **DNS.** Create A records (and AAAA, if you have IPv6) for `DOMAIN` and `TURN_DOMAIN` that point at the server.
-2. **Firewall.** Open the public ports from the table below.
-3. **Get the code and configure it:**
+1. **DNS.** Create A records (and AAAA, if the server has IPv6) for `DOMAIN` (for example `meet.example.com`) and
+   `TURN_DOMAIN` (for example `turn.meet.example.com`) that point at the server. No CDN or HTTP proxy in front: with
+   Cloudflare, use "DNS only".
+2. **Firewall.** Open the public ports (see [Firewall](#firewall)).
+3. **Docker.** Install Docker Engine and the Compose plugin from the official repository
+   (https://docs.docker.com/engine/install/).
+4. **Get the code and create `.env`:**
    ```sh
    git clone https://github.com/maksqi/blinq.git
    cd blinq
-   sh scripts/init-env.sh        # writes .env with generated secrets
-   # or: cp .env.example .env    # and fill in every REQUIRED value by hand
-   chmod 600 .env
+   sh scripts/init-env.sh
    ```
-   Check `DOMAIN`, `TURN_DOMAIN`, `TLS_MODE`, `ACME_EMAIL`, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env`. Values that
-   still look like placeholders (`change-me…`) are refused at startup.
-4. **Start:**
+   The script asks for `DOMAIN`, `TURN_DOMAIN`, the first admin's email, the TLS mode, the Let's Encrypt email and the
+   server's public IPv4 (`LIVEKIT_NODE_IP`). It generates every secret, writes `.env` with mode 600, and prints the
+   first admin password once. Without questions: `DOMAIN=meet.example.com sh scripts/init-env.sh --yes`. To write
+   `.env` by hand instead, see [docs/DEPLOYMENT.md §7](docs/DEPLOYMENT.md#7-install).
+5. **Check the server.** Raise the UDP buffers first (recommended for LiveKit and HTTP/3), then run the preflight:
+   ```sh
+   printf 'net.core.rmem_max=7500000\nnet.core.wmem_max=7500000\n' | sudo tee /etc/sysctl.d/99-blinq.conf
+   sudo sysctl --system
+   sh scripts/preflight.sh
+   ```
+   It prints one `ok`, `warn` or `FAIL` line per check and ends with `preflight: all checks passed.` (exit code 0) or
+   `preflight: no failures, N warning(s).` (exit code 2). Fix every `FAIL` line before you continue (exit code 1).
+6. **Start:**
    ```sh
    docker compose up -d --wait
    ```
-5. **First login.** Open `https://DOMAIN` and sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. You must choose a new
-   password. Then **remove `ADMIN_PASSWORD`** (and `ADMIN_EMAIL`) from `.env`; they are never used again.
-6. **Invite people** from Admin → Invites, or change the registration mode in Admin → Settings.
-7. **Back up `.env`**, above all `RECORDING_ENCRYPTION_KEY`. Without it, stored recordings cannot be decrypted.
+   The first run builds both images, which takes several minutes. The command returns once all four services are
+   healthy; `docker compose ps` shows them as `healthy`.
+7. **First login.** Open `https://DOMAIN` and sign in with `ADMIN_EMAIL` and the password the script printed. You
+   must choose a new password. Then delete the `ADMIN_PASSWORD` line from `.env` and run `docker compose up -d`, so
+   the app container no longer carries it (the first admin is created only once; it is never used again).
+8. **Invite people** from Admin → Invites, or change the registration mode in Admin → Settings.
+9. **Back up `.env`**, above all `RECORDING_ENCRYPTION_KEY`. Without it, stored recordings cannot be decrypted (see
+   [Backup and restore](#backup-and-restore)).
 
 ## Ports
 
@@ -107,6 +125,33 @@ Not public (loopback or socket only; keep them closed):
 | 2020/tcp | Caddy health | bound to 127.0.0.1 | `CADDY_HEALTH_PORT` |
 | unix socket | PostgreSQL | no network at all (`network_mode: none`) | — |
 
+The production smoke test (`sh scripts/smoke-prod.sh`) starts a test stack and fails if anything outside these two
+tables listens.
+
+### Firewall
+
+No service publishes ports through Docker (Caddy, LiveKit and the app use host networking, Postgres has no network),
+so the host firewall governs every listener. With ufw:
+
+```sh
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 443/udp
+sudo ufw allow 3478/udp
+sudo ufw allow 7881/tcp
+sudo ufw allow 50000:60000/udp
+# Only on clouds with 1:1 NAT (AWS, GCP, Azure and similar: the public IP is not on the network interface):
+# sudo ufw allow 30000:40000/udp
+sudo ufw enable
+```
+
+- Open the same list in the cloud firewall (security group). Never open 3000, 7880, 5349 or 2020.
+- On 1:1-NAT clouds, also set `LIVEKIT_NODE_IP` to the public (elastic) IP.
+- firewalld and more details: [docs/DEPLOYMENT.md §5](docs/DEPLOYMENT.md#5-firewall).
+
 ## Configuration
 
 - `.env` holds the infrastructure settings and secrets. Every variable is documented in `.env.example`, and the full
@@ -116,15 +161,76 @@ Not public (loopback or socket only; keep them closed):
 
 ## Operations
 
-TODO(stage-09a):
-- **Upgrade:** updating the code, rebuilding the images, and migrations (which run automatically before the app
-  starts).
-- **Backup and restore:** the database, the recordings volume, and `.env` including `RECORDING_ENCRYPTION_KEY`.
-- **Troubleshooting:**
-  - certificates;
-  - calls that fail on networks that block UDP (TURN over TLS);
-  - `LIVEKIT_NODE_IP` behind NAT;
-  - `docker compose logs`, `GET /api/health` and `GET /api/ready`.
+Run these in the `blinq` checkout. Details: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) §8–§12.
+
+### Status and logs
+
+```sh
+docker compose ps                               # every service should be "healthy"
+docker compose logs -f app                      # startup summary, requests, errors (secrets are redacted)
+docker compose logs caddy                       # certificates and the JSON access log
+docker compose logs livekit                     # media server and TURN
+curl -fsS https://meet.example.com/api/health   # liveness
+curl -fsS https://meet.example.com/api/ready    # database reachable and migrations applied (503 with details if not)
+```
+
+### Upgrade
+
+```sh
+# 1. Take a backup (below).
+git fetch --tags
+git checkout v1.0.1          # the release you want
+docker compose build --pull  # also refreshes the base images
+docker compose up -d --wait
+```
+
+Migrations run automatically every time the app starts (idempotent, under a database lock) and are forward-only: to
+roll back, restore the pre-upgrade backup and check out the previous tag. Calls in progress are interrupted while the
+containers are recreated. Rebuild monthly (`docker compose build --pull && docker compose up -d --wait`) to pick up
+security fixes in the base images.
+
+### Backup and restore
+
+A complete backup is three things, taken together:
+
+1. **The database**: `docker compose exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > blinq-db.dump`
+2. **The recordings volume** (already encrypted): `docker run --rm -v blinq_recordings:/src:ro -v "$PWD:/backup" alpine tar -C /src -czf /backup/blinq-recordings.tar.gz .`
+3. **`.env`**, above all `RECORDING_ENCRYPTION_KEY`. **If this key is lost, every stored recording is unrecoverable.**
+   Keep `.env` apart from the recordings backup (for example in a password manager): together they give anyone the
+   plaintext recordings.
+
+Restore onto a new server with the same `.env`: create the stack without starting it, start Postgres, `pg_restore`,
+unpack the recordings, then start everything. The exact commands and checks are in
+[docs/DEPLOYMENT.md §9](docs/DEPLOYMENT.md#9-backup-and-restore). Test a restore at least once.
+
+### Reset a password
+
+The new password is read from stdin, never from the command line; all sessions of the account are revoked.
+
+```sh
+read -rs NEW_PASSWORD   # type it and press Enter; nothing is shown
+printf '%s\n' "$NEW_PASSWORD" | docker compose exec -T app node .output/server/cli.mjs reset-password admin@example.com
+unset NEW_PASSWORD
+```
+
+### Troubleshooting
+
+- **`docker compose up` stops with "required variable … is missing a value".** Set the named variable in `.env`
+  (`sh scripts/init-env.sh` generates secrets). A service that exits instead names its problem in
+  `docker compose logs <service>`; Caddy's configuration errors start with `blinq-caddy:`.
+- **No certificate.** `docker compose logs caddy | grep -i -E 'acme|challenge|certificate'`. Both names must resolve
+  to this server and TCP 80 and 443 must be reachable from the internet. While experimenting, set
+  `ACME_CA=https://acme-staging-v02.api.letsencrypt.org/directory` to stay clear of Let's Encrypt's rate limits.
+- **Calls fail on networks that allow only HTTPS.** They need TURN over TLS on port 443, so `TURN_DOMAIN` must be set
+  and resolve to the server. `openssl s_client -connect turn.meet.example.com:443 -servername turn.meet.example.com
+  </dev/null` must show the `TURN_DOMAIN` certificate.
+- **People join but see no video ("could not establish pc connection").** The advertised address or the firewall is
+  wrong: set `LIVEKIT_NODE_IP` to the server's public IPv4 (the elastic IP behind 1:1 NAT), open 7881/tcp and
+  50000–60000/udp (plus 30000–40000/udp behind 1:1 NAT), then `docker compose up -d`.
+- **App unhealthy.** `docker compose logs app postgres livekit`; `/api/ready` names the failing check.
+
+More cases (Firefox and TURN, ports in use, old Docker, recordings) are in
+[docs/DEPLOYMENT.md §12](docs/DEPLOYMENT.md#12-troubleshooting).
 
 ## Browser support
 
@@ -168,6 +274,7 @@ sh scripts/with-lock.sh pnpm test:api      # API integration tests (builds the t
 sh scripts/with-lock.sh pnpm build:test    # test build for E2E (setup: docs/TESTING.md §6.2)
 sh scripts/with-lock.sh pnpm test:e2e      # Playwright
 pnpm check:english                         # everything in the repository must be English
+sh scripts/smoke-prod.sh                   # production compose stack with TLS_MODE=internal (docs/DEPLOYMENT.md §15)
 ```
 
 Contributors and AI agents: read [AGENT.md](AGENT.md) before changing anything.
@@ -182,7 +289,7 @@ Contributors and AI agents: read [AGENT.md](AGENT.md) before changing anything.
 | [docs/API.md](docs/API.md) | HTTP API, LiveKit contracts, crypto derivations, settings, environment |
 | [docs/SECURITY.md](docs/SECURITY.md) | threat model, E2EE design, hardening, vulnerability reports |
 | [docs/TESTING.md](docs/TESTING.md) | test layers, commands, fixtures, CI, the manual browser matrix |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | production deployment in depth (TODO(stage-09a)) |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | production deployment in depth: DNS, ports, firewall, TLS modes, install, upgrades, backups, troubleshooting |
 | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | load-test method, results, sizing |
 | [docs/stages/](docs/stages/) | one file per implementation stage, each with its Definition of Done |
 

@@ -1,8 +1,8 @@
 # Deployment
 
-This is the full operator guide for running blinq on your own server. `README.md` has the short version. Markers:
-`TODO(stage-09a)` = verified and completed by `infra` when the production files land; `TODO(stage-10)` = replaced
-with measured numbers from [`PERFORMANCE.md`](PERFORMANCE.md).
+This is the full operator guide for running blinq on your own server. `README.md` has the short version. The commands
+below are exercised by the production smoke test (§15). Marker: `TODO(stage-10)` = replaced with measured numbers
+from [`PERFORMANCE.md`](PERFORMANCE.md).
 
 ## 1. What runs
 
@@ -18,25 +18,34 @@ with measured numbers from [`PERFORMANCE.md`](PERFORMANCE.md).
 Architecture and the reasons for host networking: [`ARCHITECTURE.md`](ARCHITECTURE.md). Threat model:
 [`SECURITY.md`](SECURITY.md).
 
+Every container runs with `no-new-privileges`, all capabilities dropped (Caddy keeps `NET_BIND_SERVICE`; the Postgres
+entrypoint keeps the few it needs to drop to its own user), a read-only root filesystem with tmpfs for scratch space,
+`restart: unless-stopped` and rotated logs. The app runs as uid 10001 and LiveKit as `nobody`. No service publishes
+ports, and each service receives only its own variables from `.env`.
+
 ## 2. Server requirements
 
 - Linux on x86_64 or arm64 (host networking is Linux-only; Docker Desktop on macOS or Windows is not supported for
   production). Ubuntu 24.04 LTS and Debian 13 are the reference systems.
 - Docker Engine ≥ 28.0.1 and the Compose v2 plugin (`docker compose`, not `docker-compose`).
 - A public IPv4 address (IPv6 optional), two DNS names, and the ports in §4.
+- `sh scripts/preflight.sh` checks these requirements (§7).
 
-Sizing (all values are estimates until `TODO(stage-10)` replaces them with measurements):
+Sizing (all values are estimates until `TODO(stage-10)` replaces them with measurements; the derivation is in
+[`PERFORMANCE.md` §6](PERFORMANCE.md#6-initial-sizing-estimates-not-measured)):
 
-| Use | vCPU | RAM | Bandwidth (each direction) |
+| Use | vCPU | RAM | Bandwidth (symmetric) |
 |---|---|---|---|
-| Trial, one call with up to 10 people | 2 | 2 GB | 50 Mbit/s |
-| One full 25-person room | 4 | 4 GB | 150 Mbit/s |
-| Several concurrent rooms | 8 or more | 8 GB | 500 Mbit/s or more |
+| Small team: about 10 people in calls at once | 2 | 4 GB | 100 Mbit/s |
+| Full 25-person meetings: one to three at once, with screen share | 4 or more | 8 GB | 500 Mbit/s – 1 Gbit/s |
 
+- The minimum is 2 vCPU and 2 GB RAM (the preflight fails below that and warns below 4 vCPU / 4 GB).
 - Recording processing uses a RAM-backed work area of up to `RECORDING_WORK_TMPFS_SIZE` (default `4g`) while a job
   runs. Add it to the RAM figure if you record.
-- Disk: about 10 GB for images and the database, plus recordings (roughly 2–3 GB per recorded hour at 1080p,
+- Disk: about 10 GB for images and the database, plus recordings (roughly 1–1.8 GB per recorded hour at 1080p,
   estimate).
+- Traffic: one full 25-person meeting sends roughly 70–150 GB per hour from the server (estimate); check your
+  provider's egress pricing.
 
 ## 3. DNS
 
@@ -113,8 +122,15 @@ Set `TLS_MODE` in `.env`:
   `docker compose up -d --force-recreate caddy` to get trusted certificates.
 - **`internal`**: Caddy's own CA, for intranet or LAN installs without public DNS. Every client must trust Caddy's
   root certificate: `docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./blinq-root.crt`, then
-  install it in the OS or browser trust store. Back up the `caddy_data` volume, or clients must trust a new root
-  after a reinstall. `TODO(stage-09a)`: confirm TURN/TLS behavior with the internal CA in Chromium and Firefox.
+  install it in the OS trust store (and in Firefox's own certificate store, Settings → Privacy & Security →
+  Certificates, where Firefox does not use the OS store). Back up the `caddy_data` volume, or clients must trust a new
+  root after a reinstall.
+  - TURN/TLS works the same way: `TURN_DOMAIN` gets its own certificate from the internal CA, and TURN answers over TLS
+    on port 443 (verified by the smoke test, §15). Browsers check the TURN server's certificate like any HTTPS
+    certificate: until the root is trusted, Chromium and Firefox abort TURN/TLS (Caddy logs `remote error: tls:
+    unknown certificate authority`) and fall back to UDP and ICE/TCP, so calls from networks that allow only HTTPS
+    fail on those clients. TURN over UDP needs no certificate; on a LAN, LiveKit relays to its own private address
+    (the smoke test's relay-only call goes that way).
 - **`files`**: your own certificate. It must cover both `DOMAIN` and `TURN_DOMAIN` (SAN or wildcard). Mount it with a
   `docker-compose.override.yml`:
 
@@ -125,8 +141,11 @@ Set `TLS_MODE` in `.env`:
         - /etc/ssl/blinq:/certs:ro
   ```
 
-  and set `TLS_CERT_FILE=/certs/fullchain.pem` and `TLS_KEY_FILE=/certs/privkey.pem`. Caddy does not watch the files:
-  run `docker compose restart caddy` after every renewal.
+  and set `TLS_CERT_FILE=/certs/fullchain.pem` and `TLS_KEY_FILE=/certs/privkey.pem`. Caddy runs as root but without
+  the capability to override file permissions, so the files must be owned by root (the key with mode 600) or be
+  readable by everyone. Mount real files, not a directory of symlinks (for certbot, mount all of `/etc/letsencrypt`
+  and point at `live/<name>/`). Caddy stops with `blinq-caddy: TLS_CERT_FILE=... is missing or unreadable` otherwise.
+  It does not watch the files: run `docker compose restart caddy` after every renewal.
 
 ## 7. Install
 
@@ -140,33 +159,76 @@ Set `TLS_MODE` in `.env`:
    git checkout v1.0.0
    ```
 
-3. Create `.env`. The script asks for `DOMAIN`, `TURN_DOMAIN`, `ADMIN_EMAIL` and `ACME_EMAIL`, generates every
-   secret, sets mode 600 and prints the first admin password once:
+3. Create `.env`:
 
    ```sh
    sh scripts/init-env.sh
    ```
 
-   To do it by hand instead: `cp .env.example .env && chmod 600 .env`, fill in every `REQUIRED` value and generate
-   secrets with the `openssl` commands in the comments. Use only letters, digits, `_` and `-` in secrets: Compose
-   expands `$`, and the database password becomes part of a URL. Wrap any value containing `$` in single quotes.
-4. Optional but recommended, UDP buffers for LiveKit and HTTP/3:
+   It refuses to overwrite an existing `.env` (`--force` replaces it) and asks, with defaults in brackets:
+
+   | Question | Variable | Default |
+   |---|---|---|
+   | Public hostname of blinq | `DOMAIN` | — |
+   | Second hostname for TURN over TLS (`-` for none) | `TURN_DOMAIN` | `turn.<DOMAIN>` |
+   | Email of the first administrator | `ADMIN_EMAIL` | `admin@<DOMAIN>` |
+   | Certificates | `TLS_MODE` | `acme` |
+   | Email for Let's Encrypt expiry notices (acme only) | `ACME_EMAIL` | `ADMIN_EMAIL` |
+   | Public IPv4 of this server for media (`-` to detect it with STUN) | `LIVEKIT_NODE_IP` | the address `DOMAIN` resolves to |
+
+   It then generates `APP_SECRET`, `LIVEKIT_API_SECRET`, `POSTGRES_PASSWORD` and `ADMIN_PASSWORD` (32–48 characters
+   of `A–Z a–z 0–9 _ -`), `LIVEKIT_API_KEY` (`API` and 12 letters or digits) and `RECORDING_ENCRYPTION_KEY` (base64 of
+   32 random bytes) from `/dev/urandom`, writes `.env` with mode 600 and prints a summary with the admin password.
+   That is the only time the password is shown.
+
+   Without questions (for scripts): `DOMAIN=meet.example.com sh scripts/init-env.sh --yes`, or options such as
+   `--domain`, `--turn-domain ''`, `--tls-mode internal` and `--node-ip` (`sh scripts/init-env.sh --help`). Set
+   `ADMIN_PASSWORD` in the environment to choose the first password yourself (at least 12 characters).
+
+   To write it by hand instead: `cp .env.example .env && chmod 600 .env`, fill in every `REQUIRED` value and generate
+   secrets with the `openssl` commands in the comments. Prefer letters, digits, `_` and `-` in secrets: Compose
+   expands `$`, so wrap any value that contains `$` in single quotes.
+4. Recommended: UDP buffers for LiveKit and HTTP/3:
 
    ```sh
    printf 'net.core.rmem_max=7500000\nnet.core.wmem_max=7500000\n' | sudo tee /etc/sysctl.d/99-blinq.conf
    sudo sysctl --system
    ```
 
-5. Check the host: `sh scripts/preflight.sh`. Fix every failure; read every warning.
-6. Start: `docker compose up -d --wait`. The first run builds both images and takes several minutes. The command
-   returns once every container is healthy. If it fails, see §12.
-7. Open `https://DOMAIN`, log in with `ADMIN_EMAIL` and `ADMIN_PASSWORD`, and set a new password when asked.
-8. Remove `ADMIN_PASSWORD` from `.env` (it is never used again), then run `docker compose up -d` so the app container
-   no longer carries it.
+5. Check the host: `sh scripts/preflight.sh` (`--env-file FILE` for another file). It prints one line per check, for
+   example (abridged):
+
+   ```text
+   System
+     ok    Linux 6.8.0-45-generic on x86_64
+     ok    4 CPUs
+     ok    about 7 GB RAM
+     ok    net.core.rmem_max = 7500000
+   ...
+   DNS
+     ok    DOMAIN=meet.example.com resolves to this server (203.0.113.10)
+   ...
+   preflight: no failures, 1 warning(s).
+   ```
+
+   Exit code 0 means every check passed, 2 warnings only, 1 at least one failure. Fix every `FAIL` line and read
+   every `warn` line. It checks Linux, Docker ≥ 28.0.1 and Compose v2, `.env` (mode 600, required values, no
+   placeholders, `$` in unquoted values), that both names resolve to `LIVEKIT_NODE_IP` or a local address, that the
+   ports of §4 are free, CPU and RAM, the UDP buffers, NTP and free disk space.
+6. Start: `docker compose up -d --wait`. The first run builds both images: about 2 minutes on a fast 10-core machine,
+   plan for 5–10 minutes on a small server (estimate). The command returns once every container is healthy; with the
+   images built, that took 6–13 seconds on the smoke stack (Postgres initializes the database, then the app migrates
+   it and creates the admin). With `TLS_MODE=acme`, Caddy requests the certificates in the background meanwhile,
+   which takes a few more seconds before `https://DOMAIN` answers. If it fails, see §12.
+7. Open `https://DOMAIN`, log in with `ADMIN_EMAIL` and the printed password, and set a new password when asked.
+8. Delete the `ADMIN_PASSWORD` line from `.env` (the first admin is created only once, so it is never used again),
+   then run `docker compose up -d` so the app container no longer carries it.
 9. In the admin panel: configure registration (invite-only by default), guests, media limits and recording retention.
    With SMTP configured in `.env`, send a test email from the settings page.
 
-`TODO(stage-09a)`: confirm these steps verbatim on the smoke stack and record the first-start duration.
+What happens on every start of the app container: `cli migrate` (applies new migrations under a database lock),
+`cli bootstrap` (creates the first admin only while none exists; afterwards it prints "nothing to do"), then the
+server. A failing step stops the container before the server starts, and `docker compose logs app` shows why.
 
 ## 8. Upgrades
 
@@ -198,32 +260,40 @@ A complete backup is three things, taken together:
 
 Optionally `caddy_data` (certificates, and the internal CA in `internal` mode).
 
+Run these in the `blinq` checkout while the stack is up:
+
 ```sh
 mkdir -p "$HOME/blinq-backups"
-# Database (custom format). The single quotes let the container expand its own variables.
+# Database (custom format), over the socket inside the container. The single quotes let the container expand its
+# own variables.
 docker compose exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' \
   > "$HOME/blinq-backups/db-$(date +%F).dump"
-# Recordings
-docker run --rm -v blinq_recordings:/src:ro -v "$HOME/blinq-backups:/backup" alpine \
+# Recordings (the files keep their owner, uid 10001)
+docker run --rm -v blinq_recordings:/src:ro -v "$HOME/blinq-backups:/backup" alpine:3.22 \
   tar -C /src -czf "/backup/recordings-$(date +%F).tar.gz" .
 # .env (store it somewhere else, encrypted)
 install -m 600 .env "$HOME/blinq-backups/env-$(date +%F)"
 ```
 
-Restore on a new server (same `.env`, same or newer blinq version):
+Restore on a new server (same `.env`, same or newer blinq version), from the `blinq` checkout with the backup files
+in the current directory:
 
 ```sh
-docker compose up --no-start          # creates volumes and containers
+docker compose up --no-start          # creates the volumes and containers, starts nothing
 docker compose start postgres
+docker compose ps postgres            # wait until it shows "healthy"
 docker compose exec -T postgres sh -c 'PGPASSWORD="$POSTGRES_PASSWORD" pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists --no-owner' \
   < db-YYYY-MM-DD.dump
-docker run --rm -v blinq_recordings:/dst -v "$PWD:/backup:ro" alpine tar -C /dst -xzf /backup/recordings-YYYY-MM-DD.tar.gz
+docker run --rm -v blinq_recordings:/dst -v "$PWD:/backup:ro" alpine:3.22 tar -C /dst -xzf /backup/recordings-YYYY-MM-DD.tar.gz
 docker compose up -d --wait
 ```
 
-- Wait for `postgres` to be healthy (`docker compose ps`) before `pg_restore`.
-- Volume names are prefixed with the project name `blinq`; check with `docker volume ls`. `TODO(stage-09a)`: verify
-  these commands against the final compose file.
+- The app starts only in the last step, so it migrates the restored database (when the new version brings
+  migrations) instead of creating a fresh one, and bootstrap finds the existing admin ("nothing to do").
+- Volume names carry the project name `blinq` (`blinq_pgdata`, `blinq_recordings`, ...): `docker volume ls`.
+- These exact commands (with the smoke test's project name) were verified on the smoke stack: dump, wipe with
+  `docker compose down -v`, restore; the admin account and a recording file (owner 10001) came back and `/api/ready`
+  answered 200.
 - Test a restore at least once, and keep backups encrypted at rest.
 
 ## 10. Logs and health
@@ -260,6 +330,14 @@ The other commands (`migrate`, `bootstrap`) run automatically at every start.
 `.env` (`sh scripts/init-env.sh` generates secrets). Values that still look like placeholders are refused at startup:
 `docker compose logs app` names the variable.
 
+**`caddy` keeps restarting.** `docker compose logs caddy` starts with a `blinq-caddy:` line that names the problem:
+an unknown `TLS_MODE`, `TURN_DOMAIN` equal to `DOMAIN`, a `DOMAIN` with a scheme or port, a certificate file that is
+missing or unreadable in `files` mode, or the output of Caddy's own validation of the rendered configuration.
+
+**`app` keeps restarting.** The entrypoint prints `[blinq] entrypoint: 'migrate' failed ...` or `'bootstrap' failed
+...` above the reason. `migrate`: the database is unreachable (`docker compose logs postgres`). `bootstrap`: no admin
+exists yet and `ADMIN_EMAIL` / `ADMIN_PASSWORD` are missing, a placeholder or too weak (at least 12 characters).
+
 **No certificate / ACME errors.** `docker compose logs caddy | grep -i -E 'acme|challenge|certificate'`. Check that
 both names resolve to this server, that TCP 80 and 443 are reachable from outside, and that no other web server holds
 them. After repeated failures, use `ACME_CA` (staging) until it works: Let's Encrypt rate-limits failed validations.
@@ -280,17 +358,28 @@ Check `docker compose logs livekit` for TURN errors.
 **Participants connect but see no video, or "could not establish pc connection".** Usually the advertised IP or
 firewall is wrong. Set `LIVEKIT_NODE_IP` to the server's public IPv4 (the elastic IP on 1:1-NAT clouds), open
 7881/tcp and 50000–60000/udp, then `docker compose up -d livekit`. `docker compose logs livekit` shows the node IP at
-startup.
+startup ("using explicit node IP" when `LIVEKIT_NODE_IP` is set, "found external IP via STUN" otherwise).
+- LiveKit also offers the server's IPv6 addresses. If the server has IPv6, open the same ports for IPv6 (ufw does by
+  default).
+- Every IPv4 candidate carries `LIVEKIT_NODE_IP`, one per local interface; Docker's default bridge (`docker0`) is
+  excluded. Extra Docker bridge networks of other projects on the same host only add candidates that never connect,
+  but with `LIVEKIT_NODE_IP` empty they can also mislead the STUN detection: set it on such hosts.
+- Without `LIVEKIT_NODE_IP`, LiveKit asks public STUN servers (Twilio, Google) for the address at every start; set it
+  to avoid that request.
 
 **A port is already in use.** `sudo ss -tulpn | grep -E ':(80|443|3478|7881|3000|7880|5349|2020)\b'`. Stop the other
-service (often Apache or nginx on 80/443) or move blinq's loopback ports in `.env`.
+service (often Apache or nginx on 80/443) or move blinq's loopback ports in `.env`. `sh scripts/preflight.sh` checks
+every port of §4.
 
 **Docker older than 28.0.1 or Compose v1.** Upgrade from the official Docker repository. Compose v1 (`docker-compose`)
 cannot parse the file.
 
-**App unhealthy, `/api/ready` returns 503.** The database or LiveKit is unreachable: `docker compose ps` and
-`docker compose logs app postgres livekit`. "password authentication failed" after editing `POSTGRES_PASSWORD`: the
-password is set only when the database is created; change it back, or run `ALTER USER` inside the container.
+**App unhealthy, `/api/ready` returns 503.** The database is unreachable or migrations are pending; `details.checks`
+in the response says which (LiveKit is reported there too, but does not make the app unready). `docker compose ps`
+and `docker compose logs app postgres livekit`. The reason of the last failed healthcheck:
+`docker inspect --format '{{json .State.Health}}' blinq-app-1`. "password authentication failed" after editing
+`POSTGRES_PASSWORD`: the password is set only when the database is created; change it back, or run `ALTER USER`
+inside the container.
 
 **Recording stuck in "processing" or "failed".** `docker compose logs app | grep -i recording`. Common causes: the
 work area is too small (`RECORDING_WORK_TMPFS_SIZE` should be about twice the longest recording), the job hit
@@ -317,3 +406,33 @@ matrix in `README.md`.
 
 `docker compose down` stops and removes the containers and keeps all data. `docker compose down -v` also deletes the
 database, recordings and certificates. This cannot be undone.
+
+## 15. Smoke test (developers and CI)
+
+`sh scripts/smoke-prod.sh` runs this deployment end to end on a development machine or CI runner (Linux, or macOS with
+Docker Desktop, where the "host" network is the Docker VM). It never touches a real installation: it uses the
+project name `blinq-smoke`, a throwaway `.env.smoke` and `TLS_MODE=internal` with `DOMAIN=blinq.localhost`.
+
+1. Records the listening sockets of the host network, detects the host's IPv4 for `LIVEKIT_NODE_IP` and moves any
+   loopback or media port that is already taken (80 and 443 must be free).
+2. Writes `.env.smoke` with `init-env.sh --yes`, runs the preflight (Linux), and checks `docker compose config` with
+   TURN on, with TURN off, and without `APP_SECRET` (the error must name it).
+3. Builds both images and runs `docker compose up -d --wait`.
+4. Checks every container with `docker inspect`: capabilities, `no-new-privileges`, read-only root, users, networks
+   (`none` for Postgres), no published ports, log rotation; that the app user can write only its tmpfs areas and the
+   recordings volume; that the argon2 binding is in the image; that Postgres refuses the socket without a password.
+5. Runs `tests/smoke-prod/*.spec.ts` in the pinned Playwright image on the host network: health and readiness,
+   security headers (HSTS, CSP nonce, the Permissions-Policy override, COOP and CORP, the 308 redirect, `Alt-Svc`),
+   routing (`/api/webhooks/*` and `/twirp/*` are 404, 2 MB bodies get 413, 2 MB recording chunks do not), the
+   certificates of both names, TURN over TLS through Caddy with PROXY protocol, the login page in Chromium and Firefox
+   under the enforced CSP, and two Chromium ↔ Firefox calls with audio and video both ways: a direct one (every IPv4
+   candidate of the SFU is `LIVEKIT_NODE_IP`, ports from the media range) and a relay-only one through LiveKit's
+   TURN, which relays to the SFU's private address (`turn.allow_restricted_peer_cidrs`).
+6. Restarts the app and checks that migrate and bootstrap ran again, idempotently, with exactly one admin.
+7. Compares the listening sockets with step 1: only the ports of §4 may be new, and 3000, 7880 and 2020 only on
+   loopback; nothing on 2019 or 5432.
+8. Scans every container log for the secrets of `.env.smoke`, LiveKit tokens and unredacted `access_token` values.
+9. Removes the stack and its volumes (`--keep` leaves them for inspection).
+
+Output: `logs/smoke-prod/` (summary, `compose.log`, listeners, the Playwright report). `--no-build` reuses existing
+images (CI builds them with its layer cache).

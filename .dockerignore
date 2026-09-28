@@ -25,6 +25,21 @@ playwright-report
 test-results
 blob-report
 
+# Vendored browser assets: the image runs `pnpm vendor` itself (as .gitignore: only the committed models stay).
+public/vendor/*
+!public/vendor/mediapipe
+public/vendor/mediapipe/*
+!public/vendor/mediapipe/*.tflite
+!public/vendor/mediapipe/README.md
+
+# Not needed by the image build, so changes to them never invalidate its cache.
+docs
+tests
+logs
+docker/caddy
+docker/e2e
+docker-compose*.yml
+
 # Local data
 data
 tmp
