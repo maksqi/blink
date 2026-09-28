@@ -18,11 +18,19 @@ case "$(uname -s)" in
     done
     ;;
   Linux)
-    ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit }}')
+    # The source address of the default route: eth0 on GitHub's runners.
+    ip=$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") { print $(i + 1); exit }}' || true)
+    # No default route (offline): the first global address that is not a Docker bridge.
+    if [ -z "$ip" ]; then
+      ip=$(ip -4 -o addr show scope global 2>/dev/null |
+        awk '$2 !~ /^(docker|br-|veth)/ { split($4, address, "/"); print address[1]; exit }' || true)
+    fi
     ;;
 esac
-if [ -z "$ip" ]; then
-  echo "detect-ip: could not determine a LAN IPv4 address; set LIVEKIT_NODE_IP explicitly" >&2
-  exit 1
-fi
+case "$ip" in
+  *[!0-9.]* | '')
+    echo "detect-ip: could not determine a LAN IPv4 address; set LIVEKIT_NODE_IP explicitly" >&2
+    exit 1
+    ;;
+esac
 echo "$ip"

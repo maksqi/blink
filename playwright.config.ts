@@ -32,7 +32,8 @@ export default defineConfig({
   forbidOnly: isCI,
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  reporter: isCI ? [['github'], ['html', { open: 'never' }]] : [['list'], ['html', { open: 'never' }]],
+  // CI: list for a readable job log, github for failure annotations, html for the uploaded report (e2e.yml).
+  reporter: isCI ? [['list'], ['github'], ['html', { open: 'never' }]] : [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL,
     trace: 'retain-on-failure',

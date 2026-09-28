@@ -1,0 +1,60 @@
+# E2E reverse proxy for Playwright (docs/TESTING.md §6.1). scripts/e2e.sh starts it for one run and stops it again;
+# don't run it by hand. It joins the shared dev stack's network to reach LiveKit and reaches the app on the host through
+# host.docker.internal. It only ever publishes 127.0.0.1:8080.
+name: blinq-e2e
+
+services:
+  caddy:
+    image: caddy:2.11.4-alpine
+    command: ['caddy', 'run', '--config', '/etc/caddy/Caddyfile', '--adapter', 'caddyfile']
+    environment:
+      E2E_APP_UPSTREAM: 'host.docker.internal:${E2E_APP_PORT:-3000}'
+      E2E_LIVEKIT_UPSTREAM: 'livekit:7880'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - '127.0.0.1:8080:8080'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - dev
+    # Same hardening as production: read-only root, tmpfs for Caddy's data dirs, no capabilities beyond binding.
+    read_only: true
+    tmpfs:
+      - /data
+      - /config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '-O', '/dev/null', 'http://127.0.0.1:2020/health']
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  # Native Linux engines only (scripts/e2e.sh enables the profile). See host-gateway.Caddyfile.
+  host-gateway:
+    profiles: [linux]
+    image: caddy:2.11.4-alpine
+    command: ['caddy', 'run', '--config', '/etc/caddy/Caddyfile', '--adapter', 'caddyfile']
+    network_mode: host
+    environment:
+      E2E_APP_PORT: '${E2E_APP_PORT:-3000}'
+      E2E_GATEWAY_IP: '${E2E_GATEWAY_IP:-172.17.0.1}'
+    volumes:
+      - ./host-gateway.Caddyfile:/etc/caddy/Caddyfile:ro
+    read_only: true
+    tmpfs:
+      - /data
+      - /config
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  # The default network of docker-compose.dev.yml (project blinq-dev); LiveKit is reachable there as livekit:7880.
+  dev:
+    name: blinq-dev_default
+    external: true

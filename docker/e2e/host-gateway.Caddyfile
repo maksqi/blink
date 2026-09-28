@@ -1,0 +1,14 @@
+# Native Linux Docker engines only (see compose.yml, service host-gateway). Docker Desktop forwards connections to
+# host.docker.internal to the host's loopback by itself; a native engine does not, and the app listens on 127.0.0.1
+# only. This forwarder listens on the host-gateway address and passes requests to the app, for the e2e Caddy and for
+# the dev LiveKit's webhooks alike.
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+http://:{$E2E_APP_PORT:3000} {
+	bind {$E2E_GATEWAY_IP:172.17.0.1}
+	reverse_proxy 127.0.0.1:{$E2E_APP_PORT:3000}
+}

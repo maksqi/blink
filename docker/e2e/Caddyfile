@@ -1,0 +1,49 @@
+# E2E reverse proxy (docs/TESTING.md §6.1, docs/ARCHITECTURE.md §3). scripts/e2e.sh starts and stops it.
+#
+# One origin for the app and LiveKit signaling, as in production, so the production CSP (connect-src 'self') applies
+# unchanged. Plain HTTP is enough because http://localhost is a secure context. Caddy sets no security headers (it only
+# adds the standard Via header): CSP and the others come from the app itself (production Caddy adds only HSTS).
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+# Container-local health endpoint for the compose healthcheck (production Caddy uses 127.0.0.1:2020 the same way).
+http://127.0.0.1:2020 {
+	bind 127.0.0.1
+	respond /health 200
+}
+
+http://localhost:8080 {
+	# Access log on stdout; scripts/e2e.sh copies it to logs/e2e/caddy.log, where the E2E fixtures scan it for secrets.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			# As in production: livekit-client sends its token as ?access_token=, which must never be logged.
+			# Cookie, Set-Cookie and Authorization values are already logged as REDACTED by Caddy's defaults.
+			request>uri query {
+				replace access_token REDACTED
+			}
+		}
+	}
+
+	# LiveKit posts webhooks to the app directly; they are never reachable through the public origin.
+	@webhooks path /api/webhooks /api/webhooks/*
+	handle @webhooks {
+		respond 404
+	}
+
+	# LiveKit signaling only (/rtc/v1, /rtc/v1/validate and the legacy /rtc paths). /twirp is never proxied.
+	@lk path /rtc /rtc/*
+	handle @lk {
+		reverse_proxy {$E2E_LIVEKIT_UPSTREAM:livekit:7880}
+	}
+
+	# Everything else goes to the app. reverse_proxy flushes text/event-stream (SSE) responses immediately.
+	# flush_interval -1 is deliberately not set: it would keep upstream requests open after the browser disconnects.
+	handle {
+		reverse_proxy {$E2E_APP_UPSTREAM:host.docker.internal:3000}
+	}
+}
