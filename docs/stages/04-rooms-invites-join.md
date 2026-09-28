@@ -47,31 +47,31 @@ service, webhooks with enforcement and `publishRoomState`, so Stage 06 is UI-onl
 
 ## Tasks
 ### Backend (rooms-backend, Wave 1)
-- [ ] `POST /api/rooms` (`createRoomSchema`: browser-generated `slug`, `name`, `proof`, `ephemeral`, optional
+- [x] `POST /api/rooms` (`createRoomSchema`: browser-generated `slug`, `name`, `proof`, `ephemeral`, optional
       `password` and settings): stores `sha256(proof)` as `join_proof_hash`, argon2 hash of the password; duplicate slug
       → 409 `CONFLICT` (the client retries with a new slug) (decision); `limits.maxRoomsPerUser` → 409
       `ROOM_LIMIT_REACHED`; `maxParticipants` clamped to `limits.maxParticipantsPerRoom`.
-- [ ] `GET /api/rooms` (owned + co-hosted, `Paginated<RoomSummary>`), `GET /api/rooms/:id` (`RoomDetails`),
+- [x] `GET /api/rooms` (owned + co-hosted, `Paginated<RoomSummary>`), `GET /api/rooms/:id` (`RoomDetails`),
       `PATCH /api/rooms/:id` (`updateRoomSchema`, owner only; `password: null` clears it; a live meeting gets
       `publishRoomState`), `DELETE /api/rooms/:id` (soft delete, `deleteRoom` when live). Non-members get 404
       `ROOM_NOT_FOUND`; co-hosts calling owner-only routes get 403 `FORBIDDEN`.
-- [ ] `PUT /api/rooms/:id/key` (`rotateRoomKeySchema`): new proof hash, `key_version + 1`; 409 `MEETING_LIVE` while a
+- [x] `PUT /api/rooms/:id/key` (`rotateRoomKeySchema`): new proof hash, `key_version + 1`; 409 `MEETING_LIVE` while a
       meeting is live.
-- [ ] `POST /api/rooms/:id/cohosts` (`addCohostSchema`, existing enabled user) and `DELETE /api/rooms/:id/cohosts/:userId`
+- [x] `POST /api/rooms/:id/cohosts` (`addCohostSchema`, existing enabled user) and `DELETE /api/rooms/:id/cohosts/:userId`
       (owner only) over `room_members` (role `cohost`).
-- [ ] Invites (`server/services/invites/**`): token `base64url(inviteIdBytes(16) ‖ HMAC-SHA256(k_invite,
+- [x] Invites (`server/services/invites/**`): token `base64url(inviteIdBytes(16) ‖ HMAC-SHA256(k_invite,
       inviteIdBytes)[0..16])`, `k_invite = HKDF(APP_SECRET, info "blinq/v1/invite")`, stored nowhere, verified in
       constant time; `GET` lists `RoomInvite[]` with re-derived tokens (owner and co-hosts); `POST`
       (`createRoomInviteSchema`) → `{ invite: RoomInvite }`; `DELETE` sets `revoked_at`; consume with
       `UPDATE room_invites SET use_count = use_count + 1 WHERE id = $1 AND room_id = $2 AND revoked_at IS NULL AND
       (expires_at IS NULL OR expires_at > now()) AND (max_uses IS NULL OR use_count < max_uses) RETURNING id`, once per
       new participant row (resume never consumes) (decision).
-- [ ] Proof check: `timingSafeEqual(sha256(base64urlDecode(proof)), join_proof_hash)`; wrong → 403 `ROOM_KEY_INVALID`
+- [x] Proof check: `timingSafeEqual(sha256(base64urlDecode(proof)), join_proof_hash)`; wrong → 403 `ROOM_KEY_INVALID`
       with nothing else about the room; unknown or deleted slug → 404 `ROOM_NOT_FOUND`.
-- [ ] `POST /api/join/:slug/info` (`joinInfoSchema`) → `JoinInfo`: proof; a supplied invite must be valid (403
+- [x] `POST /api/join/:slug/info` (`joinInfoSchema`) → `JoinInfo`: proof; a supplied invite must be valid (403
       `ROOM_INVITE_INVALID`); returns `signedIn`, `guestsAllowed` (global `guests.allowed` and `rooms.allow_guests`)
       so the UI can ask guests to sign in. Never consumes the invite.
-- [ ] `POST /api/join/:slug` (`joinRequestSchema`) → `JoinResponse`: proof → everyone except host and co-hosts needs a
+- [x] `POST /api/join/:slug` (`joinRequestSchema`) → `JoinResponse`: proof → everyone except host and co-hosts needs a
       valid invite (403 `ROOM_INVITE_REQUIRED` / `ROOM_INVITE_INVALID`; applies to signed-in users too) → guests allowed
       (403 `ROOM_GUESTS_NOT_ALLOWED`) → lock (403 `ROOM_LOCKED`; host and co-hosts bypass) → password (403
       `ROOM_PASSWORD_REQUIRED` / `ROOM_PASSWORD_INVALID`, backoff `room-password` per IP+room) → removed or denied in the
@@ -79,42 +79,42 @@ service, webhooks with enforcement and `publishRoomState`, so Stage 06 is UI-onl
       waiting room (everyone except host and co-hosts) with at most 50 waiting per room (409 `LOBBY_FULL`) (decision).
       Guests must send `displayName` (400 `VALIDATION_FAILED` otherwise); signed-in users use their profile name.
       Guests get a `guest_sessions` row and the cookie `__Host-blinq_g_<slug>` (TTL 12 h (decision)).
-- [ ] Resume: same user session or guest session + same `clientId` + the same live meeting + row `admitted|joined` →
+- [x] Resume: same user session or guest session + same `clientId` + the same live meeting + row `admitted|joined` →
       reuse the row and `lk_identity`, skip the lobby, new token. Rows from older meetings never skip the lobby.
-- [ ] Meetings: the first admitted join creates the meeting (epoch = 16 random bytes, base64url; the unique partial
+- [x] Meetings: the first admitted join creates the meeting (epoch = 16 random bytes, base64url; the unique partial
       index settles races, the loser reuses the winner) and calls `createRoom` (name = `rooms.id`,
       `maxParticipants` ≤ 25, `emptyTimeoutSec` 300, `departureTimeoutSec` 20 (decision), metadata from the
       `publishRoomState` builder); an existing live LiveKit room reuses its meeting.
-- [ ] `server/services/livekit/room-service.ts`: `RoomServiceAdapter` over `RoomServiceClient` (`LIVEKIT_URL`,
+- [x] `server/services/livekit/room-service.ts`: `RoomServiceAdapter` over `RoomServiceClient` (`LIVEKIT_URL`,
       `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`); a fake adapter for API tests, selected in test builds only (mechanism
       agreed with `server-core` and documented in `docs/API.md`, Test-only section) (decision).
-- [ ] `server/services/livekit/token.ts`: `buildParticipantToken(...)` — TTL 5 min, `roomJoin`, room = `rooms.id`,
+- [x] `server/services/livekit/token.ts`: `buildParticipantToken(...)` — TTL 5 min, `roomJoin`, room = `rooms.id`,
       `canSubscribe`, `canPublishData`, `canUpdateOwnMetadata: false`, `canPublishSources` from role + room policy +
       `mic_allowed`/`camera_allowed` (`screen_share_audio` only with `screen_share`), attributes `role`, `kind`,
       `hand: ""`, `vol` from `volume_level`; never `hidden`, `roomAdmin`, `roomCreate`, `roomList`, `roomRecord`,
       `recorder` or an agent kind. `permissionSpec(...)` builds the full `ParticipantPermissionSpec` for updates.
-- [ ] `server/services/livekit/publish-room-state.ts` implements `PublishRoomState`: rebuilds `RoomMetadata` from the
+- [x] `server/services/livekit/publish-room-state.ts` implements `PublishRoomState`: rebuilds `RoomMetadata` from the
       DB, is the only caller of `updateRoomMetadata`, serializes calls per room, publishes `room.state` on the bus.
-- [ ] Lobby: `GET /api/join/requests/:id/events` (SSE; only the user session or guest session that created the row,
+- [x] Lobby: `GET /api/join/requests/:id/events` (SSE; only the user session or guest session that created the row,
       else 403 `FORBIDDEN`) and `POST /api/join/requests/:id/cancel` (204); events `status`, `admitted`, `denied`,
       `ended` (`WaitingEvent`), `: ping` every 15 s; driven by `lobby.decided` bus events; the token is minted when the
       request is admitted.
-- [ ] Server hints: `{ type: 'lobby.changed' }` etc. on `blinq.srv.v1` via `sendData` with `destinationIdentities` =
+- [x] Server hints: `{ type: 'lobby.changed' }` etc. on `blinq.srv.v1` via `sendData` with `destinationIdentities` =
       live hosts and co-hosts (or the single target for `ask-unmute`); never tokens, never destructive.
-- [ ] `server/services/calls/authorize.ts`: `resolveCaller` + `canPerform(actor, action, target)` → 403 `CALL_FORBIDDEN`.
-- [ ] In-call routes `server/api/calls/[roomId]/**` exactly as `docs/API.md` (me/name, me/hand, participants list,
+- [x] `server/services/calls/authorize.ts`: `resolveCaller` + `canPerform(actor, action, target)` → 403 `CALL_FORBIDDEN`.
+- [x] In-call routes `server/api/calls/[roomId]/**` exactly as `docs/API.md` (me/name, me/hand, participants list,
       lobby list/admit/deny/admit-all, participant mute/permissions/ask-unmute/volume/remove/role/name/lower-hand,
       mute-all, settings, end). Order: DB update → LiveKit call → `publishRoomState` when room state changed. Remove
       marks the row `removed` (final for the meeting) and calls `removeParticipant` with `revokeTokensIssuedBefore`;
       a user promoted to co-host is persisted in `room_members`, a guest only on the live row.
-- [ ] `POST /api/webhooks/livekit`: raw body, `WebhookReceiver.receive(body, authorization)` (401 on a bad signature),
+- [x] `POST /api/webhooks/livekit`: raw body, `WebhookReceiver.receive(body, authorization)` (401 on a bad signature),
       dedupe by event id (in-memory LRU, 10 min) (decision), unknown rooms ignored (agents share the dev LiveKit);
       `participant_joined` removes anyone whose row is not `admitted|joined` and marks admitted rows `joined`;
       `participant_left` → `left`; `room_finished` ends the meeting, sends `ended` to waiters, archives ephemeral rooms,
       publishes `recording.changed` when a recording was active; peak count maintained.
-- [ ] `user.revoked` bus handling (requested contract, see Stage 02): `removeParticipant` for the user's live identities.
-- [ ] `server/tasks/rooms/**` (if needed beyond `maintenance:cleanup`): close waiting rows older than 1 h.
-- [ ] Limiters: `join-ip` (info and join), `room-create` (rooms and invites), `call-actions` (in-call routes).
+- [x] `user.revoked` bus handling (requested contract, see Stage 02): `removeParticipant` for the user's live identities.
+- [x] `server/tasks/rooms/**` (if needed beyond `maintenance:cleanup`): close waiting rows older than 1 h.
+- [x] Limiters: `join-ip` (info and join), `room-create` (rooms and invites), `call-actions` (in-call routes).
 ### Frontend (rooms-ui, Wave 2)
 - [ ] `app/pages/dashboard.vue` (`auth` middleware): rooms list, "New room", "Instant meeting", per room: copy host link,
       settings, join.
@@ -169,26 +169,26 @@ service, webhooks with enforcement and `publishRoomState`, so Stage 06 is UI-onl
 ## Definition of Done
 - [ ] [auto] A guest joins via invite within the join-time budget (PR gate < 6 s; nightly p95 < 3 s) — evidence:
       `pnpm test:e2e -- join/guest-invite`, nightly.yml.
-- [ ] [auto] Bad, expired, revoked and overused invites are rejected — evidence: `tests/api/join/invites.test.ts`.
-- [ ] [auto] A wrong key is rejected by the proof — evidence: `tests/api/join/proof.test.ts`.
-- [ ] [auto] SSE and cancel reject non-owners — evidence: `tests/api/join/lobby-sse.test.ts`.
+- [x] [auto] Bad, expired, revoked and overused invites are rejected — evidence: `tests/api/join/invites.test.ts`.
+- [x] [auto] A wrong key is rejected by the proof — evidence: `tests/api/join/proof.test.ts`.
+- [x] [auto] SSE and cancel reject non-owners — evidence: `tests/api/join/lobby-sse.test.ts`.
 - [ ] [auto] The key never leaves the browser — evidence: `pnpm test:e2e -- rooms/key-leak` (request URLs and bodies,
       WebSocket frames, SSE URLs, DB dump, app and Caddy logs).
-- [ ] [auto] Lobby admit reaches the SSE in under 1 s (API level) — evidence: `tests/api/join/lobby-latency.test.ts`.
-- [ ] [auto] A locked room rejects joins; capacity is enforced — evidence: `tests/api/join/limits.test.ts`.
-- [ ] [auto] Token grants are unit-tested per role — evidence: `server/services/livekit/token.test.ts`.
-- [ ] [auto] A removed participant cannot rejoin (webhook enforcement tested) — evidence:
+- [x] [auto] Lobby admit reaches the SSE in under 1 s (API level) — evidence: `tests/api/join/lobby-latency.test.ts`.
+- [x] [auto] A locked room rejects joins; capacity is enforced — evidence: `tests/api/join/limits.test.ts`.
+- [x] [auto] Token grants are unit-tested per role — evidence: `server/services/livekit/token.test.ts`.
+- [x] [auto] A removed participant cannot rejoin (webhook enforcement tested) — evidence:
       `tests/api/webhooks/enforcement.test.ts`, `tests/api/join/limits.test.ts`.
-- [ ] [auto] Webhooks reject bad signatures and are deduplicated — evidence: `tests/api/webhooks/signature.test.ts`.
-- [ ] [auto] One meeting per room under concurrent first joins — evidence: `tests/api/join/meeting.test.ts`.
-- [ ] [auto] Every in-call route enforces the permission matrix — evidence: `tests/api/calls/authz.test.ts`.
-- [ ] [auto] Room metadata is written only through `publishRoomState` and matches the DB — evidence:
+- [x] [auto] Webhooks reject bad signatures and are deduplicated — evidence: `tests/api/webhooks/signature.test.ts`.
+- [x] [auto] One meeting per room under concurrent first joins — evidence: `tests/api/join/meeting.test.ts`.
+- [x] [auto] Every in-call route enforces the permission matrix — evidence: `tests/api/calls/authz.test.ts`.
+- [x] [auto] Room metadata is written only through `publishRoomState` and matches the DB — evidence:
       `tests/api/rooms/room-state.test.ts`.
 - [ ] [auto] Join error screens and duplicate-tab detection work — evidence: `pnpm test:e2e -- join`.
 - [ ] [auto] No console errors or CSP violations on dashboard, room settings and `/m/[slug]` — evidence:
       `pnpm test:e2e -- rooms join` (base fixture).
-- [ ] [auto] `lint`, `typecheck`, `test`, `test:api` are green — evidence: ci.yml.
-- [ ] [agent-manual] `/m/<slug>` is not server-rendered — evidence: `curl -s <base>/m/abc-defg-hjk` shows the SPA shell
+- [x] [auto] `lint`, `typecheck`, `test`, `test:api` are green — evidence: ci.yml.
+- [x] [agent-manual] `/m/<slug>` is not server-rendered — evidence: `curl -s <base>/m/abc-defg-hjk` shows the SPA shell
       without room data, pasted into the report.
 
 ## Notes and gotchas
@@ -202,3 +202,33 @@ service, webhooks with enforcement and `publishRoomState`, so Stage 06 is UI-onl
 - Invites are independent of K; after a rotation the owner re-copies links and old ones fail with `ROOM_KEY_INVALID`.
   The "rotate the key before the next meeting" prompt after a removal is client-side (`collab-ui`) (decision).
 - Never put secrets in query strings; `EventSource` URLs carry only the request id.
+
+## Backend behavior for rooms-ui and collab-ui (rooms-backend, Wave 1)
+Decisions taken while implementing the backend (each also listed in the rooms-backend report):
+- **Join.** `POST /api/join/:slug` answers 200 `JoinGrant` or 202 `JoinWaiting`. Hosts and co-hosts skip the invite, the
+  lock, the password and the waiting room; `JoinInfo.needsPassword` and `JoinInfo.waitingRoom` already reflect that
+  for the caller. Guests without `displayName` get 400 `VALIDATION_FAILED` with `details.issues[0].path =
+  'displayName'`. Info accepts a genuine, unrevoked, unexpired invite even when its uses are spent (the join decides).
+- **Resume** is checked right after the proof and never uses an invite: the same session or guest cookie with the same
+  `clientId` gets a new token for the same identity while the row is `admitted`/`joined` in the live meeting, or `left`
+  less than 2 minutes ago (page reload). A reload in the waiting room returns the same `requestId`.
+- **Waiting room SSE.** The first event is the current state. After `admitted`, `denied` or `ended` the server closes
+  the stream: call `EventSource.close()` on those events (a reconnect gets the final event again, with a fresh token).
+  Locking the room closes the lobby: waiting people get `denied { reason: 'locked' }` and may try again after unlock.
+  Cancel answers 204 even when the request was already decided.
+- **Lobby decisions** on an unknown or already decided request answer 404 `NOT_FOUND`; admitting at capacity answers
+  409 `ROOM_FULL`; admit-all admits in request order up to capacity.
+- **Removal is per person**: every live row of that user (or guest session) in the meeting is removed and their
+  pending requests end with `denied { reason: 'removed' }`; rejoining answers 403 `JOIN_REMOVED`.
+- **Self-unmute.** `allowSelfUnmute: false` (live settings, or mute-all with `preventSelfUnmute`, which co-hosts may use)
+  takes the microphone away from every participant; "give voice" (`permissions { microphone: true }`) restores it for
+  one person; `allowSelfUnmute: true` restores it for everyone. New participants start without a microphone while
+  self-unmute is off. A revoked source is also server-muted at once.
+- **Hints** (`blinq.srv.v1`): `lobby.changed` and `participant.changed` go to hosts and co-hosts that LiveKit reported
+  as joined; `ask-unmute` to its target only. Room state changes arrive through room metadata only (no hint).
+- **Live settings** answer `{ state }` (the published metadata). `locked` resets when the meeting ends; the other live
+  settings are room settings and persist.
+- **Participants list** includes admitted rows that have not connected yet (`joinedAt: null`).
+- In-call requests from a user with two tabs resolve to the most recently joined row (in-call requests carry no
+  `clientId`).
+- `muteOnJoin` is stored and returned in `RoomDetails` but not exposed to joiners yet (requested for `JoinInfo`).
