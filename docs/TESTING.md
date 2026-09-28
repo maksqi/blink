@@ -163,6 +163,10 @@ Browsers ══ media: LAN IP from scripts/detect-ip.sh, UDP 7882 / TCP 7881 ═
 dev LiveKit ─ webhooks ─► http://host.docker.internal:<PORT>/api/webhooks/livekit (PORT 3000–3005)
 ```
 
+On native Linux (CI) `host.docker.internal` does not reach the host's loopback interface, so `docker/e2e/compose.yml`
+adds a small forwarder service (`docker/e2e/host-gateway.Caddyfile`) that relays traffic from the Docker network to the
+app on the host. It also makes LiveKit webhooks reach the app in CI.
+
 - The test build (`pnpm build:test`) is the production build plus the harness page `/dev/call` and
   `window.__blinqTest` (and `GET /api/__test/livekit-calls` if approved, which only API tests use).
 - App and signaling are same-origin, so the production CSP (`connect-src 'self'`) applies unchanged. The CSP additions
@@ -175,12 +179,17 @@ dev LiveKit ─ webhooks ─► http://host.docker.internal:<PORT>/api/webhooks/
 ### 6.2 Running locally
 
 1. The shared dev stack is up (`pnpm dev:deps`, run by the orchestrator) and your worktree is set up (§7).
-2. `sh scripts/with-lock.sh pnpm build:test`
-3. Serve the build with the E2E environment (§6.1) and start the e2e Caddy for your `PORT`: TODO(devops-ci), one
-   script for both.
-4. `sh scripts/with-lock.sh pnpm test:e2e --project=chromium call/e2ee`
+2. Stop your `pnpm dev` server (the E2E server uses your port), then run:
+   `sh scripts/e2e.sh --project=chromium tests/e2e/<area>`
+   The script holds the machine-wide lock (`scripts/with-lock.sh`), builds the test build (`pnpm build:test`),
+   recreates and migrates the `blinq_e2e` database, starts `.output/server/index.mjs` with the E2E environment (§6.1),
+   starts the e2e Caddy (`docker/e2e/compose.yml`, project `blinq-e2e`), waits for health, runs Playwright with your
+   arguments, and stops everything on exit.
+   Variables: `E2E_SKIP_BUILD=1` reuses the last test build; `E2E_APP_PORT` overrides the app port;
+   `E2E_DB_NAME` overrides the database name.
 
-Artifacts: `test-results/` (trace, video and screenshot kept on failure) and `playwright-report/`.
+Artifacts: `test-results/` (trace, video and screenshot kept on failure), `playwright-report/`, and the logs in
+`logs/e2e/{app,caddy}.log` (`E2E_LOG_DIR` overrides the directory).
 
 ### 6.3 Projects and fake media (`playwright.config.ts`)
 
@@ -205,15 +214,19 @@ Artifacts: `test-results/` (trace, video and screenshot kept on failure) and `pl
 ### 6.4 Fixtures (`tests/e2e/fixtures/`)
 
 Specs import `test` and `expect` from `tests/e2e/fixtures/index.ts`. It exports
-`test = mergeTests(base, livekit, media)` (each file exports its own `test.extend(...)`) and re-exports `expect`.
+`test = mergeTests(base, livekit, media, recording)` (each file exports its own `test.extend(...)`) and re-exports
+`expect`.
 
 | File | Owner | Provides |
 |---|---|---|
 | `base.ts` | `devops-ci` | the global guards (§6.5), `secrets.track(value)`, the per-test `allowConsoleErrors` option |
 | `livekit.ts` | `call-core` | `joinAs(role, options)` |
-| `media.ts` | `call-core` | fake-device helpers, first-frame waits, `getStats` polling |
+| `media.ts` | `media-fx` | processor helpers (blur, noise suppression) |
+| `recording.ts` | `recording-client` | ffprobe/volumedetect helpers, forced MIME, chunk-failure injection |
+| `join.ts` | `rooms-backend` | DB-backed join through the real join API (creates `call_participants` rows) |
 
-W0b commits `livekit.ts` and `media.ts` as stubs, so `index.ts` (frozen after W0b) does not change when `call-core`
+Call-core's fake-device helpers, first-frame waits and `getStats` polling live in `livekit.ts`. W0a commits
+`livekit.ts`, `media.ts` and `recording.ts` as stubs, so `index.ts` (frozen after W0b) does not change when `call-core`
 implements them (decision). Other areas add fixture files through a report request.
 
 **`joinAs(role, options)`**: `role` is `host`, `cohost` or `participant`; options are `name`, `kind` (`user` or
@@ -234,7 +247,12 @@ unencrypted-publisher negative test).
 - a console message of type `error` or an uncaught page error appears, unless it matches the test's narrow
   `allowConsoleErrors` list (for example a deliberate 403 in a negative test);
 - a secret appears in the app log or the e2e Caddy log: any tracked value (room key, join proof, LiveKit token,
-  invite/session/guest token, password) or a generic pattern (JWT-shaped `eyJ…`, `#k=`). Log locations: TODO(devops-ci).
+  invite/session/guest token, password) or a generic pattern (JWT-shaped `eyJ…`, `#k=`). Logs: `logs/e2e/app.log` and
+  `logs/e2e/caddy.log`.
+
+Fixture API (`base.ts`): `guards.watch(context)` for extra browser contexts, `guards.allowConsoleError(pattern)`,
+`secrets.track(value)` (values of at least 8 characters) and `secrets.expectNoLeaks()`. Secrets from the test
+environment are tracked automatically, and a final log scan runs once per worker.
 
 `rooms/key-leak.spec.ts` (Stage 04) goes further. It records every request URL and body, WebSocket frame and SSE URL,
 then searches them, a `pg_dump` of the test database and both logs for `K` and everything derived from it.
@@ -330,6 +348,14 @@ Other latency limits in stage DoDs are asserted as written, everywhere: lobby ad
 
 Actions are pinned by commit SHA. After every merge the orchestrator runs the same gate locally
 ([`ROADMAP.md`](ROADMAP.md) → Merge gate).
+
+Local equivalents of the CI-only checks:
+- `node scripts/check-build.mjs` — asserts the production build contains no test hooks or harness chunks (and the
+  test build does).
+- `sh scripts/scan-secrets.sh` — gitleaks over the repository history (`.gitleaks.toml` allowlists the public dev-only
+  values in `.env.dev.example` and `docker-compose.dev.yml`).
+- `sh scripts/lint-workflows.sh` — actionlint and shellcheck over `.github/workflows/`.
+- `pnpm audit` is report-only in `ci.yml` and blocking in `release.yml`.
 
 ## 9. Manual cross-browser matrix `[user]`
 
