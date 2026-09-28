@@ -1,0 +1,5 @@
+# Health endpoint for the container healthcheck, on loopback only: without bind, Caddy would listen on every interface.
+http://:{$CADDY_HEALTH_PORT} {
+	bind 127.0.0.1
+	respond "OK" 200
+}

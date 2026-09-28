@@ -1,0 +1,19 @@
+	# TURN/TLS on port 443 (only with TURN_DOMAIN). LiveKit always advertises turns:TURN_DOMAIN:443. TLS connections
+	# with that SNI are terminated here and forwarded to LiveKit's plaintext TURN listener with PROXY protocol v2, so
+	# LiveKit sees the real client address (Firefox rejects a loopback XOR-MAPPED-ADDRESS). Every other connection
+	# goes on to the HTTP server (the tls wrapper).
+	servers :443 {
+		listener_wrappers {
+			layer4 {
+				@turn tls sni {$TURN_DOMAIN}
+				route @turn {
+					tls
+					proxy {
+						proxy_protocol v2
+						upstream 127.0.0.1:{$LIVEKIT_TURN_TLS_PORT}
+					}
+				}
+			}
+			tls
+		}
+	}
