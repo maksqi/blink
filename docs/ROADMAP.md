@@ -11,15 +11,15 @@ and verifying a stage.
 | Stage | Title | Owner(s) | Wave | Depends on | Status |
 |---|---|---|---|---|---|
 | [00](stages/00-docs-and-planning.md) | Docs and planning | orchestrator + doc agents | W0-docs | — | done |
-| [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | in progress (W0a done) |
+| [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | done |
 | [02](stages/02-auth-and-accounts.md) | Auth and accounts | auth | W1 | 01 | todo |
 | [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | todo |
 | [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | todo |
-| [05](stages/05-call-core.md) | Call core | call-core | W1 | 01 | todo |
+| [05](stages/05-call-core.md) | Call core | call-core | W1 | 01 | in progress |
 | [06](stages/06-host-controls-collaboration.md) | Host controls and collaboration | collab-ui | W2 | 04 (backend), 05 | todo |
 | [07](stages/07-media-processing.md) | Media processing | media-fx | W2 | 05 | todo |
 | [08](stages/08-recording.md) | Recording | recording-server (W1), recording-client (W2) | W1 / W2 | 01; client also 05 and 08 (server) | todo |
-| [09](stages/09-production-deployment.md) | Production deployment | infra (9a, W1); user (9b) | W1 / final | 01 (9a); 10 (9b) | todo |
+| [09](stages/09-production-deployment.md) | Production deployment | infra (9a, W1); user (9b) | W1 / final | 01 (9a); 10 (9b) | in progress (9a) |
 | [10](stages/10-hardening-qa-release.md) | Hardening, QA and release | e2e, security-review, quality-review, fix agents, docs | W3 | all | todo |
 
 ## Dependency graph
@@ -76,7 +76,7 @@ Wave base SHAs (filled in by the orchestrator):
 | Wave | Base SHA |
 |---|---|
 | W0b | c923e6d |
-| W1 | — |
+| W1 | 051a570 (call-core, infra); see change log for auth, rooms-backend, recording-server |
 | W2 | — |
 | W3 | — |
 
@@ -155,3 +155,5 @@ Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
 
 - 2026-09-28 — Roadmap created from the approved plan.
 - 2026-09-28 — Stage 00 done (all docs committed); W0a committed; W0b started from c923e6d.
+- 2026-09-28 — W0b merged (devops-ci, ui-shell, server-core); Stage 01 done. Gate: lint, typecheck, 359 unit tests,
+  154 API tests, production build checks, CLI bootstrap. call-core and infra started from 051a570.

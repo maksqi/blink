@@ -147,6 +147,8 @@ docker exec blinq-dev-postgres-1 psql -U blinq -d postgres -v ON_ERROR_STOP=1 -q
   -c "DROP DATABASE IF EXISTS \"$DB_NAME\" WITH (FORCE)" \
   -c "CREATE DATABASE \"$DB_NAME\" OWNER blinq" > /dev/null
 node .output/server/cli.mjs migrate
+# First admin from ADMIN_EMAIL / ADMIN_PASSWORD (.env.dev.example: admin@blinq.local), must change password at login.
+node .output/server/cli.mjs bootstrap
 
 # 4. App server. A second Nitro server on a busy port logs EADDRINUSE but keeps running, and the old server would
 # answer every request, so the port must be free first.

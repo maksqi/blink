@@ -1,6 +1,6 @@
 # Stage 01 — Foundation
 
-Status: todo
+Status: done
 Owner(s): `orchestrator` (W0a); `server-core`, `ui-shell`, `devops-ci` (W0b, parallel worktrees)
 Depends on: Stage 00
 Blocks: every Wave 1 workstream (`auth`, `rooms-backend`, `call-core`, `recording-server`, `infra`)
