@@ -25,7 +25,6 @@ import { useDb, type Db, type Tx } from '../../database/client'
 import { callParticipants, meetings, recordings, rooms } from '../../database/schema'
 import { eventBus } from '../../utils/event-bus'
 import { logger } from '../../utils/logger'
-import { getSettings } from '../settings/settings'
 import { buildRoomMetadata } from '../livekit/metadata'
 import { roomService } from '../livekit/room-service'
 
@@ -61,7 +60,11 @@ export function newEpoch(): string {
   return randomBytes(16).toString('base64url')
 }
 
-export async function createMeeting(tx: Tx, room: RoomRow, now: Date = new Date()): Promise<MeetingRow> {
+/**
+ * Runs inside `withRoomLock`: every query uses `tx`, and `settings` are loaded by the caller beforehand, because a
+ * second pool connection taken while the lock is held could wait behind other lock waiters that hold the pool.
+ */
+export async function createMeeting(tx: Tx, room: RoomRow, settings: Settings, now: Date = new Date()): Promise<MeetingRow> {
   const [inserted] = await tx
     .insert(meetings)
     .values({ roomId: room.id, epoch: newEpoch(), startedAt: now })
@@ -78,7 +81,6 @@ export async function createMeeting(tx: Tx, room: RoomRow, now: Date = new Date(
     .set({ meetingId: inserted.id })
     .where(and(eq(callParticipants.roomId, room.id), isNull(callParticipants.meetingId), eq(callParticipants.status, 'waiting')))
 
-  const settings = await getSettings()
   const service = roomService()
   await service.deleteRoom(room.id)
   const { sid } = await service.createRoom({

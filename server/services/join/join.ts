@@ -260,7 +260,7 @@ export async function joinRoom(event: H3Event, slug: string, input: JoinRequestI
 
     if (!lobby && !meeting) {
       const room = current
-      meeting = await withLivekit('createRoom', () => createMeeting(tx, room, now))
+      meeting = await withLivekit('createRoom', () => createMeeting(tx, room, settings, now))
     }
     const [row] = await tx
       .insert(callParticipants)

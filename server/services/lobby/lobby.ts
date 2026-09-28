@@ -108,11 +108,13 @@ async function admitUnderLock(
   pick: (tx: Tx, meetingId: string, available: number) => Promise<string[]>,
   now: Date,
 ): Promise<string[]> {
+  // Loaded before taking the lock: everything under it uses the transaction's connection only.
+  const settings = await getSettings()
   return withRoomLock(caller.roomId, async (tx) => {
     const meeting = await findLiveMeeting(tx, caller.roomId)
     const room = await findRoomById(caller.roomId, { db: tx })
     if (!meeting || !room || meeting.id !== caller.meetingId) throw apiError('NOT_FOUND', 404)
-    const max = effectiveMaxParticipants(room, await getSettings())
+    const max = effectiveMaxParticipants(room, settings)
     const available = Math.max(0, max - (await activeCount(tx, meeting.id)))
     const ids = await pick(tx, meeting.id, available)
     if (ids.length === 0) return []
@@ -148,6 +150,8 @@ export async function admitRequest(caller: ParticipantRow, requestId: string, no
     },
     now,
   )
+  // Another moderator may have decided in the meantime.
+  if (admitted.length === 0) throw apiError('NOT_FOUND', 404)
   for (const id of admitted) eventBus().publish({ type: 'lobby.decided', requestId: id, decision: 'admitted' })
   await notifyLobbyChanged(caller.roomId, caller.meetingId)
 }
