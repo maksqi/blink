@@ -5,14 +5,17 @@
  *   cli bootstrap                  create the first admin from ADMIN_EMAIL / ADMIN_PASSWORD (only once, ever)
  *   cli reset-password <email>     set a new password read from stdin, revoke sessions, clear throttling, audit
  *
- * Bundled to .output/server/cli.mjs by scripts/build-cli.mjs. In development: `pnpm cli <command>`.
+ * Bundled to .output/server/cli.mjs by scripts/build-cli.mjs (run it with the production environment, e.g.
+ * `node --env-file=.env .output/server/cli.mjs bootstrap`). In development: `pnpm cli <command>`.
+ * Exit codes: 0 success, 1 failure, 2 usage, 130 aborted prompt.
  */
+import { closeDb } from './database/client'
 import { runMigrations } from './database/migrate'
 import { EnvError, env } from './utils/env'
 
 const USAGE = 'Usage: cli <migrate | bootstrap | reset-password <email>>'
 
-async function main(argv: string[]): Promise<number> {
+async function run(argv: string[]): Promise<number> {
   const [command, ...args] = argv
   switch (command) {
     case 'migrate': {
@@ -21,23 +24,31 @@ async function main(argv: string[]): Promise<number> {
       return 0
     }
     case 'bootstrap': {
-      // Implemented by server-core (Stage 01, W0b): server/services/session/bootstrap.ts
+      // Loaded lazily so `migrate` never needs the argon2 native addon.
       const { runBootstrap } = await import('./services/session/bootstrap')
       return runBootstrap()
     }
     case 'reset-password': {
       const email = args[0]
-      if (!email) {
+      if (!email || args.length > 1) {
+        // The password is read from stdin only; refusing extra arguments keeps it out of argv.
         console.error(USAGE)
         return 2
       }
-      // Implemented by server-core (Stage 01, W0b): server/services/session/reset-password.ts
       const { runResetPassword } = await import('./services/session/reset-password')
       return runResetPassword(email)
     }
     default:
       console.error(USAGE)
       return 2
+  }
+}
+
+async function main(argv: string[]): Promise<number> {
+  try {
+    return await run(argv)
+  } finally {
+    await closeDb()
   }
 }
 
