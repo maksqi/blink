@@ -4,7 +4,7 @@
  * Runs the real pre-join and call code without the rooms UI:
  *
  *   /dev/call#url=<ws url>&token=<LiveKit token>&k=<room key>&epoch=<meeting epoch>&slug=<slug>&name=<name>
- *            [&e2ee=off] [&mic=0] [&cam=0] [&title=…] [&rec=1] [&muteOnJoin=1]
+ *            [&e2ee=off] [&mic=0] [&cam=0] [&title=…] [&rec=1] [&muteOnJoin=1] [&nameMode=guest]
  *            [&maxCam=720p|1080p] [&maxShare=720p|1080p] [&shareFps=5|15|30]
  *
  * The fragment is read once and stripped from the address bar right away (like the shell's fragment plugin).
@@ -36,6 +36,7 @@ interface HarnessParams {
   camera: boolean
   microphone: boolean
   recording: boolean
+  nameMode: 'fixed' | 'guest'
   muteOnJoin: boolean
   media: MediaLimits
 }
@@ -91,6 +92,7 @@ function readParams(hash: string): HarnessParams | string {
     camera: params.get('cam') !== '0',
     microphone: params.get('mic') !== '0',
     recording: params.get('rec') === '1',
+    nameMode: params.get('nameMode') === 'guest' ? 'guest' : 'fixed',
     muteOnJoin: params.get('muteOnJoin') === '1',
     media: {
       maxCameraResolution: pick(
@@ -177,7 +179,7 @@ onBeforeUnmount(() => session?.dispose())
       v-else-if="session.store.phase === 'prejoin'"
       :session="session"
       :title="config?.title"
-      name-mode="fixed"
+      :name-mode="config?.nameMode"
       :display-name="config?.name"
       :recording-active="config?.recording"
       @join="onJoin"
