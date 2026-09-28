@@ -23,7 +23,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "nuxt typecheck",
+    "typecheck": "nuxt typecheck && tsc -p tests/tsconfig.json",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
     "test:nuxt": "vitest run --project nuxt",

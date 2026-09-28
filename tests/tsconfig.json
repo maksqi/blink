@@ -1,0 +1,25 @@
+{
+  // Type-checks Playwright specs/fixtures, API tests and the Playwright/Vitest configs (nuxt typecheck covers app/server/shared).
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "#shared/*": ["../shared/*"],
+      "~~/*": ["../*"],
+      "~/*": ["../app/*"],
+      "@/*": ["../app/*"]
+    }
+  },
+  "include": ["./e2e/**/*.ts", "./api/**/*.ts", "../playwright.config.ts", "./smoke-prod/**/*.ts", "./load/**/*.ts", "./perf/**/*.ts"]
+}

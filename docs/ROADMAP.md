@@ -99,6 +99,7 @@ orchestrator. "Frozen" paths change only through the orchestrator, after an agen
   vault excepted, see rooms-ui), `app/composables/useApi.ts`
 - `app/components/ui/**` (shadcn-vue), `app/layouts/**` and navigation after W0b
 - `.github/workflows/**` and `docker-compose.dev.yml` after W0b
+- `tests/e2e/fixtures/index.ts` (merges base, livekit, media, recording), `tests/tsconfig.json`
 
 ### W0b
 
@@ -125,8 +126,8 @@ orchestrator. "Frozen" paths change only through the orchestrator, after an agen
 | `admin` | `server/api/admin/**` (except `recordings/**`), `server/services/admin/**`, `app/pages/admin/**` (except `recordings.vue`), `app/components/admin/**`, `tests/api/admin/**`, `tests/e2e/admin/**` |
 | `rooms-ui` | `app/pages/{dashboard,rooms}/**`, `app/pages/m/**`, `app/components/{rooms,join}/**`, `app/lib/join/**`, `app/composables/rooms/**`, `app/lib/e2ee/key-vault.ts` (+ test), `tests/e2e/{rooms,join}/**` |
 | `collab-ui` | `app/lib/call/features/{participants,lobby,chat,reactions,hands,host-actions,room-settings}/**`, `app/components/call/{participants,lobby,chat,reactions,host}/**`, `tests/e2e/collab/**` |
-| `media-fx` | `app/lib/media/**`, `app/lib/call/features/effects/**`, `app/components/call/effects/**`, `scripts/vendor-assets.mjs`, `public/vendor/**`, `tests/e2e/media/**` |
-| `recording-client` | `app/lib/recording/**`, `app/lib/call/features/recording/**`, `app/components/call/recording/**`, `tests/e2e/recording/**` |
+| `media-fx` | `app/lib/media/**`, `app/lib/call/features/effects/**`, `app/components/call/effects/**`, `scripts/vendor-assets.mjs`, `public/vendor/**`, `tests/e2e/media/**`, `tests/e2e/fixtures/media.ts` |
+| `recording-client` | `app/lib/recording/**`, `app/lib/call/features/recording/**`, `app/components/call/recording/**`, `tests/e2e/recording/**`, `tests/e2e/fixtures/recording.ts` |
 
 ### W3
 
