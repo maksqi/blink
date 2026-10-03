@@ -17,6 +17,7 @@ RUN npm install --global --no-fund --no-audit pnpm@11.20.0
 WORKDIR /src
 # Dependencies first, so source changes reuse the downloaded store.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
     pnpm fetch --store-dir /pnpm/store
 COPY . .

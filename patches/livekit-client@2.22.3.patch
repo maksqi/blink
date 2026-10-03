@@ -1,0 +1,16 @@
+diff --git a/dist/livekit-client.esm.mjs b/dist/livekit-client.esm.mjs
+index 0bdf98540d93d7deb581737dca7afb299308d307..97b8d014b902ff9cdfce2cc140029aec5e97eb9e 100644
+--- a/dist/livekit-client.esm.mjs
++++ b/dist/livekit-client.esm.mjs
+@@ -25600,7 +25600,10 @@ class RTCEngine extends eventsExports.EventEmitter {
+             value: new EncryptedPacket({
+               encryptedValue: encryptedData.payload,
+               iv: encryptedData.iv,
+-              keyIndex: encryptedData.keyIndex
++              keyIndex: encryptedData.keyIndex,
++              // blinq patch: 2.22.3 leaves encryption_type unset (NONE), so receivers cannot tell decrypted packets
++              // from plaintext ones. Receivers read this field only after a successful decryption.
++              encryptionType: Encryption_Type.GCM
+             })
+           };
+         }

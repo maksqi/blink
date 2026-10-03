@@ -14,3 +14,8 @@ allowBuilds:
   vue-demi: true
   # Installs the platform-specific native resolver binary (transitive via @nuxt/eslint -> eslint-plugin-import-x).
   unrs-resolver: true
+
+# Local dependency patches (pnpm patch). Each one says why in the patch file; drop it once upstream ships the fix.
+# livekit-client: set encryption_type on encrypted data packets, so receivers can require E2EE for chat (2.22.3 bug).
+patchedDependencies:
+  livekit-client@2.22.3: patches/livekit-client@2.22.3.patch

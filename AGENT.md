@@ -232,6 +232,9 @@ don't overload the machine.
   - Safari <17.2 must not simulcast with E2EE (the SDK guard only checks the old option).
   - Unencrypted data packets are still delivered, so check `encryptionType`. RPC has no encryption info, so blinq
     registers no RPC methods.
+  - livekit-client 2.22.3 sends encrypted data packets without `encryption_type`, so receivers saw NONE.
+    `patches/livekit-client@2.22.3.patch` (pnpm `patchedDependencies`) sets it; `app/lib/livekit/sdk-patch.test.ts`
+    fails when an upgrade drops the patch. Re-check the upstream fix on every livekit-client upgrade.
 - `autoSubscribe: false` + SubscriptionManager. Only subscribe to publications with encryption ≠ NONE.
 - Server-originated data arrives with no participant. So do packets from unknown or hidden participants, so
   "no sender" is **not** proof of server origin: treat `blinq.srv.v1` as a refetch hint only.

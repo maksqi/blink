@@ -263,6 +263,9 @@ All derivations use HKDF-SHA256 via WebCrypto. The exact info strings are in [`A
   - `allowBuilds` lists every package allowed to run install scripts; everything else is denied.
   - `minimumReleaseAge` avoids freshly published (possibly malicious) versions.
   - The lockfile is committed and CI installs with `--frozen-lockfile`.
+  - Local patches (`patchedDependencies`, `patches/`) are reviewed like code and each one states why it exists. The
+    only one, for livekit-client 2.22.3, marks encrypted data packets as GCM so receivers can keep rejecting
+    unencrypted ones (§3.3); a unit test fails when an upgrade stops applying it.
 - **Pinning:** GitHub Actions are pinned by commit SHA. Container images are pinned by version (digest pinning
   optional).
 - **Scanning:** gitleaks scans for committed secrets. `pnpm audit` runs in CI; high or critical findings block a

@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  livekit-client@2.22.3: f01bd6800075dfb4a46127ac4e9389e6ead9c239ef6eeb03f9fa64eb4faae902
+
 importers:
 
   .:
@@ -13,7 +16,7 @@ importers:
         version: 5.3.0
       '@livekit/track-processors':
         specifier: ^0.8.1
-        version: 0.8.1(@types/dom-mediacapture-transform@0.1.12)(livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22))
+        version: 0.8.1(@types/dom-mediacapture-transform@0.1.12)(livekit-client@2.22.3(patch_hash=f01bd6800075dfb4a46127ac4e9389e6ead9c239ef6eeb03f9fa64eb4faae902)(@types/dom-mediacapture-record@1.0.22))
       '@lucide/vue':
         specifier: ^1.48.0
         version: 1.48.0(vue@3.5.43(typescript@6.0.3))
@@ -58,7 +61,7 @@ importers:
         version: 1.15.11
       livekit-client:
         specifier: ^2.22.3
-        version: 2.22.3(@types/dom-mediacapture-record@1.0.22)
+        version: 2.22.3(patch_hash=f01bd6800075dfb4a46127ac4e9389e6ead9c239ef6eeb03f9fa64eb4faae902)(@types/dom-mediacapture-record@1.0.22)
       livekit-server-sdk:
         specifier: ^2.19.1
         version: 2.19.1
@@ -6876,11 +6879,11 @@ snapshots:
     dependencies:
       '@bufbuild/protobuf': 1.10.1
 
-  '@livekit/track-processors@0.8.1(@types/dom-mediacapture-transform@0.1.12)(livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22))':
+  '@livekit/track-processors@0.8.1(@types/dom-mediacapture-transform@0.1.12)(livekit-client@2.22.3(patch_hash=f01bd6800075dfb4a46127ac4e9389e6ead9c239ef6eeb03f9fa64eb4faae902)(@types/dom-mediacapture-record@1.0.22))':
     dependencies:
       '@mediapipe/tasks-vision': 0.10.14
       '@types/dom-mediacapture-transform': 0.1.12
-      livekit-client: 2.22.3(@types/dom-mediacapture-record@1.0.22)
+      livekit-client: 2.22.3(patch_hash=f01bd6800075dfb4a46127ac4e9389e6ead9c239ef6eeb03f9fa64eb4faae902)(@types/dom-mediacapture-record@1.0.22)
 
   '@lucide/vue@1.48.0(vue@3.5.43(typescript@6.0.3))':
     dependencies:
@@ -10197,7 +10200,7 @@ snapshots:
     transitivePeerDependencies:
       - srvx
 
-  livekit-client@2.22.3(@types/dom-mediacapture-record@1.0.22):
+  livekit-client@2.22.3(patch_hash=f01bd6800075dfb4a46127ac4e9389e6ead9c239ef6eeb03f9fa64eb4faae902)(@types/dom-mediacapture-record@1.0.22):
     dependencies:
       '@livekit/mutex': 1.1.1
       '@livekit/protocol': 1.50.4
