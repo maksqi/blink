@@ -4,8 +4,9 @@
 #   git archive --format=tar HEAD | docker build -t blinq-app:clean -
 #
 # Build and runtime use the same Debian base, so the native @node-rs/argon2 binding that Nitro traces into
-# .output/server/node_modules matches the runtime libc (glibc).
-ARG NODE_IMAGE=node:24-bookworm-slim
+# .output/server/node_modules matches the runtime libc (glibc). Pinned to the full Node release; bump it together with
+# `.node-version` when upgrading Node (`docker compose build --pull` still picks up Debian rebuilds of this tag).
+ARG NODE_IMAGE=node:24.21.0-bookworm-slim
 
 FROM mwader/static-ffmpeg:9.0.2 AS ffmpeg
 
