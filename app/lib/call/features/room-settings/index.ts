@@ -1,6 +1,6 @@
 /**
  * Room settings feature (Stage 06): the host-controls button for hosts and co-hosts (lock, live settings, mute all,
- * end for all). Test builds also expose the room metadata every client sees as `window.__blinqTest.state.roomState`.
+ * end for all). Test builds also expose the room metadata every client sees as `state.roomState` in the test hooks.
  */
 import { defineCallFeature } from '../../../contracts/call'
 import { testHooks } from '../../../contracts/test-hooks'

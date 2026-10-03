@@ -163,6 +163,12 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       orchestrator (`nuxt.config.ts`) — status: open
 - [ ] F-011 [low] rooms — the sessionStorage fragment store (`blinq:fragment:/m/<slug>`) can keep an untaken key after
       sign-out — owner: fix-ui — status: open
+- [x] F-012 [medium] ci — the production SSR bundle contains `__blinqTest` (a JSDoc comment in
+      `app/lib/call/features/room-settings/index.ts`; SSR chunks are not minified), so `check-build.mjs production`
+      fails — owner: orchestrator — status: fixed (comment reworded)
+- [x] F-013 [medium] ci — gitleaks reports 15 `generic-api-key` false positives (fake passwords in tests, the temporary
+      password alphabet), so the ci.yml gitleaks job fails — owner: orchestrator — status: fixed (`.gitleaks.toml`
+      allowlist limited to that rule in test files)
 
 ## Tests
 - API: `tests/api/security/{authz-matrix,idor,csrf,rate-limits,cookies,headers}.test.ts`.

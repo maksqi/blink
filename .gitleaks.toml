@@ -20,3 +20,17 @@ regexes = [
   '''^dev-admin-password-0000$''',
   '''^blinq-dev$''',
 ]
+
+# Unit and API tests use obvious fake passwords and tokens (word triples, documentation UUIDs). Only the noisy generic
+# rule is relaxed there, so real key formats (cloud keys, private keys, JWTs) in tests are still reported.
+[[allowlists]]
+description = "Fake credentials in tests (generic-api-key only)"
+targetRules = ["generic-api-key"]
+paths = ['''(^|/)tests/''', '''\.test\.ts$''']
+
+# The alphabet temporary passwords are drawn from is not a secret.
+[[allowlists]]
+description = "Temporary password alphabet"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = ['''TEMP_PASSWORD_ALPHABET = ''']
