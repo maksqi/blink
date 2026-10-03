@@ -1,12 +1,16 @@
 /**
  * Lobby latency (Stage 04 DoD): a host's admit reaches the waiting owner's SSE in under 1 s (API level).
  */
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { createRoom, createUser } from '../_harness'
-import { joinGuest, startMeeting } from '../rooms/_support'
+import { joinGuest, setSetting, startMeeting } from '../rooms/_support'
 import { openSse } from './_sse'
 
 describe('lobby latency', () => {
+  // The waiting person is a guest. The server caches settings for up to 5 s, so an earlier file that turned
+  // guests.allowed off can still be in effect: restore the default and wait until the server sees it.
+  beforeAll(() => setSetting('guests.allowed', null))
+
   it('delivers admitted to the SSE in under 1 s', async () => {
     const owner = await createUser()
     const room = await createRoom(owner, { waitingRoom: true })
