@@ -4,8 +4,15 @@
  * The operator CLI (`cli reset-password`) restores the first-login state before and after, so every browser project
  * starts from the same state.
  */
+import type { Page } from '@playwright/test'
 import { expect, test } from '../fixtures'
 import { BOOTSTRAP_ADMIN, resetBootstrapAdmin, strongPassword } from './support'
+
+/** The room list has answered and no request is left in flight. */
+async function dashboardSettled(page: Page): Promise<void> {
+  await expect(page.getByTestId('rooms-empty').or(page.getByTestId('room-item').first())).toBeVisible()
+  await page.waitForLoadState('networkidle')
+}
 
 test.describe('first admin', { tag: '@ui' }, () => {
   test.beforeEach(() => resetBootstrapAdmin())
@@ -34,8 +41,13 @@ test.describe('first admin', { tag: '@ui' }, () => {
 
     await expect(page).toHaveURL(/\/dashboard$/)
     await expect(page.getByTestId('user-menu')).toBeVisible()
+    // Reload only once the dashboard has settled, and end the test the same way (F-063): a reload or the closing page
+    // cancels requests still in flight (the room list, link prefetches), and WebKit and sometimes Firefox report each
+    // cancelled fetch or module import as a page error although the app handles it.
+    await dashboardSettled(page)
     await page.reload()
     await expect(page).toHaveURL(/\/dashboard$/)
+    await dashboardSettled(page)
     // The API no longer holds the account back.
     expect(await page.evaluate(async () => (await fetch('/api/auth/sessions')).status)).toBe(200)
   })
