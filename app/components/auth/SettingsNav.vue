@@ -17,7 +17,7 @@ const current = (to: string) => route.path.replace(/\/+$/, '') === to
         <NuxtLink
           :to="item.to"
           :aria-current="current(item.to) ? 'page' : undefined"
-          class="inline-flex h-10 items-center gap-2 border-b-2 border-transparent px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground"
+          class="inline-flex h-10 items-center gap-2 pointer-coarse:h-11 border-b-2 border-transparent px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground"
         >
           <component :is="item.icon" class="size-4" aria-hidden="true" />
           {{ item.label }}

@@ -246,7 +246,9 @@ All derivations use HKDF-SHA256 via WebCrypto. The exact info strings are in [`A
   - Placeholder values refuse to start. `scripts/init-env.sh` generates strong random values.
 - **Caddy:**
   - Admin API off.
-  - `access_token` query parameters are redacted from access logs.
+  - The access log keeps no query for page URLs, redacts credential parameters (`access_token`, `join_request`, `t`,
+    `k`, tokens, proofs, passwords, `email`, `link`, `q`) on `/api` and `/rtc`, and strips queries from `Location`
+    and `Referer`. The error log drops every query. Requests for other host names are not logged.
   - The TURN hostname serves no content: HTTP requests are aborted and TLS-ALPN challenges are disabled.
 
 ## 8. Logging and privacy
@@ -270,10 +272,12 @@ All derivations use HKDF-SHA256 via WebCrypto. The exact info strings are in [`A
   - Local patches (`patchedDependencies`, `patches/`) are reviewed like code and each one states why it exists. The
     only one, for livekit-client 2.22.3, marks encrypted data packets as GCM so receivers can keep rejecting
     unencrypted ones (§3.3); a unit test fails when an upgrade stops applying it.
-- **Pinning:** GitHub Actions are pinned by commit SHA. Container images are pinned by version (digest pinning
-  optional).
+- **Pinning:** GitHub Actions are pinned by commit SHA. Container images are pinned by full version (digest pinning
+  optional). The app runtime image has no package manager. Caddy is built with patched Go modules
+  (`xcaddy --replace`) until a Caddy release includes the fixes.
 - **Scanning:** gitleaks scans for committed secrets. `pnpm audit` runs in CI; high or critical findings block a
-  release.
+  release. Exceptions are only allowed for build-time packages that never reach the runtime bundle and have no
+  patched release, each with its reason in `pnpm-workspace.yaml` (`auditConfig.ignoreGhsas`).
 - **Forbidden packages:** anything that phones home. For example `@mediapipe/tasks-vision` 1.x, which is reported to
   send telemetry, stays pinned at 0.10.14.
 

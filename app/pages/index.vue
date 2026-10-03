@@ -5,7 +5,6 @@
  * on load; the link itself is never sent to the server.
  */
 import { ArrowRightIcon, KeyRoundIcon, LinkIcon, ServerIcon, UsersRoundIcon } from '@lucide/vue'
-import { useForm } from '@tanstack/vue-form'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
@@ -32,19 +31,26 @@ watch(user, (value) => {
   if (value) navigateTo('/dashboard', { replace: true })
 })
 
-function validateLink({ value }: { value: string }) {
-  const result = parseMeetingLink(value, window.location.origin)
-  return result.ok ? undefined : MEETING_LINK_ERRORS[result.error]
+// One field with one check on submit: a plain ref keeps the form library off the landing page (initial JS budget).
+const link = ref('')
+const linkError = ref<string | null>(null)
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
+
+function editLink(value: string | number) {
+  link.value = String(value)
+  linkError.value = null
 }
 
-const form = useForm({
-  defaultValues: { link: '' },
-  onSubmit: ({ value }) => {
-    const result = parseMeetingLink(value.link, window.location.origin)
-    // Full navigation on purpose: the fragment plugin must see the key on page load.
-    if (result.ok) window.location.assign(result.href)
-  },
-})
+function openLink() {
+  const result = parseMeetingLink(link.value, window.location.origin)
+  if (!result.ok) {
+    linkError.value = MEETING_LINK_ERRORS[result.error]
+    return
+  }
+  // Full navigation on purpose: the fragment plugin must see the key on page load.
+  window.location.assign(result.href)
+}
 
 const features = [
   {
@@ -105,7 +111,7 @@ const features = [
           </p>
           <div class="mt-8 flex flex-wrap items-center gap-3 motion-safe:animate-rise motion-safe:[animation-delay:240ms]">
             <Button as-child size="lg" class="h-11 px-5 text-[0.9375rem]">
-              <NuxtLink to="/login">
+              <NuxtLink to="/login" prefetch-on="interaction">
                 Sign in
                 <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
               </NuxtLink>
@@ -113,50 +119,41 @@ const features = [
           </div>
 
           <form
+            method="post"
             class="mt-10 max-w-xl rounded-2xl border bg-card/85 p-4 shadow-sm backdrop-blur sm:p-5 motion-safe:animate-rise motion-safe:[animation-delay:320ms]"
             novalidate
             data-testid="join-link-form"
-            @submit.prevent.stop="form.handleSubmit()"
+            @submit.prevent.stop="openLink"
           >
-            <form.Field name="link" :validators="{ onSubmit: validateLink }">
-              <template #default="{ field }">
-                <Field :data-invalid="field.state.meta.errors.length > 0 || undefined" class="gap-2.5">
-                  <FieldLabel :for="field.name" class="text-sm font-semibold">Join with a link</FieldLabel>
-                  <FieldDescription :id="`${field.name}-description`">
-                    Paste the meeting link you received. It opens here, and the key never leaves your browser.
-                  </FieldDescription>
-                  <div class="flex flex-col gap-2 sm:flex-row">
-                    <InputGroup class="h-11 flex-1 bg-background">
-                      <InputGroupAddon>
-                        <LinkIcon aria-hidden="true" />
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        :id="field.name"
-                        :name="field.name"
-                        :model-value="field.state.value"
-                        type="text"
-                        inputmode="url"
-                        autocomplete="off"
-                        autocapitalize="off"
-                        spellcheck="false"
-                        enterkeyhint="go"
-                        placeholder="https://.../m/abc-defg-hjk#k=..."
-                        :aria-invalid="field.state.meta.errors.length > 0 || undefined"
-                        :aria-describedby="
-                          field.state.meta.errors.length > 0
-                            ? `${field.name}-description ${field.name}-error`
-                            : `${field.name}-description`
-                        "
-                        @update:model-value="(value: string | number) => field.handleChange(String(value))"
-                        @blur="field.handleBlur"
-                      />
-                    </InputGroup>
-                    <Button type="submit" size="lg" variant="secondary" class="h-11 px-5">Join</Button>
-                  </div>
-                  <FieldError :id="`${field.name}-error`" :errors="field.state.meta.errors" />
-                </Field>
-              </template>
-            </form.Field>
+            <Field :data-invalid="linkError ? true : undefined" class="gap-2.5">
+              <FieldLabel for="link" class="text-sm font-semibold">Join with a link</FieldLabel>
+              <FieldDescription id="link-description">
+                Paste the meeting link you received. It opens here, and the key never leaves your browser.
+              </FieldDescription>
+              <div class="flex flex-col gap-2 sm:flex-row">
+                <InputGroup class="h-11 flex-1 bg-background">
+                  <InputGroupAddon>
+                    <LinkIcon aria-hidden="true" />
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id="link"
+                    :model-value="link"
+                    type="text"
+                    inputmode="url"
+                    autocomplete="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    enterkeyhint="go"
+                    placeholder="https://.../m/abc-defg-hjk#k=..."
+                    :aria-invalid="linkError ? true : undefined"
+                    :aria-describedby="linkError ? 'link-description link-error' : 'link-description'"
+                    @update:model-value="editLink"
+                  />
+                </InputGroup>
+                <Button type="submit" size="lg" variant="secondary" class="h-11 px-5" :disabled="!hydrated">Join</Button>
+              </div>
+              <FieldError id="link-error" :errors="linkError ? [linkError] : []" />
+            </Field>
           </form>
         </div>
 

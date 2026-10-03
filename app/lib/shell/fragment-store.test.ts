@@ -113,6 +113,34 @@ describe('captureFragment', () => {
     expect(store.take('/invite/')).toBe(TOKEN)
   })
 
+  // F-030: vue-router matches paths case-insensitively, so these URLs open the meeting and token pages too.
+  it('strips secrets from any letter case of the path and hands them to the page', () => {
+    const key = generateRoomKey()
+    const history = fakeHistory()
+    const result = captureFragment({
+      location: at(`/M/abc-defg-hjk#k=${encodeRoomKey(key)}&t=${INVITE}`),
+      history,
+      storage,
+    })
+
+    expect(result).toEqual({ pathname: '/m/abc-defg-hjk', kind: 'room', stored: true })
+    expect(history.replaceState).toHaveBeenCalledExactlyOnceWith(history.state, '', '/M/abc-defg-hjk')
+    expect(createFragmentStore(storage).take('/m/abc-defg-hjk')).toEqual({ key, inviteToken: INVITE, invalidKey: false })
+
+    const tokenHistory = fakeHistory()
+    captureFragment({ location: at(`/Reset-Password#${TOKEN}`), history: tokenHistory, storage })
+    expect(tokenHistory.replaceState).toHaveBeenCalledWith(tokenHistory.state, '', '/Reset-Password')
+    expect(createFragmentStore(storage).take('/reset-password')).toBe(TOKEN)
+    expect(storage.data.size).toBe(0)
+  })
+
+  it('keeps an upper-case slug under the key the page asks for', () => {
+    const key = generateRoomKey()
+    captureFragment({ location: at(`/m/ABC-DEFG-HJK#k=${encodeRoomKey(key)}`), history: fakeHistory(), storage })
+    expect(fragmentKind('/M/ABC-DEFG-HJK/')).toBe('room')
+    expect(createFragmentStore(storage).take('/m/abc-defg-hjk')?.key).toEqual(key)
+  })
+
   it('leaves other pages and URLs without a fragment alone', () => {
     storage.setItem('blinq:fragment:/m/abc-defg-hjk', JSON.stringify({ kind: 'room', t: INVITE, invalidKey: false }))
     const history = fakeHistory()

@@ -26,7 +26,7 @@ const emit = defineEmits<{ useHere: [] }>()
         Use here
       </Button>
       <Button variant="secondary" as-child>
-        <NuxtLink to="/">Back to home</NuxtLink>
+        <NuxtLink to="/" prefetch-on="interaction">Back to home</NuxtLink>
       </Button>
     </div>
   </JoinScreen>

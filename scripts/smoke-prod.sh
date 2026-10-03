@@ -55,7 +55,7 @@ OUT=$ROOT/logs/smoke-prod
 SUMMARY=$OUT/summary.txt
 PLAYWRIGHT_IMAGE=mcr.microsoft.com/playwright:v1.63.0-noble
 # Any image with busybox netstat and ip; this one is part of the stack anyway.
-HELPER_IMAGE=postgres:18-alpine
+HELPER_IMAGE=postgres:18.6-alpine3.24
 SMOKE_DOMAIN=blinq.localhost
 SMOKE_TURN_DOMAIN=turn.blinq.localhost
 RTC_START=50000

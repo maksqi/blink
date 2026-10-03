@@ -20,6 +20,8 @@ export const JOIN_API_CODES = [
   'LOBBY_FULL',
   'RATE_LIMITED',
   'VALIDATION_FAILED',
+  // 503: the server could not reach LiveKit (server/services/livekit/errors.ts).
+  'SERVICE_UNAVAILABLE',
 ] as const
 
 export type JoinApiCode = (typeof JOIN_API_CODES)[number]
@@ -120,6 +122,11 @@ const COPY: Record<JoinProblemCode, JoinErrorCopy> = {
     message: 'Check your name and try again.',
     next: 'retry',
   },
+  SERVICE_UNAVAILABLE: {
+    title: "The meeting service isn't available",
+    message: "The server can't reach its media service right now. Try again in a minute.",
+    next: 'retry',
+  },
   MISSING_KEY: {
     title: 'This link is incomplete',
     message:
@@ -187,6 +194,7 @@ const INLINE: ReadonlySet<JoinProblemCode> = new Set<JoinProblemCode>([
   'RATE_LIMITED',
   'VALIDATION_FAILED',
   'ROOM_PASSWORD_INVALID',
+  'SERVICE_UNAVAILABLE',
   'UNKNOWN',
 ])
 

@@ -25,6 +25,8 @@ const formError = ref<string | null>(null)
 const serverErrors = ref<Record<string, string>>({})
 const currentSchema = z.string().min(1, 'Enter your current password')
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   onSubmit: async ({ value, formApi }) => {
@@ -68,6 +70,7 @@ const id = (name: string) => `${props.idPrefix}-${name}`
 
 <template>
   <form
+    method="post"
     class="flex flex-col gap-6"
     novalidate
     data-testid="change-password-form"
@@ -151,7 +154,7 @@ const id = (name: string) => `${props.idPrefix}-${name}`
       </form.Field>
     </FieldGroup>
 
-    <Button type="submit" size="lg" :class="block ? 'w-full' : 'w-full sm:w-auto sm:self-start'" :disabled="submitting">
+    <Button type="submit" size="lg" :class="block ? 'w-full' : 'w-full sm:w-auto sm:self-start'" :disabled="submitting || !hydrated">
       <Spinner v-if="submitting" />
       {{ submitLabel }}
     </Button>

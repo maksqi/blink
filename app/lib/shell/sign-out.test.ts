@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { clearKeyVault, clearTabKeys, signOut, type KeyListStorage } from './sign-out'
+import { clearKeyVault, clearTabKeys, keysToForget, signOut, type KeyListStorage } from './sign-out'
 
 function listStorage(entries: Record<string, string>): KeyListStorage & { data: Map<string, string> } {
   const data = new Map(Object.entries(entries))
@@ -32,7 +32,12 @@ function deps(logout: () => Promise<unknown>) {
 describe('signOut', () => {
   it('signs out on the server, clears local state, then leaves', async () => {
     const vault = listStorage({ 'blinq:keys:u1': '{}', 'blinq-color-mode': 'dark' })
-    const tabKeys = listStorage({ 'blinq:tabkey:abc-defg-hjk': '{}', 'blinq:clientId': 'c1' })
+    // F-011: a link fragment captured on load but never taken by a page holds a room key too.
+    const tabKeys = listStorage({
+      'blinq:tabkey:abc-defg-hjk': '{}',
+      'blinq:fragment:/m/abc-defg-hjk': '{}',
+      'blinq:clientId': 'c1',
+    })
     const d = deps(async () => undefined)
     await signOut({ ...d, vault, tabKeys })
 
@@ -84,10 +89,33 @@ describe('clearKeyVault', () => {
 })
 
 describe('clearTabKeys', () => {
-  it('removes every per-tab meeting key and nothing else', () => {
-    const storage = listStorage({ 'blinq:tabkey:a': '{}', 'blinq:tabkey:b': '{}', 'blinq:fragment:/m/a': '{}' })
+  it('removes every per-tab meeting key and captured link fragment, and nothing else', () => {
+    const storage = listStorage({
+      'blinq:tabkey:a': '{}',
+      'blinq:tabkey:b': '{}',
+      'blinq:fragment:/m/abc-defg-hjk': '{"kind":"room","k":"x"}',
+      'blinq:fragment:/invite': '{"kind":"token","token":"x"}',
+      'blinq:clientId': 'c1',
+    })
     clearTabKeys(storage)
-    expect([...storage.data.keys()]).toEqual(['blinq:fragment:/m/a'])
+    expect([...storage.data.keys()]).toEqual(['blinq:clientId'])
     expect(() => clearTabKeys(null)).not.toThrow()
+  })
+})
+
+// F-029: the vault is cleared on a 401 or a missing session too, not only when this tab knew the previous user.
+describe('keysToForget', () => {
+  it('forgets everything when the signed-in user is gone or changed', () => {
+    expect(keysToForget('u1', null)).toBe('all')
+    expect(keysToForget('u1', 'u2')).toBe('all')
+  })
+
+  it('forgets the vault whenever nobody is signed in, so an expired session leaves no keys behind', () => {
+    expect(keysToForget(null, null)).toBe('vault')
+  })
+
+  it('keeps the keys of a user who stays signed in', () => {
+    expect(keysToForget('u1', 'u1')).toBe('none')
+    expect(keysToForget(null, 'u1')).toBe('none')
   })
 })

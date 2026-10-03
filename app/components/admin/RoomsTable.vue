@@ -43,7 +43,7 @@ function toggle(id: string) {
             <TableCell class="w-full max-w-0">
               <button
                 type="button"
-                class="flex max-w-full items-center gap-1.5 rounded-sm text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                class="flex max-w-full items-center gap-1.5 rounded-sm text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:min-h-11"
                 :aria-expanded="expanded.has(room.id)"
                 :aria-controls="`room-history-${room.id}`"
                 :aria-label="`Meeting history of ${room.name}`"

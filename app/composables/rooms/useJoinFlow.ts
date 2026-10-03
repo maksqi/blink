@@ -4,7 +4,9 @@
  *
  *   loading   K and t from the fragment (`$fragment.take`), this tab's key or the key vault; the per-tab clientId
  *   info      POST /api/join/:slug/info (proof only) + GET /api/config + the duplicate-tab probe, in parallel
- *   prejoin   the call session is created here (SDK, E2EE worker, preview); `<CallPrejoin>` emits join
+ *   prejoin   the call session is created here (SDK, E2EE worker, preview); `<CallPrejoin>` emits join. The call
+ *             code is a separate chunk, loaded once a key is found (in parallel with the info request), so the
+ *             missing-key, damaged-link and other error screens never download it
  *   password  when the room has one
  *   join      POST /api/join/:slug → 200 grant → connect, or 202 → waiting (EventSource; cancel)
  *   connecting → inCall → left | ended | removed | error   (phases of the call session, mirrored)
@@ -16,14 +18,14 @@ import { onBeforeUnmount, shallowRef } from 'vue'
 import type { JoinInfo, JoinResponse } from '#shared/schemas/join'
 import type { PublicConfig } from '#shared/schemas/settings'
 import { callToast } from '~/lib/call/notify'
-import { createCallSession, type ApiClient, type CallSession } from '~/lib/call/session'
+import type { ApiClient, CallSession } from '~/lib/call/session'
 import type { CallPhase } from '~/lib/contracts/call'
 import { testHooks } from '~/lib/contracts/test-hooks'
 import { deriveJoinProof, encodeRoomKey, isValidSlug, type RoomKey } from '~/lib/e2ee/keys'
 import { currentBrowserEnv, evaluateCallSupport } from '~/lib/livekit/support'
 import { newClientId, tabClientId } from '~/lib/join/client-id'
 import { resolveRoomKey } from '~/lib/join/key-source'
-import { INITIAL_JOIN_STATE, joinReducer, type JoinEvent, type JoinState } from '~/lib/join/machine'
+import { INITIAL_JOIN_STATE, joinReducer, keepsCallSession, type JoinEvent, type JoinState } from '~/lib/join/machine'
 import { presenceChannelName, TabPresence, type ChannelLike } from '~/lib/join/tab-presence'
 import { openWaitingStream, type WaitingStream } from '~/lib/join/waiting'
 import { signInLocation } from '../useAuth'
@@ -76,6 +78,8 @@ export function useJoinFlow(slug: string) {
   let presence: TabPresence | null = null
   let otherTab: string | null = null
   let disposed = false
+  let callModule: Promise<typeof import('~/lib/call/session')> | null = null
+  let creatingSession = false
 
   function publishTestState(next: JoinState) {
     if (!__BLINQ_TEST_HOOKS__) return
@@ -102,9 +106,18 @@ export function useJoinFlow(slug: string) {
     const next = joinReducer(state.value, event)
     if (next === state.value) return
     state.value = next
+    // A join error screen ends the flow: release the camera, mic, Room and E2EE worker of the preview now.
+    if (!keepsCallSession(next)) disposeSession()
     // The call session shows the phases the page owns too (test hooks, features reading ctx.phase).
     if (session.value && HOST_PAGE_PHASES.includes(next.phase)) session.value.setPhase(next.phase)
     publishTestState(next)
+  }
+
+  function disposeSession() {
+    const current = session.value
+    if (!current) return
+    session.value = null
+    current.dispose()
   }
 
   // ---- loading and info ------------------------------------------------------------------------------------------
@@ -139,7 +152,16 @@ export function useJoinFlow(slug: string) {
       hasInvite: resolved.status === 'found' && Boolean(inviteToken),
     })
     // dispatch() moved the state on; read it again rather than relying on the narrowed type above.
-    if (currentPhase() === 'info') await loadInfo()
+    if (currentPhase() !== 'info') return
+    // Pre-join is the likely next screen: fetch the call code while the link is checked.
+    callCode().catch(() => {})
+    await loadInfo()
+  }
+
+  /** The call session module (livekit-client, the call features), loaded once on demand. */
+  function callCode() {
+    callModule ??= import('~/lib/call/session')
+    return callModule
   }
 
   async function loadConfig(): Promise<PublicConfig | null> {
@@ -154,6 +176,8 @@ export function useJoinFlow(slug: string) {
   async function loadInfo() {
     if (!key) return
     proof = await deriveJoinProof(key, slug)
+    // The page may have been left while the proof was derived; a channel opened now would never be closed.
+    if (disposed) return
     presence = new TabPresence({
       channel: openChannel(slug),
       id: newClientId(),
@@ -199,24 +223,42 @@ export function useJoinFlow(slug: string) {
     }
   }
 
+  /** A pre-join or password screen without a session and no reason to wait: the session can be made now. */
+  function sessionWanted(): boolean {
+    const { info, phase, duplicate } = state.value
+    if (session.value || !key || !info || duplicate || disposed) return false
+    return phase === 'prejoin' || phase === 'password'
+  }
+
   /** Creates the call session for pre-join (SDK, E2EE worker, connection warm-up); never for an error screen. */
   function ensureSession() {
-    const { info, phase, duplicate } = state.value
-    if (session.value || !key || !info || duplicate || disposed) return
-    if (phase !== 'prejoin' && phase !== 'password') return
-    const cfg = config.value
-    const created = createCallSession({
-      slug,
-      key,
-      media: cfg?.media,
-      publicUrl: cfg?.publicUrl,
-      livekitUrl: cfg?.livekitUrl,
-      muteOnJoin: info.muteOnJoin,
-      api: api as unknown as ApiClient,
-    })
-    created.events.on('call.phase', (phase) => dispatch({ type: 'call', phase }))
-    session.value = created
-    if (HOST_PAGE_PHASES.includes(state.value.phase)) created.setPhase(state.value.phase)
+    if (creatingSession || !sessionWanted()) return
+    creatingSession = true
+    callCode().then(
+      ({ createCallSession }) => {
+        creatingSession = false
+        // The state may have moved on while the call code loaded (left, another tab, an error).
+        const info = state.value.info
+        if (!sessionWanted() || !key || !info) return
+        const cfg = config.value
+        const created = createCallSession({
+          slug,
+          key,
+          media: cfg?.media,
+          publicUrl: cfg?.publicUrl,
+          livekitUrl: cfg?.livekitUrl,
+          muteOnJoin: info.muteOnJoin,
+          api: api as unknown as ApiClient,
+        })
+        created.events.on('call.phase', (phase) => dispatch({ type: 'call', phase }))
+        session.value = created
+        if (HOST_PAGE_PHASES.includes(state.value.phase)) created.setPhase(state.value.phase)
+      },
+      () => {
+        creatingSession = false
+        dispatch({ type: 'sessionFailed' })
+      },
+    )
   }
 
   // ---- join --------------------------------------------------------------------------------------------------------
@@ -337,7 +379,7 @@ export function useJoinFlow(slug: string) {
     stream = null
     presence?.close()
     presence = null
-    session.value?.dispose()
+    disposeSession()
     if (__BLINQ_TEST_HOOKS__) {
       const hooks = testHooks()
       if (hooks) delete hooks.state.join

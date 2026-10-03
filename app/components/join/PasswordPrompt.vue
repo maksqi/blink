@@ -47,7 +47,7 @@ function submit() {
     description="The host set a password for this meeting."
     data-testid="join-password"
   >
-    <form class="flex w-full flex-col gap-4 text-left" novalidate @submit.prevent="submit">
+    <form method="post" class="flex w-full flex-col gap-4 text-left" novalidate @submit.prevent="submit">
       <Alert v-if="error" variant="destructive" data-testid="join-password-error">
         <AlertDescription>{{ error }}</AlertDescription>
       </Alert>
