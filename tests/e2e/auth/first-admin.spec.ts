@@ -4,8 +4,31 @@
  * The operator CLI (`cli reset-password`) restores the first-login state before and after, so every browser project
  * starts from the same state.
  */
+import type { Page } from '@playwright/test'
 import { expect, test } from '../fixtures'
 import { BOOTSTRAP_ADMIN, resetBootstrapAdmin, strongPassword } from './support'
+
+/**
+ * No request of this document is left in flight (F-063). A full navigation or a reload cancels them, and WebKit (and
+ * sometimes Firefox) reports each cancelled fetch or module import as a page error although the app handles it. Nuxt
+ * fetches its build manifest about a second after a page is ready, so that request is waited for too.
+ */
+async function settled(page: Page): Promise<void> {
+  await page
+    .waitForFunction(
+      () => performance.getEntriesByType('resource').some((entry) => entry.name.includes('/_nuxt/builds/meta/')),
+      undefined,
+      { timeout: 5_000 },
+    )
+    .catch(() => {}) // a build without the app manifest never asks for it
+  await page.waitForLoadState('networkidle')
+}
+
+/** The room list has answered and nothing else is in flight. */
+async function dashboardSettled(page: Page): Promise<void> {
+  await expect(page.getByTestId('rooms-empty').or(page.getByTestId('room-item').first())).toBeVisible()
+  await settled(page)
+}
 
 test.describe('first admin', { tag: '@ui' }, () => {
   test.beforeEach(() => resetBootstrapAdmin())
@@ -23,6 +46,7 @@ test.describe('first admin', { tag: '@ui' }, () => {
     await expect(page).toHaveURL(/\/change-password$/)
     await expect(page.getByRole('heading', { name: 'Choose a new password' })).toBeVisible()
     // Every other page leads back here while the change is pending (server-rendered redirect).
+    await settled(page)
     await page.goto('/dashboard')
     await expect(page).toHaveURL(/\/change-password$/)
     await expect(page.getByTestId('user-menu')).toHaveCount(0)
@@ -34,8 +58,11 @@ test.describe('first admin', { tag: '@ui' }, () => {
 
     await expect(page).toHaveURL(/\/dashboard$/)
     await expect(page.getByTestId('user-menu')).toBeVisible()
+    // Reload only once the dashboard has settled, and end the test the same way (F-063).
+    await dashboardSettled(page)
     await page.reload()
     await expect(page).toHaveURL(/\/dashboard$/)
+    await dashboardSettled(page)
     // The API no longer holds the account back.
     expect(await page.evaluate(async () => (await fetch('/api/auth/sessions')).status)).toBe(200)
   })

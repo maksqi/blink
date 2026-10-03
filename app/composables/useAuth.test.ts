@@ -38,9 +38,13 @@ describe('routeNeedsSession', () => {
 
 describe('error copy', () => {
   it('uses the stable code, never the server text', () => {
-    expect(authErrorText(apiError('AUTH_INVALID_CREDENTIALS', undefined, 401))).toBe('Email or password is incorrect.')
-    expect(authErrorText(apiError('INVITE_USED', undefined, 410))).toBe('This invite has already been used.')
-    expect(authErrorText(new Error('boom'))).toBe('Something went wrong on the server.')
+    expect(authErrorText(apiError('AUTH_INVALID_CREDENTIALS', undefined, 401))).toBe(
+      'Email or password is incorrect. Check them and try again.',
+    )
+    expect(authErrorText(apiError('INVITE_USED', undefined, 410))).toBe(
+      'This invite has already been used. Sign in, or ask your administrator for a new one.',
+    )
+    expect(authErrorText(new Error('boom'))).toBe('Something went wrong on the server. Try again in a moment.')
     expect(authErrorText(new ApiError(0, 'NETWORK', 'Network error. Check your connection.'))).toBe(
       'Network error. Check your connection.',
     )

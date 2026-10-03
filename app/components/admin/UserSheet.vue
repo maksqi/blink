@@ -214,7 +214,7 @@ const copy = computed(() => (action.value ? COPY[action.value] : null))
             </div>
           </dl>
 
-          <form class="flex flex-col gap-4" novalidate @submit.prevent.stop="form.handleSubmit()">
+          <form method="post" class="flex flex-col gap-4" novalidate @submit.prevent.stop="form.handleSubmit()">
             <FieldGroup class="gap-4">
               <form.Field name="displayName" :validators="{ onChange: displayNameSchema, onSubmit: displayNameSchema }">
                 <template #default="{ field }">

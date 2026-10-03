@@ -74,6 +74,7 @@ onMounted(load)
       <Item
         v-for="session in sessions"
         :key="session.id"
+        role="listitem"
         variant="outline"
         class="bg-card"
         :data-current="session.current || undefined"
@@ -108,9 +109,10 @@ onMounted(load)
           </Button>
         </ItemActions>
       </Item>
-      <p v-if="sessions.length === 1" class="text-sm text-muted-foreground">
-        This is the only device signed in to your account.
-      </p>
     </ItemGroup>
+    <!-- Outside the list: a list (role="list") may only own list items. -->
+    <p v-if="!loadError && sessions?.length === 1" class="text-sm text-muted-foreground">
+      This is the only device signed in to your account.
+    </p>
   </div>
 </template>

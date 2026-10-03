@@ -27,6 +27,8 @@ const registrationOpen = computed(() => (config.value?.registration.mode ?? 'inv
 const formError = ref<string | null>(null)
 const passwordRequired = z.string().min(1, 'Enter your password')
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { email: '', password: '' },
   onSubmit: async ({ value }) => {
@@ -39,9 +41,7 @@ const form = useForm({
     } catch (error) {
       formError.value = isApiError(error, 'AUTH_EMAIL_NOT_VERIFIED')
         ? 'Confirm your email address first: open the link we emailed you. A new link is sent at most every 10 minutes.'
-        : isApiError(error, 'AUTH_ACCOUNT_DISABLED')
-          ? 'This account is disabled. Contact your administrator.'
-          : authErrorText(error)
+        : authErrorText(error)
     }
   },
 })
@@ -58,7 +58,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
     </CardHeader>
 
     <CardContent>
-      <form class="flex flex-col gap-5" novalidate data-testid="login-form" @submit.prevent.stop="form.handleSubmit()">
+      <form method="post" class="flex flex-col gap-5" novalidate data-testid="login-form" @submit.prevent.stop="form.handleSubmit()">
         <FormAlert :message="formError" />
         <FieldGroup class="gap-4">
           <form.Field name="email" :validators="{ onBlur: emailSchema, onSubmit: emailSchema }">
@@ -93,7 +93,8 @@ const submitting = form.useStore((state) => state.isSubmitting)
                   <NuxtLink
                     v-if="smtpEnabled"
                     to="/forgot-password"
-                    class="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                    prefetch-on="interaction"
+                    class="inline-flex items-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline pointer-coarse:min-h-11"
                   >
                     Forgot password?
                   </NuxtLink>
@@ -114,7 +115,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
           </form.Field>
         </FieldGroup>
 
-        <Button type="submit" size="lg" class="w-full" :disabled="submitting">
+        <Button type="submit" size="lg" class="w-full" :disabled="submitting || !hydrated">
           <Spinner v-if="submitting" />
           Sign in
         </Button>
@@ -125,7 +126,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
       <p v-if="!smtpEnabled">Forgot your password? Ask an administrator to reset it.</p>
       <p v-if="registrationOpen">
         New here?
-        <NuxtLink to="/register" class="font-medium text-foreground underline-offset-4 hover:underline"
+        <NuxtLink to="/register" prefetch-on="interaction" class="font-medium text-foreground underline-offset-4 hover:underline"
           >Create an account</NuxtLink
         >
       </p>

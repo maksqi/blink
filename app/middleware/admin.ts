@@ -8,6 +8,9 @@
 import { signInLocation } from '~/composables/useAuth'
 
 export default defineNuxtRouteMiddleware((to) => {
+  // The server already rendered the 403 page for this request. Raising it again while that page hydrates would only
+  // report the same error twice (Nuxt logs [NUXT_E1005], F-051); the error page stays up either way.
+  if (import.meta.client && useNuxtApp().isHydrating && useError().value) return
   const user = useAuthState()
   if (!user.value) return navigateTo(signInLocation(to.path))
   if (user.value.mustChangePassword) return navigateTo('/change-password')

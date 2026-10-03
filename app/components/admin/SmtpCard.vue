@@ -28,6 +28,8 @@ function optionalEmail({ value }: { value: string }) {
   return parsed.success ? undefined : (parsed.error.issues[0]?.message ?? 'Enter a valid email address')
 }
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { to: '' },
   onSubmit: async ({ value }) => {
@@ -71,7 +73,7 @@ const configured = computed(() => props.smtp.configured)
       </CardDescription>
     </CardHeader>
     <CardContent v-if="configured">
-      <form class="flex flex-col gap-3" novalidate @submit.prevent.stop="form.handleSubmit()">
+      <form method="post" class="flex flex-col gap-3" novalidate @submit.prevent.stop="form.handleSubmit()">
         <FormAlert :message="sendError" title="The test email was not sent" />
         <form.Field name="to" :validators="{ onBlur: optionalEmail, onSubmit: optionalEmail }">
           <template #default="{ field }">
@@ -90,7 +92,7 @@ const configured = computed(() => props.smtp.configured)
                   @update:model-value="(value: string | number) => field.handleChange(String(value))"
                   @blur="field.handleBlur"
                 />
-                <Button type="submit" variant="outline" :disabled="sending" data-testid="send-test-email">
+                <Button type="submit" variant="outline" :disabled="sending || !hydrated" data-testid="send-test-email">
                   <Spinner v-if="sending" data-icon="inline-start" />
                   Send test email
                 </Button>

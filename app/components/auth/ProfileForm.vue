@@ -35,7 +35,7 @@ const dirty = form.useStore((state) => state.isDirty)
 </script>
 
 <template>
-  <form class="flex flex-col gap-6" novalidate data-testid="profile-form" @submit.prevent.stop="form.handleSubmit()">
+  <form method="post" class="flex flex-col gap-6" novalidate data-testid="profile-form" @submit.prevent.stop="form.handleSubmit()">
     <FormAlert :message="formError" />
     <FieldGroup class="gap-5">
       <form.Field name="displayName" :validators="{ onBlur: displayNameSchema, onSubmit: displayNameSchema }">

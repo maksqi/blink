@@ -24,6 +24,8 @@ const formError = ref<string | null>(null)
 const removing = ref(false)
 const editing = ref(false)
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { password: '' },
   onSubmit: async ({ value, formApi }) => {
@@ -80,6 +82,7 @@ async function removePassword() {
     </div>
     <form
       v-else
+      method="post"
       class="flex flex-col gap-3 sm:flex-row sm:items-start"
       novalidate
       @submit.prevent.stop="form.handleSubmit()"
@@ -104,7 +107,7 @@ async function removePassword() {
         </template>
       </form.Field>
       <div class="flex gap-2">
-        <Button type="submit" :disabled="submitting" data-testid="room-password-save">
+        <Button type="submit" :disabled="submitting || !hydrated" data-testid="room-password-save">
           <Spinner v-if="submitting" data-icon="inline-start" />
           {{ room.hasPassword ? 'Change password' : 'Set password' }}
         </Button>

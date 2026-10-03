@@ -347,7 +347,7 @@ const fieldName = (key: SettingKey) => key as any
 </script>
 
 <template>
-  <form class="flex flex-col gap-6" novalidate data-testid="settings-form" @submit.prevent.stop="form.handleSubmit()">
+  <form method="post" class="flex flex-col gap-6" novalidate data-testid="settings-form" @submit.prevent.stop="form.handleSubmit()">
     <FormAlert :message="formError" />
 
     <Card v-for="section in SETTING_SECTIONS" :key="section.id" :data-section="section.id">

@@ -131,7 +131,8 @@
     --muted-foreground: oklch(0.73 0.02 250);
     --accent: oklch(0.3 0.045 210);
     --accent-foreground: oklch(0.94 0.03 195);
-    --destructive: oklch(0.7 0.17 22);
+    /* Light enough for text-destructive on the destructive buttons' 20 % tint over every dark surface: >= 5:1 (F-055). */
+    --destructive: oklch(0.75 0.15 22);
     --border: oklch(1 0 0 / 9%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.72 0.1 198);
@@ -176,5 +177,78 @@
     }
     ::selection {
         background-color: color-mix(in oklch, var(--primary) 24%, transparent);
+    }
+}
+
+/*
+ * Touch targets on phones and tablets (F-058; WCAG 2.5.8, 44 px as in Apple's guidelines and the e2e responsive
+ * checks). Only coarse pointers change: desktop layouts keep the compact shadcn sizes. Unlayered on purpose, so these
+ * minimums win over the components' size utilities (`h-9`, `size-8`, `h-[18.4px]`).
+ */
+@media (pointer: coarse) {
+    :is(
+            [data-slot='button'],
+            [data-slot='input'],
+            [data-slot='input-group-control'],
+            [data-slot='toggle'],
+            [data-slot='toggle-group-item'],
+            [data-slot$='-trigger'],
+            [data-slot$='-close'],
+            [data-slot^='pagination-'],
+            [data-slot='breadcrumb-link']
+        ):not([data-slot='pagination-content'], [data-slot='pagination-item'], [data-slot='pagination-ellipsis']) {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    /* Text links in a row: the label stays centred in the taller box. */
+    a:is([data-slot='breadcrumb-link'], [data-slot^='pagination-']) {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    /* Input groups size themselves from their (now taller) control. */
+    [data-slot='input-group'] {
+        height: auto;
+    }
+
+    /*
+     * Switches and checkboxes keep their look: a transparent border makes the box 44 px, the background stays in the
+     * padding box, and the outer radius grows with the border so the visible corners are unchanged.
+     */
+    [data-slot='switch'] {
+        --touch-h: 18.4px;
+        --touch-w: 2rem;
+        height: 44px;
+        width: calc(var(--touch-w) + 44px - var(--touch-h));
+        border-width: calc((44px - var(--touch-h)) / 2 + 1px);
+        border-color: transparent;
+        background-clip: padding-box;
+        --tw-shadow: 0 0 #0000;
+    }
+    [data-slot='switch'][data-size='sm'] {
+        --touch-h: 0.875rem;
+        --touch-w: 1.5rem;
+    }
+    [data-slot='checkbox'] {
+        width: 44px;
+        height: 44px;
+        border: 14px solid transparent;
+        border-radius: 18px;
+        background-clip: padding-box;
+        /* The 1 px outline that the transparent border replaces, drawn inside the padding box. */
+        --tw-inset-ring-shadow: inset 0 0 0 1px var(--input);
+        --tw-shadow: 0 0 #0000;
+    }
+    [data-slot='checkbox']:is([data-state='checked'], [data-checked]) {
+        --tw-inset-ring-shadow: inset 0 0 0 1px var(--primary);
+    }
+    /* Slider thumbs: the same, a 16 px knob in a 44 px box (its 1 px primary outline becomes an inset ring). */
+    [data-slot='slider-thumb'] {
+        width: 44px;
+        height: 44px;
+        border: 14px solid transparent;
+        background-clip: padding-box;
+        --tw-inset-ring-shadow: inset 0 0 0 1px var(--primary);
+        --tw-shadow: 0 0 #0000;
     }
 }

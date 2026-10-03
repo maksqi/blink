@@ -102,7 +102,7 @@ watch(open, (value) => {
         </DialogFooter>
       </template>
 
-      <form v-else class="flex flex-col gap-6" novalidate @submit.prevent.stop="form.handleSubmit()">
+      <form v-else method="post" class="flex flex-col gap-6" novalidate @submit.prevent.stop="form.handleSubmit()">
         <DialogHeader>
           <DialogTitle>Create user</DialogTitle>
           <DialogDescription>

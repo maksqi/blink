@@ -36,8 +36,9 @@ const activity = computed(() =>
     </ItemMedia>
 
     <ItemContent class="min-w-0">
-      <ItemTitle class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <NuxtLink :to="`/rooms/${room.id}`" class="truncate hover:underline" data-testid="room-name">
+      <!-- w-full: ItemTitle is w-fit, which let a long name widen the row past a phone screen (F-057). -->
+      <ItemTitle class="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        <NuxtLink :to="`/rooms/${room.id}`" class="max-w-full min-w-0 truncate hover:underline pointer-coarse:leading-11" data-testid="room-name">
           {{ room.name }}
         </NuxtLink>
         <Badge v-if="room.live" class="bg-primary/15 text-primary" variant="secondary">

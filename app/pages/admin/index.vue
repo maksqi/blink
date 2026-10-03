@@ -86,7 +86,12 @@ const SECTIONS = [
     <AppPageHeader title="Admin" description="An overview of this server.">
       <template #actions>
         <Skeleton v-if="!overview" class="h-6 w-36" />
-        <NuxtLink v-else-if="overview.smtp !== null" to="/admin/settings" class="rounded-full" data-testid="smtp-badge">
+        <NuxtLink
+          v-else-if="overview.smtp !== null"
+          to="/admin/settings"
+          class="inline-flex items-center rounded-full pointer-coarse:min-h-11"
+          data-testid="smtp-badge"
+        >
           <Badge :variant="overview.smtp ? 'secondary' : 'outline'">
             {{ overview.smtp ? 'Email configured' : 'Email not configured' }}
           </Badge>

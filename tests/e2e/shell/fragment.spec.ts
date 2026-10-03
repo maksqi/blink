@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { spendJoinBudget } from '../join/support'
 import {
   fragmentWrites,
   randomRoomKey,
@@ -40,6 +41,27 @@ test.describe('fragment capture', { tag: '@ui' }, () => {
     ])
     // Fragments never reach the server; nothing else leaks them either.
     expect(requests.filter((url) => url.includes(key) || url.includes(invite))).toEqual([])
+    watch.expectClean()
+  })
+
+  // F-030: vue-router ignores letter case, so this URL opens the meeting page; the key must leave the address bar.
+  test('strips the key from a mixed-case meeting path and keeps it for the page', async ({ page, baseURL }) => {
+    const watch = await watchPage(page, watchOptions)
+    const key = randomRoomKey()
+    await recordFragmentWrites(page)
+    await spendJoinBudget(1)
+    await page.goto(`/M/Abc-Defg-Hjk#k=${key}`)
+    await waitForApp(page)
+
+    expect(await page.evaluate(() => location.hash)).toBe('')
+    expect(page.url()).toBe(`${baseURL}/M/Abc-Defg-Hjk`)
+    expect((await routerLocation(page)).hash).toBe('')
+    expect(await fragmentWrites(page)).toEqual([
+      ['blinq:fragment:/m/abc-defg-hjk', { kind: 'room', k: key, invalidKey: false }],
+    ])
+    // The meeting page took the key and checked it with the server (the room does not exist) instead of asking for
+    // a link.
+    await expect(page.getByTestId('join-error')).toHaveAttribute('data-code', 'ROOM_NOT_FOUND')
     watch.expectClean()
   })
 

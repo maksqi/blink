@@ -31,6 +31,8 @@ onMounted(() => {
 const formError = ref<string | null>(null)
 const serverErrors = ref<Record<string, string>>({})
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { newPassword: '', confirmPassword: '' },
   onSubmit: async ({ value }) => {
@@ -114,6 +116,7 @@ function clearServerError(name: string) {
       </CardHeader>
       <CardContent>
         <form
+          method="post"
           class="flex flex-col gap-5"
           novalidate
           data-testid="reset-password-form"
@@ -175,7 +178,7 @@ function clearServerError(name: string) {
               </template>
             </form.Field>
           </FieldGroup>
-          <Button type="submit" size="lg" class="w-full" :disabled="submitting">
+          <Button type="submit" size="lg" class="w-full" :disabled="submitting || !hydrated">
             <Spinner v-if="submitting" />
             Save new password
           </Button>
