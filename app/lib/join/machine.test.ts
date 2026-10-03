@@ -358,6 +358,14 @@ describe('waiting room', () => {
     expect(state.requestId).toBeNull()
   })
 
+  it('ends on the error screen when the call code cannot be loaded before the call', () => {
+    const prejoin = run(toPrejoin())
+    const failed = joinReducer(prejoin, { type: 'sessionFailed' })
+    expect(failed.phase).toBe('error')
+    expect(failed.problem).toEqual({ code: 'UNKNOWN' })
+    expect(joinReducer(waiting, { type: 'sessionFailed' })).toBe(waiting)
+  })
+
   it('ignores waiting events in other phases', () => {
     const prejoin = run(toPrejoin())
     expect(joinReducer(prejoin, { type: 'waiting', event: { event: 'ended', data: {} } })).toBe(prejoin)

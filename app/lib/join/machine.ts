@@ -66,6 +66,8 @@ export type JoinEvent =
   | { type: 'joinFailed'; code: unknown; retryAfter?: unknown }
   | { type: 'waiting'; event: WaitingEvent }
   | { type: 'waitingFailed' }
+  /** The call code (loaded on demand) could not be loaded, so there is no pre-join preview to show. */
+  | { type: 'sessionFailed' }
   | { type: 'cancelled' }
   /** The call session's phase, once the call started. */
   | { type: 'call'; phase: CallPhase }
@@ -178,6 +180,9 @@ export function joinReducer(state: JoinState, event: JoinEvent): JoinState {
 
     case 'waitingFailed':
       return state.phase === 'waiting' ? fail(state, { code: 'UNKNOWN' }) : state
+
+    case 'sessionFailed':
+      return state.phase === 'prejoin' || state.phase === 'password' ? fail(state, { code: 'UNKNOWN' }) : state
 
     case 'cancelled':
       return state.phase === 'waiting' ? { ...state, phase: 'prejoin', requestId: null, notice: null } : state
