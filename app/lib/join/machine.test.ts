@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { JoinGrant, JoinInfo } from '#shared/schemas/join'
 import type { CallPhase } from '../contracts/call'
-import { INITIAL_JOIN_STATE, inCallView, joinReducer, nameModeFor, type JoinEvent, type JoinState } from './machine'
+import {
+  INITIAL_JOIN_STATE,
+  inCallView,
+  joinReducer,
+  keepsCallSession,
+  nameModeFor,
+  type JoinEvent,
+  type JoinState,
+} from './machine'
 
 const INFO: JoinInfo = {
   roomId: '0190a1b2-c3d4-7e5f-8a9b-00000000000a',
@@ -389,5 +397,41 @@ describe('name mode', () => {
     expect(nameModeFor(INFO)).toBe('guest')
     expect(nameModeFor({ ...INFO, signedIn: true })).toBe('fixed')
     expect(nameModeFor(null)).toBe('guest')
+  })
+})
+
+// F-038: a join error screen must not keep the camera, the mic, the Room and the E2EE worker of the preview alive.
+describe('keepsCallSession', () => {
+  const waiting = run([
+    ...toPrejoin(),
+    clickJoin,
+    { type: 'joinSucceeded', response: { status: 'waiting', requestId: 'r1' } },
+  ])
+
+  it('keeps the session for pre-join, password, the waiting room and the call', () => {
+    expect(keepsCallSession(run(toPrejoin()))).toBe(true)
+    expect(keepsCallSession(run([...toPrejoin({ needsPassword: true }), clickJoin]))).toBe(true)
+    expect(keepsCallSession(waiting)).toBe(true)
+    const inCall = run([...toPrejoin(), clickJoin, { type: 'joinSucceeded', response: GRANT }])
+    expect(keepsCallSession(inCall)).toBe(true)
+    for (const phase of ['inCall', 'left', 'ended', 'removed', 'error'] as const) {
+      expect(keepsCallSession(joinReducer(inCall, { type: 'call', phase }))).toBe(true)
+    }
+  })
+
+  it('drops the session on every full-screen join problem', () => {
+    const problems: JoinState[] = [
+      joinReducer(waiting, { type: 'waiting', event: { event: 'denied', data: { reason: 'denied' } } }),
+      joinReducer(waiting, { type: 'waiting', event: { event: 'denied', data: { reason: 'removed' } } }),
+      joinReducer(waiting, { type: 'waiting', event: { event: 'ended', data: {} } }),
+      joinReducer(waiting, { type: 'waitingFailed' }),
+      run([...toPrejoin(), clickJoin, { type: 'joinFailed', code: 'JOIN_REMOVED' }]),
+      run([...toPrejoin(), clickJoin, { type: 'joinFailed', code: 'ROOM_KEY_INVALID' }]),
+      run([...toInfo, { type: 'infoFailed', code: 'SERVICE_UNAVAILABLE' }]),
+    ]
+    for (const state of problems) {
+      expect(state.phase).toBe('error')
+      expect(keepsCallSession(state)).toBe(false)
+    }
   })
 })

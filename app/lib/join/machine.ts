@@ -193,6 +193,15 @@ export function inCallView(state: JoinState): boolean {
   return state.grant !== null && CALL_PHASES.includes(state.phase)
 }
 
+/**
+ * Whether the call session (camera and mic preview, Room, E2EE worker) may stay alive in this state. A full-screen
+ * join problem ends the flow (its only way on is a reload or leaving), so the session is disposed and the camera
+ * light goes out; the call's own error and end screens are part of the call view and keep it.
+ */
+export function keepsCallSession(state: JoinState): boolean {
+  return state.phase !== 'error' || inCallView(state)
+}
+
 /** Guests type their name on the pre-join screen; signed-in users join with their profile name. */
 export function nameModeFor(info: JoinInfo | null): 'guest' | 'fixed' {
   return info?.signedIn ? 'fixed' : 'guest'

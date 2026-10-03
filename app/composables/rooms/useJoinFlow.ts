@@ -23,7 +23,7 @@ import { deriveJoinProof, encodeRoomKey, isValidSlug, type RoomKey } from '~/lib
 import { currentBrowserEnv, evaluateCallSupport } from '~/lib/livekit/support'
 import { newClientId, tabClientId } from '~/lib/join/client-id'
 import { resolveRoomKey } from '~/lib/join/key-source'
-import { INITIAL_JOIN_STATE, joinReducer, type JoinEvent, type JoinState } from '~/lib/join/machine'
+import { INITIAL_JOIN_STATE, joinReducer, keepsCallSession, type JoinEvent, type JoinState } from '~/lib/join/machine'
 import { presenceChannelName, TabPresence, type ChannelLike } from '~/lib/join/tab-presence'
 import { openWaitingStream, type WaitingStream } from '~/lib/join/waiting'
 import { signInLocation } from '../useAuth'
@@ -102,9 +102,18 @@ export function useJoinFlow(slug: string) {
     const next = joinReducer(state.value, event)
     if (next === state.value) return
     state.value = next
+    // A join error screen ends the flow: release the camera, mic, Room and E2EE worker of the preview now.
+    if (!keepsCallSession(next)) disposeSession()
     // The call session shows the phases the page owns too (test hooks, features reading ctx.phase).
     if (session.value && HOST_PAGE_PHASES.includes(next.phase)) session.value.setPhase(next.phase)
     publishTestState(next)
+  }
+
+  function disposeSession() {
+    const current = session.value
+    if (!current) return
+    session.value = null
+    current.dispose()
   }
 
   // ---- loading and info ------------------------------------------------------------------------------------------
@@ -154,6 +163,8 @@ export function useJoinFlow(slug: string) {
   async function loadInfo() {
     if (!key) return
     proof = await deriveJoinProof(key, slug)
+    // The page may have been left while the proof was derived; a channel opened now would never be closed.
+    if (disposed) return
     presence = new TabPresence({
       channel: openChannel(slug),
       id: newClientId(),
@@ -337,7 +348,7 @@ export function useJoinFlow(slug: string) {
     stream = null
     presence?.close()
     presence = null
-    session.value?.dispose()
+    disposeSession()
     if (__BLINQ_TEST_HOOKS__) {
       const hooks = testHooks()
       if (hooks) delete hooks.state.join
