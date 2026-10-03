@@ -1,3 +1,4 @@
+import { fileNamePart } from '../../../app/lib/recording/local-file'
 import { expect, test } from '../fixtures'
 import { getRecording, probe, recordingState, startRecording, stopRecording } from '../fixtures/recording'
 
@@ -26,8 +27,12 @@ test('local-only mode saves a playable file on this device and uploads nothing',
   expect(final.error).toBeNull()
   expect(final.chunksProduced).toBeGreaterThanOrEqual(2)
 
+  // F-009: named after the meeting's name as the call shows it (not the slug).
+  const meeting = (await host.page.getByTestId('call-view').locator('header h1').textContent())?.trim() ?? ''
+  expect(fileNamePart(meeting)).not.toBe('')
   const name = download.suggestedFilename()
-  expect(name).toMatch(new RegExp(`^blinq-${room.slug}-\\d{4}-\\d{2}-\\d{2}-\\d{4}\\.(webm|mp4)$`))
+  expect(name).toMatch(new RegExp(`^blinq-${fileNamePart(meeting)}-\\d{4}-\\d{2}-\\d{2}-\\d{4}\\.(webm|mp4)$`))
+  expect(name).not.toContain(room.slug)
   const file = testInfo.outputPath(name)
   await download.saveAs(file)
   const info = await probe(file)
