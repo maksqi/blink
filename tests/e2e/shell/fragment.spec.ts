@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { spendJoinBudget } from '../join/support'
 import {
   fragmentWrites,
   randomRoomKey,
@@ -48,6 +49,7 @@ test.describe('fragment capture', { tag: '@ui' }, () => {
     const watch = await watchPage(page, watchOptions)
     const key = randomRoomKey()
     await recordFragmentWrites(page)
+    await spendJoinBudget(1)
     await page.goto(`/M/Abc-Defg-Hjk#k=${key}`)
     await waitForApp(page)
 
