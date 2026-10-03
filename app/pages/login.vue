@@ -39,9 +39,7 @@ const form = useForm({
     } catch (error) {
       formError.value = isApiError(error, 'AUTH_EMAIL_NOT_VERIFIED')
         ? 'Confirm your email address first: open the link we emailed you. A new link is sent at most every 10 minutes.'
-        : isApiError(error, 'AUTH_ACCOUNT_DISABLED')
-          ? 'This account is disabled. Contact your administrator.'
-          : authErrorText(error)
+        : authErrorText(error)
     }
   },
 })

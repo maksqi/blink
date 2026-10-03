@@ -209,7 +209,7 @@ const reminder = computed(() => (hostState.removedCount.value > 0 ? rotateRemind
           @update:model-value="onSharePolicy"
         >
           <ToggleGroupItem value="everyone" class="flex-1" data-testid="share-everyone">Everyone</ToggleGroupItem>
-          <ToggleGroupItem value="hosts" class="flex-1" data-testid="share-hosts">Hosts only</ToggleGroupItem>
+          <ToggleGroupItem value="hosts" class="flex-1" data-testid="share-hosts">Hosts and co-hosts</ToggleGroupItem>
         </ToggleGroup>
       </div>
 
