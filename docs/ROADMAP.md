@@ -247,3 +247,8 @@ tracked as F-001 to F-011 in the Stage 10 Findings list):
   responsive pages; pending findings F-051 to F-059 marked in `tests/e2e/a11y/support.ts`) and `e2e-prod` merged (the
   smoke-prod call runs the real UI flow on the prod image, Chromium ↔ Firefox direct and relay-only; passed twice).
   F-053 (slider name) fixed on main. Lint, typecheck, check:english and actionlint pass after both merges.
+- 2026-10-03 — W3 `e2e-flows` (call specs on `/m/[slug]`, real-flow fixtures, full journey), `fix-infra` (Caddy log
+  redaction, no npm in the runtime, patched Caddy Go modules, full image pins; trivy HIGH/CRITICAL 0 on both images) and
+  `fix-ui` (forms, key vault, fragments, join cleanup, copy, a11y, touch targets, initial JS `/` 144 KiB and `/login`
+  182 KiB gzip) merged. Full E2E after fix-ui: 461 passed; the remaining failures are F-006 (SDK data-channel errors on
+  removal, fix-call) and two responsive issues fixed on main (pagination touch size, a seeded-recording race).
