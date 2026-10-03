@@ -37,11 +37,15 @@ LABEL org.opencontainers.image.title="blinq" \
       org.opencontainers.image.revision="${BLINQ_REVISION}"
 
 # (decision) Fixed uid/gid 10001. /data/recordings is created with that owner so a new named volume inherits it.
+# The server, the CLI and the healthcheck need only `node`: the package managers of the base image (npm, npx,
+# corepack, yarn) are removed, so their bundled dependencies are neither reachable nor reported by image scanners.
 RUN groupadd --system --gid 10001 blinq \
  && useradd --system --uid 10001 --gid 10001 --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin blinq \
  && mkdir -p /data/recordings /work \
  && chown 10001:10001 /data/recordings /work \
- && chmod 0700 /data/recordings /work
+ && chmod 0700 /data/recordings /work \
+ && rm -rf /usr/local/lib/node_modules /opt/yarn-v* \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg
 
 COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 # Owned by root and read-only for the app user.
