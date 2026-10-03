@@ -6,6 +6,8 @@ import { defineConfig, devices } from '@playwright/test'
  */
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:8080'
 const isCI = Boolean(process.env.CI)
+// Nightly-only engines (nightly.yml, non-blocking): Edge and macOS WebKit with E2EE. Kept out of plain runs.
+const nightlyBrowsers = process.env.E2E_NIGHTLY_BROWSERS === '1'
 
 const chromiumMediaArgs = [
   '--use-fake-ui-for-media-stream',
@@ -60,5 +62,18 @@ export default defineConfig({
       grep: /@responsive/,
       use: { ...devices['Pixel 7'], launchOptions: { args: chromiumMediaArgs } },
     },
+    ...(nightlyBrowsers
+      ? [
+          {
+            name: 'msedge',
+            use: { ...devices['Desktop Edge'], channel: 'msedge', launchOptions: { args: chromiumMediaArgs } },
+          },
+          {
+            // macOS WebKit has RTCRtpScriptTransform, so it runs the full suite (Linux WebKit cannot: webkit-ui).
+            name: 'webkit',
+            use: { ...devices['Desktop Safari'] },
+          },
+        ]
+      : []),
   ],
 })

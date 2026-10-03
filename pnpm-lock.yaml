@@ -105,6 +105,9 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
     devDependencies:
+      '@axe-core/playwright':
+        specifier: ^4.13.0
+        version: 4.13.0(playwright-core@1.63.0)
       '@nuxt/eslint':
         specifier: ^1.17.0
         version: 1.17.0(@typescript-eslint/utils@8.70.1(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vue/compiler-sfc@3.5.43)(crossws@0.4.12(srvx@0.11.22))(esbuild@0.28.2)(eslint@10.11.0(jiti@2.7.0)(supports-color@10.2.2))(magic-string@1.4.2)(magicast@0.5.5)(rolldown@1.2.11)(rollup@4.63.5)(srvx@0.11.22)(supports-color@10.2.2)(typescript@6.0.3)(unplugin@3.4.0(esbuild@0.28.2)(rolldown@1.2.11)(rollup@4.63.5)(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2))(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1)))(vite@8.3.1(@types/node@24.19.0)(esbuild@0.28.2)(jiti@2.7.0)(stylus@0.57.0(supports-color@10.2.2))(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.1))
@@ -179,6 +182,11 @@ packages:
     engines: {node: '>= 20'}
     peerDependencies:
       '@types/json-schema': ^7.0.15
+
+  '@axe-core/playwright@4.13.0':
+    resolution: {integrity: sha512-6YLx+kxXu5GJceG4ozFg+33a2EMTdjYwWGloJ3sb9Kta5pp+ZNS53uxGVog5JetIY8s++P5UrtX+cri+u0VAVg==}
+    peerDependencies:
+      playwright-core: '>= 1.0.0'
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -2542,6 +2550,10 @@ packages:
     hasBin: true
     peerDependencies:
       postcss: ^8.1.0
+
+  axe-core@4.13.0:
+    resolution: {integrity: sha512-UzGt8zg7Ny8djbYMhxl2zuEevVa7r2gJjYY5Lwr1xM7+XU2nd6CkIWFTVcCIbAP63vSz71NaVyyuSk9lHKcy0A==}
+    engines: {node: '>=4'}
 
   b4a@1.9.0:
     resolution: {integrity: sha512-dpfcF9fDNR6++cthXR67iyhgqWy9CBouAvIWhIntzBG6cvK/cnIPiZQjBwi/ZqjjBEDGfoNDtmB0kTjroOJ3pQ==}
@@ -6149,6 +6161,11 @@ snapshots:
       '@types/json-schema': 7.0.15
       js-yaml: 4.3.2
 
+  '@axe-core/playwright@4.13.0(playwright-core@1.63.0)':
+    dependencies:
+      axe-core: 4.13.0
+      playwright-core: 1.63.0
+
   '@babel/code-frame@7.29.7':
     dependencies:
       '@babel/helper-validator-identifier': 7.29.7
@@ -8597,6 +8614,8 @@ snapshots:
       picocolors: 1.1.1
       postcss: 8.5.28
       postcss-value-parser: 4.2.0
+
+  axe-core@4.13.0: {}
 
   b4a@1.9.0: {}
 

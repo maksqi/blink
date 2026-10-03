@@ -1,6 +1,6 @@
 # Stage 10 — Hardening, QA and release
 
-Status: todo
+Status: in progress
 Owner(s): `e2e`, `security-review` (read-only), `quality-review` (read-only), fix agents (grouped by owner area),
 `docs` (Wave 3); `orchestrator` (findings list, frozen files, release)
 Depends on: every earlier stage merged (Stages 01–08 and 9a)
@@ -141,7 +141,28 @@ low), location, reproduction and owner area.
 ### Findings (orchestrator-maintained)
 Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — status: open | fixed <sha> | accepted
 (<why>)`.
-- None yet.
+- [ ] F-001 [low] server — `deleteUser` publishes `user.revoked` after the row is deleted (`call_participants.user_id`
+      already null); the admin service works around it in `beforeDelete` — owner: fix-server — status: open
+- [ ] F-002 [low] server — 404 error responses carry `cache-control: no-cache` (Nitro error handler), not the documented
+      `no-store` — owner: fix-server — status: open
+- [ ] F-003 [low] admin — the overview counts live meetings from the first 100 rooms only ("100+") — owner: admin —
+      status: open
+- [x] F-004 [low] ci — nightly.yml runs `--project=msedge`, which `playwright.config.ts` did not define — owner:
+      orchestrator — status: fixed (W3 kickoff, `E2E_NIGHTLY_BROWSERS=1`)
+- [ ] F-005 [medium] call — `LocalMedia` ignores server-side mutes, so the local toggles stay "on" after a host mute;
+      collab-ui works around it in `ParticipantNotices` — owner: fix-call — status: open
+- [ ] F-006 [low] call — the SDK logs data-channel errors when a room is deleted (end for all) — owner: fix-call —
+      status: open
+- [ ] F-007 [low] call — participant-side dialogs live in a zero-footprint `start` control-bar item; no always-mounted
+      overlay slot in `CallFeature` — owner: orchestrator (contract) + fix-call — status: open
+- [ ] F-008 [low] rooms — co-hosts can only be promoted during a call (no user lookup for non-admins) — owner:
+      orchestrator — status: open
+- [ ] F-009 [low] recording — local-only file names use the slug; the room name is not in `CallContext` — owner:
+      orchestrator (contract) + fix-call — status: open
+- [ ] F-010 [low] media — `/vendor/mediapipe/*.tflite` is served as `text/plain` (with `nosniff`) — owner:
+      orchestrator (`nuxt.config.ts`) — status: open
+- [ ] F-011 [low] rooms — the sessionStorage fragment store (`blinq:fragment:/m/<slug>`) can keep an untaken key after
+      sign-out — owner: fix-ui — status: open
 
 ## Tests
 - API: `tests/api/security/{authz-matrix,idor,csrf,rate-limits,cookies,headers}.test.ts`.

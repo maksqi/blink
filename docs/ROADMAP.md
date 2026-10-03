@@ -20,7 +20,7 @@ and verifying a stage.
 | [07](stages/07-media-processing.md) | Media processing | media-fx | W2 | 05 | in progress |
 | [08](stages/08-recording.md) | Recording | recording-server (W1), recording-client (W2) | W1 / W2 | 01; client also 05 and 08 (server) | server done; client in progress (W2) |
 | [09](stages/09-production-deployment.md) | Production deployment | infra (9a, W1); user (9b) | W1 / final | 01 (9a); 10 (9b) | 9a done; 9b needs a real server (user) |
-| [10](stages/10-hardening-qa-release.md) | Hardening, QA and release | e2e, security-review, quality-review, fix agents, docs | W3 | all | todo |
+| [10](stages/10-hardening-qa-release.md) | Hardening, QA and release | e2e, security-review, quality-review, fix agents, docs | W3 | all | in progress |
 
 ## Dependency graph
 
@@ -84,7 +84,7 @@ Wave base SHAs (filled in by the orchestrator):
 | W0b | a24cccf |
 | W1 | 2f8fe39 (call-core, infra); see change log for auth, rooms-backend, recording-server |
 | W2 | see change log (2026-10-03) |
-| W3 | — |
+| W3 | see change log (2026-10-03, `chore(w3): kickoff`) |
 
 ## Ownership map
 
@@ -137,17 +137,28 @@ orchestrator. Paths of finished waves (W0b, W1) belong to the orchestrator again
 
 ### W3
 
-- `e2e`: `tests/e2e/**` (all specs and fixtures, after W2 merges), `tests/load/**`, `tests/perf/**`,
-  `tests/api/security/**`, `docs/PERFORMANCE.md`.
-- `security-review` and `quality-review` are read-only and produce reports.
-- Fix agents get the owning area of each finding.
+The `e2e` role is split into five agents with disjoint paths:
+
+| Owner | Port | Paths |
+|---|---|---|
+| `e2e-security` | 3002 | `tests/api/security/**`, `tests/e2e/security/**` |
+| `e2e-flows` | 3003 | `tests/e2e/fixtures/{flows,livekit}.ts`, `tests/e2e/{call,journeys,rooms,join}/**` |
+| `e2e-a11y` | 3004 | `tests/e2e/{a11y,responsive}/**` |
+| `e2e-perf` | 3005 | `tests/e2e/{perf,network}/**`, `tests/e2e/recording/long.spec.ts`, `tests/load/**`, `docs/PERFORMANCE.md` |
+| `e2e-prod` | 3006 | `tests/smoke-prod/**`, `scripts/smoke-prod.sh` |
+
+- `security-review` (3007) and `quality-review` (3008) are read-only and produce reports.
+- Fix agents get the owning area of each finding (assigned in the Stage 10 Findings list, paths never overlap).
 - `docs`: `docs/**` (except files the orchestrator owns), `README.md`, `CHANGELOG.md`.
+- A test that fails because of a product bug is not fixed in the product by an `e2e-*` agent: it is skipped with a
+  `pending finding: <summary>` comment and reported; the fix agent removes the skip.
 
 Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
 
 ## Wave 3 inputs
 
-Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-review`, fix agents) must handle:
+Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-review`, fix agents) must handle (now
+tracked as F-001 to F-011 in the Stage 10 Findings list):
 
 - `admin`: `deleteUser` (`server/services/users/admin.ts`) publishes `user.revoked` only after the row is deleted, when
   `call_participants.user_id` is already null; the admin service works around it in `beforeDelete`
@@ -214,3 +225,7 @@ Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-
   `recording-client` and `rooms-ui` merged without conflicts. Follow-ups on main: devices that finish opening after
   `connect()` are published (media-fx report), sign-out also clears the per-tab meeting keys (rooms-ui report), the
   control bar keeps More options in view, `joinAs` specs allow in-call 403s, TESTING.md lists the Wave 2 hooks.
+- 2026-10-03 — W3 kickoff: `@axe-core/playwright` 4.13.0 (dev), nightly-only Playwright projects `msedge` and `webkit`
+  (macOS) behind `E2E_NIGHTLY_BROWSERS=1`, the `flows` fixture stub in `tests/e2e/fixtures/index.ts`, the W3 ownership
+  split and the pre-seeded Findings F-001 to F-011. The W3 base SHA is this commit. The W2 wave gate (full E2E, docker
+  build, smoke-prod) runs on it.
