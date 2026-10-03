@@ -201,8 +201,9 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       `Content-Length` only) (S-12) — owner: fix-server — status: open
 - [ ] F-026 [low] server — the room-password backoff has the same race as login (25 parallel guesses evaluated) (S-13)
       — owner: fix-server — status: open
-- [ ] F-027 [low] infra — ffmpeg runs as the app uid and could read the app's `/proc/<pid>/environ` after an ffmpeg
-      exploit (S-14) — owner: orchestrator — status: open
+- [x] F-027 [low] infra — ffmpeg runs as the app uid and could read the app's `/proc/<pid>/environ` after an ffmpeg
+      exploit (S-14) — owner: orchestrator — status: accepted (no capability to switch uid; signed-in input behind the
+      ffprobe allowlist; documented in SECURITY.md §6)
 - [ ] F-028 [low] server — `/api/**` responses carry no `Cross-Origin-Resource-Policy` (S-15) — owner: fix-server —
       status: open
 - [ ] F-029 [low] ui — the key vault survives an expired session (cleared only when a previous user was known; no 401
