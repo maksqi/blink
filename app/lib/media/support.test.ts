@@ -92,6 +92,17 @@ describe('currentMediaFxEnv', () => {
     expect(createElement).not.toHaveBeenCalled()
   })
 
+  it('can leave the WebGL2 probe for later', () => {
+    const createElement = vi.fn()
+    vi.stubGlobal('window', globalThis)
+    vi.stubGlobal('document', { createElement })
+    vi.stubGlobal('OffscreenCanvas', function Stub() {})
+    vi.stubGlobal('VideoFrame', function Stub() {})
+    vi.stubGlobal('createImageBitmap', () => undefined)
+    expect(currentMediaFxEnv({ probeWebGL: false }).hasWebGL2).toBe(true)
+    expect(createElement).not.toHaveBeenCalled()
+  })
+
   it('detects a full browser and probes WebGL2 once', () => {
     const loseContext = vi.fn()
     const getContext = vi.fn(() => ({ getExtension: () => ({ loseContext }) }))

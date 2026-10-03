@@ -56,8 +56,12 @@ export function supportsRnnoise(env: MediaFxEnv, sampleRate: number | null): Eff
 
 let webgl2: boolean | null = null
 
-/** Creates one throwaway WebGL2 context (cached), like the library's check, and releases it right away. */
-function probeWebGL2(): boolean {
+/**
+ * Creates one throwaway WebGL2 context (cached), like the library's check, and releases it right away. Not free (it
+ * can start the GPU process), so the effects feature runs it at idle time or right before blur first starts, never
+ * while the call page starts up.
+ */
+export function probeWebGL2(): boolean {
   if (webgl2 !== null) return webgl2
   try {
     const gl = document.createElement('canvas').getContext('webgl2')
@@ -69,8 +73,11 @@ function probeWebGL2(): boolean {
   return webgl2
 }
 
-/** Reads the current browser. Call only in the browser. */
-export function currentMediaFxEnv(): MediaFxEnv {
+/**
+ * Reads the current browser. Call only in the browser. With `probeWebGL: false` WebGL2 is assumed (not probed yet);
+ * probe it later with `probeWebGL2()`.
+ */
+export function currentMediaFxEnv(options: { probeWebGL?: boolean } = {}): MediaFxEnv {
   const w = window as unknown as Record<string, unknown>
   const has = (name: string) => typeof w[name] !== 'undefined'
   const canvasProto = has('HTMLCanvasElement') ? (w.HTMLCanvasElement as { prototype: object }).prototype : null
@@ -80,8 +87,8 @@ export function currentMediaFxEnv(): MediaFxEnv {
     hasOffscreenCanvas: has('OffscreenCanvas'),
     hasVideoFrame: has('VideoFrame'),
     hasCreateImageBitmap: has('createImageBitmap'),
-    // Only probed when the rest is there: a context is not free.
-    hasWebGL2: transformer && probeWebGL2(),
+    // Only probed when the rest is there.
+    hasWebGL2: transformer && (options.probeWebGL === false || probeWebGL2()),
     hasTrackProcessor: has('MediaStreamTrackProcessor') && has('MediaStreamTrackGenerator'),
     hasCanvasCaptureStream: canvasProto !== null && 'captureStream' in canvasProto,
     hasAudioWorklet: has('AudioWorkletNode') && audioProto !== null && 'audioWorklet' in audioProto,

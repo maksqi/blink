@@ -43,6 +43,7 @@ interface Options {
   attachFails?: boolean
   prepareFails?: boolean
   phase?: CallPhase
+  probeWebGL2?: () => boolean
 }
 
 function harness(options: Options = {}) {
@@ -148,6 +149,7 @@ function harness(options: Options = {}) {
     rnnoise,
     notify,
     now: () => time,
+    probeWebGL2: options.probeWebGL2,
   })
   return {
     controller,
@@ -238,6 +240,60 @@ describe('EffectsController: start', () => {
     await h.controller.setBlur('strong')
     await h.controller.setNoise('rnnoise')
     expect(h.state).toMatchObject({ blur: 'off', noise: 'browser' })
+  })
+})
+
+describe('EffectsController: deferred WebGL2 check', () => {
+  it('probes only right before blur first starts, and turns blur off with the reason without WebGL2', async () => {
+    const probeWebGL2 = vi.fn(() => false)
+    const h = harness({
+      probeWebGL2,
+      prefs: { defaults: { blur: 'strong', noise: 'browser', gain: 1, lastBlur: 'strong' } },
+    })
+    h.controller.start()
+    await settle()
+    expect(probeWebGL2).not.toHaveBeenCalled()
+    expect(h.state.blurSupport.ok).toBe(true)
+    await h.startCamera()
+    expect(probeWebGL2).toHaveBeenCalledTimes(1)
+    expect(h.state.blur).toBe('off')
+    expect(h.state.blurSupport).toEqual({ ok: false, reason: "Your browser can't blur the background" })
+    expect(h.processors).toHaveLength(0)
+    expect(h.notify.error).not.toHaveBeenCalled()
+    await h.controller.setBlur('light')
+    expect(probeWebGL2).toHaveBeenCalledTimes(1)
+    expect(h.state.blur).toBe('off')
+    h.controller.dispose()
+  })
+
+  it('runs the probe at idle time when blur stays off', async () => {
+    vi.useFakeTimers()
+    try {
+      const probeWebGL2 = vi.fn(() => true)
+      const h = harness({ probeWebGL2 })
+      h.controller.start()
+      expect(probeWebGL2).not.toHaveBeenCalled()
+      vi.advanceTimersByTime(5_000)
+      expect(probeWebGL2).toHaveBeenCalledTimes(1)
+      expect(h.state.blurSupport.ok).toBe(true)
+      h.controller.dispose()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('cancels a pending idle probe on dispose', () => {
+    vi.useFakeTimers()
+    try {
+      const probeWebGL2 = vi.fn(() => true)
+      const h = harness({ probeWebGL2 })
+      h.controller.start()
+      h.controller.dispose()
+      vi.advanceTimersByTime(10_000)
+      expect(probeWebGL2).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

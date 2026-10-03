@@ -106,6 +106,11 @@ export interface EffectsDeps {
   /** The devices call-core opens first (its remembered choice), known before the tracks exist. */
   expectedDevices?: { videoinput?: string; audioinput?: string }
   createBlurProcessor?: CreateBlurProcessor
+  /**
+   * Deferred WebGL2 check: `env.hasWebGL2` is then provisional and this runs at idle time or right before blur first
+   * starts (creating a context can start the GPU process, which must not slow down the call page start).
+   */
+  probeWebGL2?: () => boolean
   rnnoise?: RnnoiseService
   notify?: EffectsNotifier
   now?: () => number
@@ -148,6 +153,8 @@ export class EffectsController {
   private frameRate: number | null = null
   private timers: Array<ReturnType<typeof setInterval>> = []
   private started = false
+  private webglPending: boolean
+  private cancelIdleProbe: (() => void) | null = null
   private disposed = false
 
   constructor(private readonly deps: EffectsDeps) {
@@ -159,6 +166,7 @@ export class EffectsController {
     this.rnnoise = deps.rnnoise ?? defaultRnnoise
     this.now = deps.now ?? (() => performance.now())
     this.prefs = readMediaPrefs(this.storage)
+    this.webglPending = typeof deps.probeWebGL2 === 'function'
     this.scope = effectScope(true)
     this.state = reactive<EffectsState>({
       blur: 'off',
@@ -238,6 +246,7 @@ export class EffectsController {
     })
 
     this.timers.push(setInterval(() => void this.sampleSender(), SENDER_STATS_INTERVAL_MS))
+    if (this.webglPending) this.scheduleWebGLCheck()
     if (__BLINQ_TEST_HOOKS__) this.installTestHooks()
   }
 
@@ -278,6 +287,7 @@ export class EffectsController {
     this.disposed = true
     this.scope.stop()
     for (const timer of this.timers.splice(0)) clearInterval(timer)
+    this.cancelIdleProbe?.()
     this.engine.destroy()
     // The chain disposes the insert when call-core releases the mic; this only detaches it early.
     this.insert?.dispose()
@@ -320,6 +330,11 @@ export class EffectsController {
       const attachNow = this.cameraLive() || CONNECTED.includes(this.ctx.phase.value)
       if (level !== 'off' && !this.engine.attached && !attachNow) return this.refreshBlur()
       if (level === this.engine.level && (level === 'off' || this.engine.attached)) return this.refreshBlur()
+      if (level !== 'off' && !this.engine.attached && !this.checkWebGL()) {
+        // No WebGL2 after all: the control now shows why; nothing was loaded.
+        this.state.blur = 'off'
+        return this.refreshBlur()
+      }
       this.blurCreating = !this.engine.attached && level !== 'off'
       this.refreshBlur()
       try {
@@ -331,6 +346,34 @@ export class EffectsController {
         this.refreshBlur()
       }
     })
+  }
+
+  /** Runs the deferred WebGL2 check once; returns whether blur is still supported. */
+  private checkWebGL(): boolean {
+    if (this.webglPending) {
+      this.webglPending = false
+      this.cancelIdleProbe?.()
+      if (!this.deps.probeWebGL2!()) this.state.blurSupport = supportsBlur({ ...this.env, hasWebGL2: false })
+    }
+    return this.state.blurSupport.ok
+  }
+
+  private scheduleWebGLCheck(): void {
+    const run = () => {
+      this.cancelIdleProbe = null
+      if (!this.disposed) this.checkWebGL()
+    }
+    const w = globalThis as {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
+      cancelIdleCallback?: (handle: number) => void
+    }
+    if (w.requestIdleCallback && w.cancelIdleCallback) {
+      const handle = w.requestIdleCallback(run, { timeout: 10_000 })
+      this.cancelIdleProbe = () => w.cancelIdleCallback!(handle)
+    } else {
+      const timer = setTimeout(run, 5_000)
+      this.cancelIdleProbe = () => clearTimeout(timer)
+    }
   }
 
   private blurFailed(error: unknown): void {

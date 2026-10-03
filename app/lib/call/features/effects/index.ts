@@ -4,7 +4,7 @@
  */
 import { defineCallFeature } from '../../../contracts/call'
 import { browserStorage, readDevicePrefs } from '../../devices'
-import { currentMediaFxEnv } from '../../../media/support'
+import { currentMediaFxEnv, probeWebGL2 } from '../../../media/support'
 import { EffectsController, registerEffects } from './controller'
 import BlurToggle from '~/components/call/effects/BlurToggle.vue'
 import EffectsSettings from '~/components/call/effects/EffectsSettings.vue'
@@ -22,7 +22,9 @@ export default defineCallFeature({
     const controller = new EffectsController({
       ctx,
       store: useCallStore(),
-      env: currentMediaFxEnv(),
+      // WebGL2 is probed later (idle time or the first blur), not while the call page starts.
+      env: currentMediaFxEnv({ probeWebGL: false }),
+      probeWebGL2,
       storage,
       // call-core opens these devices first; their saved effects apply before the tracks start.
       expectedDevices: readDevicePrefs(storage),
