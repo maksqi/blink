@@ -93,6 +93,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
                   <NuxtLink
                     v-if="smtpEnabled"
                     to="/forgot-password"
+                    prefetch-on="interaction"
                     class="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                   >
                     Forgot password?
@@ -125,7 +126,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
       <p v-if="!smtpEnabled">Forgot your password? Ask an administrator to reset it.</p>
       <p v-if="registrationOpen">
         New here?
-        <NuxtLink to="/register" class="font-medium text-foreground underline-offset-4 hover:underline"
+        <NuxtLink to="/register" prefetch-on="interaction" class="font-medium text-foreground underline-offset-4 hover:underline"
           >Create an account</NuxtLink
         >
       </p>

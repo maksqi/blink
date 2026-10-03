@@ -111,7 +111,7 @@ const features = [
           </p>
           <div class="mt-8 flex flex-wrap items-center gap-3 motion-safe:animate-rise motion-safe:[animation-delay:240ms]">
             <Button as-child size="lg" class="h-11 px-5 text-[0.9375rem]">
-              <NuxtLink to="/login">
+              <NuxtLink to="/login" prefetch-on="interaction">
                 Sign in
                 <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
               </NuxtLink>

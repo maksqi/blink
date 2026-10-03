@@ -50,7 +50,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
       description="This server cannot send email. Ask an administrator to reset your password."
     >
       <Button as-child variant="outline" size="lg" class="w-full">
-        <NuxtLink to="/login">Back to sign in</NuxtLink>
+        <NuxtLink to="/login" prefetch-on="interaction">Back to sign in</NuxtLink>
       </Button>
     </AuthStatus>
 
@@ -60,7 +60,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
         new password. The link works once and expires in 1 hour.
       </template>
       <Button as-child variant="outline" size="lg" class="w-full">
-        <NuxtLink to="/login">Back to sign in</NuxtLink>
+        <NuxtLink to="/login" prefetch-on="interaction">Back to sign in</NuxtLink>
       </Button>
     </AuthStatus>
 
@@ -114,7 +114,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
       <CardFooter class="border-t pt-6 text-sm text-muted-foreground">
         <p>
           Remembered it?
-          <NuxtLink to="/login" class="font-medium text-foreground underline-offset-4 hover:underline"
+          <NuxtLink to="/login" prefetch-on="interaction" class="font-medium text-foreground underline-offset-4 hover:underline"
             >Sign in</NuxtLink
           >
         </p>

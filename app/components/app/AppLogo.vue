@@ -21,6 +21,7 @@ const props = withDefaults(
   <component
     :is="props.to ? NuxtLink : 'span'"
     :to="props.to || undefined"
+    :prefetch-on="props.to ? 'interaction' : undefined"
     :aria-label="props.to ? 'blinq home' : undefined"
     :class="cn('inline-flex shrink-0 items-center gap-2 rounded-lg text-foreground', props.class)"
   >

@@ -29,7 +29,7 @@ const user = useAuthState()
           <UserMenu />
         </div>
         <Button v-else as-child size="sm" class="ml-1 px-3.5">
-          <NuxtLink to="/login">Sign in</NuxtLink>
+          <NuxtLink to="/login" prefetch-on="interaction">Sign in</NuxtLink>
         </Button>
       </div>
     </div>

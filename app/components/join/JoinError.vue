@@ -66,7 +66,7 @@ const icon = computed(() => ICONS[props.problem.code] ?? CircleAlertIcon)
       </Button>
       <Button v-if="copy.next === 'retry'" data-testid="join-error-retry" @click="emit('retry')">Try again</Button>
       <Button :variant="copy.next === 'home' ? 'default' : 'secondary'" as-child>
-        <NuxtLink to="/">Back to home</NuxtLink>
+        <NuxtLink to="/" prefetch-on="interaction">Back to home</NuxtLink>
       </Button>
     </div>
   </JoinScreen>

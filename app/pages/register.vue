@@ -71,7 +71,7 @@ function clearServerError(name: string) {
       description="Accounts on this server are created by invitation. Ask an administrator for an invite."
     >
       <Button as-child size="lg" class="w-full">
-        <NuxtLink to="/login">Sign in</NuxtLink>
+        <NuxtLink to="/login" prefetch-on="interaction">Sign in</NuxtLink>
       </Button>
     </AuthStatus>
 
@@ -81,7 +81,7 @@ function clearServerError(name: string) {
         >. Open it to finish creating your account. It expires in 24 hours.
       </template>
       <Button as-child variant="outline" size="lg" class="w-full">
-        <NuxtLink to="/login">Back to sign in</NuxtLink>
+        <NuxtLink to="/login" prefetch-on="interaction">Back to sign in</NuxtLink>
       </Button>
     </AuthStatus>
 
@@ -209,7 +209,7 @@ function clearServerError(name: string) {
       <CardFooter class="border-t pt-6 text-sm text-muted-foreground">
         <p>
           Already have an account?
-          <NuxtLink to="/login" class="font-medium text-foreground underline-offset-4 hover:underline"
+          <NuxtLink to="/login" prefetch-on="interaction" class="font-medium text-foreground underline-offset-4 hover:underline"
             >Sign in</NuxtLink
           >
         </p>
