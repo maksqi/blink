@@ -101,6 +101,8 @@ const env = {
   PORT: String(port),
   PUBLIC_URL: origin,
   LIVEKIT_PUBLIC_URL: `ws://127.0.0.1:${port}`,
+  // The test-only GET /api/__test/livekit-calls answers 404 unless the in-memory fake RoomService is in use.
+  ...(mode === 'test' ? { LIVEKIT_URL: 'fake://local' } : {}),
   LOG_LEVEL: 'warn',
 }
 const server = spawn(process.execPath, ['.output/server/index.mjs'], { env, stdio: ['ignore', 'pipe', 'pipe'] })
