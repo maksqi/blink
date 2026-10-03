@@ -37,17 +37,7 @@ export type E2eDb = ReturnType<typeof drizzle>
 export const PENDING = {
   chatList:
     'pending finding: chat messages are <li> inside <ol role="log">, which drops the list semantics (ChatPanel)',
-  destructiveContrast:
-    'pending finding: destructive buttons in the dark theme are 4.42:1 (#f66c6d on #432c33), under 4.5:1',
-  sessionsList: 'pending finding: the session list has role="list" but its items have no role="listitem" (SessionList)',
-  forbiddenConsole: 'pending finding: the 403 page logs [NUXT_E1005] on load (admin middleware aborts during SSR)',
   settingsFocus: 'pending finding: closing the call settings dialog (opened from the More menu) leaves focus on <body>',
-  dashboardOverflow:
-    'pending finding: a long room name overflows the dashboard on phones (RoomListItem title is w-fit, no truncation)',
-  touchTargets:
-    'pending finding: touch targets under 44 px on phones (shadcn buttons, inputs, selects, switches 18-40 px; logo, text links, Show password 24 px)',
-  callTopTargets:
-    'pending finding: the E2EE badge (32 px) and the tile options button (28 px) are under 44 px on phones',
 } as const
 
 // ---- Themes -------------------------------------------------------------------------------------------------------

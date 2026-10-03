@@ -34,6 +34,7 @@ type LooseFetch = (url: string, options: Record<string, unknown>) => Promise<unk
 export function useApi() {
   // Nitro's typed-route inference explodes on dynamic string paths; responses are typed by the caller instead.
   const requestFetch = useRequestFetch() as unknown as LooseFetch
+  const nuxtApp = tryUseNuxtApp()
 
   return async function api<T>(
     path: string,
@@ -51,6 +52,10 @@ export function useApi() {
       if (isFetchError(error)) {
         if (!error.response) throw new ApiError(0, 'NETWORK', 'Network error. Check your connection.')
         const code = error.data?.data?.code
+        // An expired or revoked session: listeners drop per-user browser state such as the key vault (SECURITY.md §3.1).
+        if (import.meta.client && error.response.status === 401 && code === 'UNAUTHENTICATED') {
+          void nuxtApp?.callHook('blinq:session-lost')
+        }
         throw new ApiError(
           error.response.status,
           (code ?? 'INTERNAL') as ErrorCode,

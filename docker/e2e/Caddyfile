@@ -7,6 +7,19 @@
 	admin off
 	auto_https off
 	persist_config off
+	# As in production (docker/caddy/entrypoint.sh): the error log drops the query, other host names are not logged.
+	log errors {
+		include http.log.error
+		output stderr
+		format filter {
+			wrap json
+			request>uri regexp \?.*$ ?REDACTED
+			request>headers>Referer regexp \?.*$ ?REDACTED
+		}
+	}
+	log default {
+		exclude http.log.access http.log.error
+	}
 }
 
 # Container-local health endpoint for the compose healthcheck (production Caddy uses 127.0.0.1:2020 the same way).
@@ -17,17 +30,45 @@ http://127.0.0.1:2020 {
 
 http://localhost:8080 {
 	# Access log on stdout; scripts/e2e.sh copies it to logs/e2e/caddy.log, where the E2E fixtures scan it for secrets.
-	log {
+	# The same two loggers as production (docker/caddy/site.caddyfile explains the names): /api and /rtc redact
+	# credential parameters, every other path loses its whole query.
+	log api {
 		output stdout
 		format filter {
 			wrap json
-			# As in production: livekit-client sends its token as ?access_token=, which must never be logged.
-			# Cookie, Set-Cookie and Authorization values are already logged as REDACTED by Caddy's defaults.
 			request>uri query {
 				replace access_token REDACTED
+				replace join_request REDACTED
+				replace t REDACTED
+				replace k REDACTED
+				replace token REDACTED
+				replace inviteToken REDACTED
+				replace proof REDACTED
+				replace password REDACTED
+				replace currentPassword REDACTED
+				replace newPassword REDACTED
+				replace confirmPassword REDACTED
+				replace email REDACTED
+				replace link REDACTED
+				replace q REDACTED
 			}
+			request>headers>Referer regexp \?.*$ ?REDACTED
+			resp_headers>Location regexp \?.*$ ?REDACTED
 		}
 	}
+	log pages {
+		output stdout
+		format filter {
+			wrap json
+			request>uri regexp \?.*$ ?REDACTED
+			request>headers>Referer regexp \?.*$ ?REDACTED
+			resp_headers>Location regexp \?.*$ ?REDACTED
+		}
+	}
+	@log_api path /api /api/* /rtc /rtc/*
+	log_name @log_api api
+	@log_pages not path /api /api/* /rtc /rtc/*
+	log_name @log_pages pages
 
 	# As in production (docker/caddy/site.caddyfile), so perf/budget measures the compressed transfer sizes.
 	# Text-based responses only. Not text/event-stream (the waiting-room SSE), which must reach the browser at once.

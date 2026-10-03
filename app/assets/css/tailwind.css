@@ -196,7 +196,7 @@
             [data-slot$='-close'],
             [data-slot^='pagination-'],
             [data-slot='breadcrumb-link']
-        ):not([data-slot='pagination-content'], [data-slot='pagination-item'], [data-slot='pagination-ellipsis']) {
+        ):not([data-slot='pagination-content'], [data-slot='pagination-ellipsis']) {
         min-height: 44px;
         min-width: 44px;
     }

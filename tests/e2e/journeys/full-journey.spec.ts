@@ -42,11 +42,7 @@ test.describe('full journey', () => {
     page,
     flows,
     secrets,
-    browserName,
   }) => {
-    // pending finding: F-014 toast covers the join button (the "Room created" toast sits over Join now at 1280x720 in
-    // Firefox, and Playwright's hover keeps it from closing).
-    test.fixme(browserName === 'firefox', 'pending finding: F-014 toast covers the join button')
     const suffix = randomBytes(3).toString('hex')
     const userName = `Uma Journey ${suffix}`
     const roomName = `Journey room ${suffix}`

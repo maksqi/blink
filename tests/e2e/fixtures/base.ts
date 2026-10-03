@@ -299,6 +299,13 @@ interface TestState {
   secrets: Secrets
 }
 
+/**
+ * Benign framework messages allowed in every test. Nuxt fetches the build manifest in the background about a second
+ * after load; when a navigation cancels that request, WebKit and Firefox log `[NUXT_E5002]`. blinq has no client-side
+ * route rules or prerendered pages, so the manifest is never needed (Stage 10, F-063).
+ */
+const FRAMEWORK_NOISE: RegExp[] = [/^\[NUXT_E5002\](?:\n|$)/]
+
 export const test = base.extend<
   { allowConsoleErrors: (string | RegExp)[]; guards: Guards; secrets: Secrets; _e2eTest: TestState },
   { _e2eWorker: WorkerState }
@@ -324,7 +331,7 @@ export const test = base.extend<
 
   _e2eTest: [
     async ({ context, allowConsoleErrors, _e2eWorker }, use, testInfo) => {
-      const allowed = [...allowConsoleErrors]
+      const allowed = [...allowConsoleErrors, ...FRAMEWORK_NOISE]
       const recorders: ContextRecorder[] = []
       const watched = new WeakSet<BrowserContext>()
       const tracked = new Map<string, string>()

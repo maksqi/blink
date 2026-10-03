@@ -16,13 +16,14 @@ test.describe('end-to-end encrypted call', () => {
     for (const [viewer, publisher] of pairs) {
       // Video: frames decrypted and decoded.
       await waitForRemoteFrames(viewer.page, publisher.identity, 15)
-      // Audio: decoded samples carry energy (the fake devices play a tone).
+      // Audio: decoded samples carry energy (the fake devices play a tone). Comfort noise from a silent sender adds up
+      // to ~1e-8 only, so the threshold proves real audio (F-061; a tone reaches 0.5+ within seconds).
       await expect
         .poll(async () => (await inboundAudio(viewer.page, publisher.identity))[0]?.totalAudioEnergy ?? 0, {
           timeout: 20_000,
           message: `${viewer.name} hears ${publisher.name}`,
         })
-        .toBeGreaterThan(0)
+        .toBeGreaterThan(0.01)
 
       const state = await callState(viewer.page)
       expect(state?.e2eeEnabled).toBe(true)

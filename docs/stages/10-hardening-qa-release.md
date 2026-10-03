@@ -161,17 +161,17 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       orchestrator (contract) + fix-call — status: open
 - [x] F-010 [low] media — `/vendor/mediapipe/*.tflite` is served as `text/plain` (with `nosniff`) — owner:
       orchestrator (`nuxt.config.ts`) — status: fixed (route rule; `check-build.mjs production` asserts it)
-- [ ] F-011 [low] rooms — the sessionStorage fragment store (`blinq:fragment:/m/<slug>`) can keep an untaken key after
-      sign-out — owner: fix-ui — status: open
+- [x] F-011 [low] rooms — the sessionStorage fragment store (`blinq:fragment:/m/<slug>`) can keep an untaken key after
+      sign-out — owner: fix-ui — status: fixed (fix-ui)
 - [x] F-012 [medium] ci — the production SSR bundle contains `__blinqTest` (a JSDoc comment in
       `app/lib/call/features/room-settings/index.ts`; SSR chunks are not minified), so `check-build.mjs production`
       fails — owner: orchestrator — status: fixed (comment reworded)
 - [x] F-013 [medium] ci — gitleaks reports 15 `generic-api-key` false positives (fake passwords in tests, the temporary
       password alphabet), so the ci.yml gitleaks job fails — owner: orchestrator — status: fixed (`.gitleaks.toml`
       allowlist limited to that rule in test files)
-- [ ] F-014 [medium] ui — after creating a room the "Room created" toast (bottom right) covers the pre-join Join button
+- [x] F-014 [medium] ui — after creating a room the "Room created" toast (bottom right) covers the pre-join Join button
       at 1280×720; hovering it to click Join pauses its dismissal (`rooms/create-and-join` fails in Firefox) — owner:
-      fix-ui — status: open
+      fix-ui — status: fixed (fix-ui: no "Room created" toast; toasts at the top in calls)
 - [ ] F-015 [high] call — E2EE: livekit-client keeps one decrypt flag per participant that every `TrackPublished`
       overwrites, and the worker passes frames through undecrypted when it is off; blinq checks encryption per track,
       so a compromised SFU can announce one `NONE` track and get plaintext played, mixed and recorded on that
@@ -186,8 +186,8 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       — status: open
 - [ ] F-019 [medium] server — no cap on waiting-room SSE streams per request or IP (150/150 opened) (S-05) — owner:
       fix-server — status: open
-- [ ] F-020 [medium] ui — forms submitted before hydration send `GET /login?email=…&password=…` or `/?link=…#k=…`
-      into the URL, history and the Caddy log (S-06) — owner: fix-ui (+ fix-infra: Caddy query redaction) — status: open
+- [x] F-020 [medium] ui — forms submitted before hydration send `GET /login?email=…&password=…` or `/?link=…#k=…`
+      into the URL, history and the Caddy log (S-06) — owner: fix-ui (+ fix-infra: Caddy query redaction) — status: fixed (fix-ui: method="post", no name on the link field, submit disabled until hydration; Caddy part fix-infra)
       (Caddy part fixed by fix-infra 5687e71)
 - [x] F-021 [medium] deps — `pnpm audit --prod --audit-level high` exits 1: node-forge GHSA-86w9-cpqp-85rv and braces
       GHSA-vfj7-8cjw-p6xm (build-time only, no patched release on npm) (S-07) — owner: orchestrator — status: fixed
@@ -207,10 +207,10 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       ffprobe allowlist; documented in SECURITY.md §6)
 - [ ] F-028 [low] server — `/api/**` responses carry no `Cross-Origin-Resource-Policy` (S-15) — owner: fix-server —
       status: open
-- [ ] F-029 [low] ui — the key vault survives an expired session (cleared only when a previous user was known; no 401
-      hook) (S-16, SECURITY.md §3.1) — owner: fix-ui — status: open
-- [ ] F-030 [low] ui — `/M/<slug>#k=…` (mixed case) keeps the key in the address bar: the fragment store matches the
-      path case-sensitively (S-17) — owner: fix-ui — status: open
+- [x] F-029 [low] ui — the key vault survives an expired session (cleared only when a previous user was known; no 401
+      hook) (S-16, SECURITY.md §3.1) — owner: fix-ui — status: fixed (fix-ui + `blinq:session-lost` hook in useApi.ts)
+- [x] F-030 [low] ui — `/M/<slug>#k=…` (mixed case) keeps the key in the address bar: the fragment store matches the
+      path case-sensitively (S-17) — owner: fix-ui — status: fixed (fix-ui)
 - [ ] F-031 [low] call — chat and reaction envelopes can be replayed by the SFU after a reload or 5000 ids (in-memory
       dedupe, no freshness check) (S-18) — owner: fix-call — status: open
 - [ ] F-032 [low] server — Nitro error bodies reflect `X-Forwarded-Host` in `url` (Caddy overwrites it in production)
@@ -227,8 +227,8 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
 - [ ] F-037 [medium] call — the heap grows ~1.3 MB per join/leave in one tab: livekit-client's WeakRef
       `onDeviceChange` closure keeps every `Room`, and @tanstack/vue-form drops `formApi.mount()`'s cleanup so form
       devtools listeners keep the component and the `CallSession` — owner: fix-call (patches) — status: open
-- [ ] F-038 [medium] ui — join error screens keep the preview session (camera, mic, Room, E2EE worker) alive
-      (`app/composables/rooms/useJoinFlow.ts:99-107`) — owner: fix-ui — status: open
+- [x] F-038 [medium] ui — join error screens keep the preview session (camera, mic, Room, E2EE worker) alive
+      (`app/composables/rooms/useJoinFlow.ts:99-107`) — owner: fix-ui — status: fixed (fix-ui)
 - [ ] F-039 [medium] server — a LiveKit full reconnect (left on the old session, joined on the new one) is enforced as
       a removal (`server/services/meetings/webhooks.ts:62-103`) — owner: fix-server — status: open
 - [x] F-040 [medium] db — `recordings.meeting_id` has no index (deleting a user with 5000 meetings takes 4.5 s vs
@@ -245,9 +245,9 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       is undocumented and the join screen shows it as unknown; `VALIDATION_FAILED` with status 416; 413/415 normalized
       to `VALIDATION_FAILED`; `recording_busy` documented under upload but thrown by DELETE — owner: orchestrator
       (docs) + fix-server + fix-ui — status: open
-- [ ] F-045 [medium] ui — copy: many `ERROR_MESSAGES` give no next step (`shared/utils/error-codes/index.ts`); one
+- [x] F-045 [medium] ui — copy: many `ERROR_MESSAGES` give no next step (`shared/utils/error-codes/index.ts`); one
       setting is labeled "Hosts only" in the call and "Hosts and co-hosts" on the room page — owner: fix-ui (+ fix-call
-      label) — status: open
+      label) — status: fixed (fix-ui)
 - [ ] F-046 [low] server — LiveKit `createRoom`/`deleteRoom` run inside the room-lock transaction (pool max 10);
       `GET /lobby` writes; (unconfirmed) demoting a co-host does not stop their screen share under the "hosts" policy —
       owner: fix-server — status: open
@@ -262,25 +262,25 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       `hasModerationMenu`, `bytesEqual`, `queuePosition`, `displayedSetting`) and duplicates (UUID regex ×8,
       `likePattern` ×5, moderator check ×3, server forks of `StreamEvent` and the settings patch schema) — owner:
       fix-server + fix-call + fix-ui (dead code); duplicates accepted for v1 — status: open
-- [ ] F-051 [low] ui — the 403 and 404 error pages log `[NUXT_E1005]` to the console while hydrating (e2e-security) —
-      owner: fix-ui — status: open
-- [ ] F-052 [high] ui — axe critical `aria-required-children` on `/settings/sessions`: the session list has
-      `role="list"` but its items have no `listitem` role (SessionList.vue) (e2e-a11y) — owner: fix-ui — status: open
+- [x] F-051 [low] ui — the 403 and 404 error pages log `[NUXT_E1005]` to the console while hydrating (e2e-security) —
+      owner: fix-ui — status: fixed (fix-ui)
+- [x] F-052 [high] ui — axe critical `aria-required-children` on `/settings/sessions`: the session list has
+      `role="list"` but its items have no `listitem` role (SessionList.vue) (e2e-a11y) — owner: fix-ui — status: fixed (fix-ui)
 - [x] F-053 [medium] ui-kit — slider thumbs (`role="slider"`) have no accessible name; `aria-label` stays on the root
       (`app/components/ui/slider/Slider.vue`) — owner: orchestrator — status: fixed (the thumb gets the name; a11y
       `axe-call` runs without the exception)
 - [ ] F-054 [medium] call — chat messages are `<li>` inside `<ol role="log">`, which drops the list semantics
       (ChatPanel) — owner: fix-call — status: open
-- [ ] F-055 [medium] ui — destructive buttons in the dark theme are 4.42:1 (#f66c6d on #432c33) — owner: fix-ui —
-      status: open
+- [x] F-055 [medium] ui — destructive buttons in the dark theme are 4.42:1 (#f66c6d on #432c33) — owner: fix-ui —
+      status: fixed (fix-ui: dark `--destructive` oklch(0.75 0.15 22))
 - [ ] F-056 [medium] call — closing the device settings dialog opened from More options leaves focus on `<body>`
       (WCAG 2.4.3) — owner: fix-call — status: open
-- [ ] F-057 [medium] ui — a long room name overflows the dashboard by 118 px at 375 px and pushes dialogs past the
-      screen edge (RoomListItem `ItemTitle`) — owner: fix-ui — status: open
-- [ ] F-058 [medium] ui — touch targets under 44 px on phones on every page except the call control bar (shadcn
+- [x] F-057 [medium] ui — a long room name overflows the dashboard by 118 px at 375 px and pushes dialogs past the
+      screen edge (RoomListItem `ItemTitle`) — owner: fix-ui — status: fixed (fix-ui)
+- [x] F-058 [medium] ui — touch targets under 44 px on phones on every page except the call control bar (shadcn
       buttons, inputs, selects, switches, toggle groups, pagination, sidebar trigger, slider thumb; logo, Show password,
       text links; the E2EE badge and tile options in the call) — owner: fix-ui (+ fix-call for call controls) —
-      status: open
+      status: fixed (fix-ui: `(pointer: coarse)` minimum 44 px; desktop keeps compact controls)
 - [ ] F-059 [low] call — toggling the mic right after joining, before the first publish, logs "could not update mute
       status for unpublished track" — owner: fix-call — status: open
 - [ ] F-060 [low] call — when the mic chain's AudioContext never runs (e.g. no audio backend), the published mic is
@@ -289,9 +289,9 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       silent sender satisfies — owner: e2e-flows (call) + fix-call (media) — status: open
 - [x] F-062 [low] infra — Caddy logs livekit-client's `join_request=` query (the SDP offer with ICE credentials) —
       owner: fix-infra (+ orchestrator for the e2e Caddyfile) — status: fixed (fix-infra 5687e71, 7b5c966)
-- [ ] F-063 [low] ui — reloading `/dashboard` aborts route chunk imports, which surface as uncaught page errors
+- [x] F-063 [low] ui — reloading `/dashboard` aborts route chunk imports, which surface as uncaught page errors
       ("Importing a module script failed"); `auth/first-admin` fails on webkit-ui (2/2) and once on Firefox (e2e-flows)
-      — owner: fix-ui — status: open
+      — owner: fix-ui — status: fixed (spec race: fix-ui waits in first-admin; the guard allows only the benign `[NUXT_E5002]` manifest abort)
 - [ ] F-064 [low] call — Firefox sometimes never fires `load` on a fully rendered pre-join page (a guest in
       `rooms/key-leak` hung for 113 s with no request pending); `openToPrejoin` now waits for `domcontentloaded` — owner:
       fix-call — status: open

@@ -109,7 +109,7 @@ describe('createCallActions', () => {
     expect(await actions.remove(tara)).toEqual({ ok: false, code: 'CALL_FORBIDDEN', status: 403 })
     expect(notify).toHaveBeenCalledWith('Only the host or a co-host can do that.')
     expect(failureMessage('NETWORK')).toBe('Network error. Check your connection.')
-    expect(failureMessage('SOMETHING_ELSE')).toBe('Something went wrong on the server.')
+    expect(failureMessage('SOMETHING_ELSE')).toBe('Something went wrong on the server. Try again in a moment.')
   })
 
   it('treats 404 on a target as "they left" and refetches', async () => {
@@ -131,7 +131,7 @@ describe('createCallActions', () => {
     }
     const { actions, notify } = setup(() => new FakeApiError(409, 'ROOM_FULL'))
     await actions.admit('r1')
-    expect(notify).toHaveBeenCalledWith('This meeting is full.')
+    expect(notify).toHaveBeenCalledWith('This meeting is full. Try again when someone leaves.')
   })
 
   it('keeps reads quiet', async () => {

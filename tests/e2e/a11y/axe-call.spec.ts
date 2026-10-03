@@ -139,11 +139,7 @@ test.describe('axe on the meeting page', () => {
       await settle(page)
 
       await openHostControls(page)
-      // pending finding: the destructive buttons (mute all, end meeting) are 4.42:1 in the dark theme.
-      await expectAccessible(page, 'host controls', {
-        include: ['[data-testid="host-controls"]'],
-        pending: { 'color-contrast': PENDING.destructiveContrast },
-      })
+      await expectAccessible(page, 'host controls', { include: ['[data-testid="host-controls"]'] })
       await page.getByTestId('host-end-meeting').click()
       await expect(page.getByTestId('end-meeting-dialog')).toBeVisible()
       await expectAccessible(page, 'end-meeting confirmation', { include: ['[data-testid="end-meeting-dialog"]'] })

@@ -17,7 +17,6 @@ import {
   horizontalOverflow,
   notePending,
   overflowingElements,
-  PENDING,
   requirePasswordChange,
   seedRecordings,
   settleAnimations,
@@ -33,8 +32,6 @@ const WIDTHS = [375, 768, 1440] as const
 /** WCAG 2.5.5 (AAA) and the platform guidelines: 44 CSS px for touch. */
 const TOUCH_MIN = 44
 const ERROR_PAGE_CONSOLE = /Failed to load resource: the server responded with a status of 40[34]/
-/** pending finding: the 403 page logs [NUXT_E1005] on load (admin middleware aborts the navigation during SSR). */
-const FORBIDDEN_PAGE_CONSOLE = /\[NUXT_E1005\]/
 
 function viewportFor(width: number) {
   return { width, height: width < 700 ? 740 : 900 }
@@ -47,17 +44,18 @@ interface PendingChecks {
   touch?: string
 }
 
-/**
- * Layout checks for one page state: fits the width, the primary action is reachable, touch targets on phones.
- * pending finding: every page except the call control bar still has touch targets under 44 px on phones, so the
- * touch check defaults to `PENDING.touchTargets` (recorded as an annotation with the offending controls).
- */
+/** Touch-sized controls are a coarse-pointer rule (F-058): desktop browsers keep compact controls at any width. */
+async function isCoarsePointer(page: Page): Promise<boolean> {
+  return page.evaluate(() => matchMedia('(pointer: coarse)').matches)
+}
+
+/** Layout checks for one page state: fits the width, the primary action is reachable, touch targets on phones. */
 async function checkPage(
   page: Page,
   label: string,
   width: number,
   primary: Locator,
-  pending: PendingChecks = { touch: PENDING.touchTargets },
+  pending: PendingChecks = {},
 ): Promise<void> {
   const name = `${label} at ${width}px`
   await expect(primary, `${name}: primary control`).toBeVisible()
@@ -75,7 +73,7 @@ async function checkPage(
   }
   await primary.scrollIntoViewIfNeeded()
   await expect.soft(primary, `${name}: primary control in the viewport`).toBeInViewport()
-  if (width < 700) {
+  if (width < 700 && (await isCoarsePointer(page))) {
     const small = await smallTargets(page, TOUCH_MIN)
     if (pending.touch) {
       if (small.length > 0) notePending(pending.touch, { label: name, small })
@@ -133,20 +131,18 @@ for (const width of WIDTHS) {
 
       await page.goto('/dashboard')
       await expect(page.getByTestId('room-item')).toHaveCount(2)
-      // pending finding: the long room name pushes the dashboard 118 px past a 375 px screen.
-      const dashboard = width < 700 ? { overflow: PENDING.dashboardOverflow, touch: PENDING.touchTargets } : undefined
-      await checkPage(page, 'dashboard', width, page.getByTestId('instant-meeting'), dashboard)
+      await checkPage(page, 'dashboard', width, page.getByTestId('instant-meeting'))
       await page.getByTestId('new-room').click()
       const dialog = page.getByTestId('create-room-dialog')
       await expect(dialog).toBeVisible()
-      await checkPage(page, 'new-room dialog', width, dialog.getByTestId('create-room-submit'), dashboard)
+      await checkPage(page, 'new-room dialog', width, dialog.getByTestId('create-room-submit'))
       await page.keyboard.press('Escape')
       await expect(dialog).toBeHidden()
       if (width < 768) {
         await page.getByTestId('mobile-nav-trigger').click()
         const nav = page.getByTestId('mobile-nav')
         await expect(nav).toBeVisible()
-        await checkPage(page, 'mobile navigation', width, nav.getByRole('link', { name: 'Recordings' }), dashboard)
+        await checkPage(page, 'mobile navigation', width, nav.getByRole('link', { name: 'Recordings' }))
         await page.keyboard.press('Escape')
         await expect(nav).toBeHidden()
       }
@@ -159,8 +155,10 @@ for (const width of WIDTHS) {
       await expect(page.getByText('Rae Responsive').or(page.getByTestId('recordings-table')).first()).toBeVisible()
       await checkPage(page, 'recordings', width, page.getByTestId('delete-recording').first())
 
+      // The seeded row has no chunks: the recordings:finalize-stale task (every 2 min) may already have failed it, so
+      // only the detail page itself is waited for, not the processing state.
       await page.goto(`/recordings/${processingId}`)
-      await expect(page.getByText('Processing the recording')).toBeVisible()
+      await expect(page.getByTestId('delete-recording')).toBeVisible()
       await checkPage(page, 'recording detail', width, page.getByTestId('delete-recording'))
 
       await page.goto('/settings')
@@ -171,7 +169,6 @@ for (const width of WIDTHS) {
       await checkPage(page, 'sessions', width, page.getByTestId('session-item').first())
 
       guards.allowConsoleError(ERROR_PAGE_CONSOLE)
-      guards.allowConsoleError(FORBIDDEN_PAGE_CONSOLE) // pending finding: see FORBIDDEN_PAGE_CONSOLE
       await page.goto('/admin')
       await expect(page.getByText('Error 403')).toBeVisible()
       await checkPage(page, '403', width, page.getByRole('button', { name: 'Go to dashboard' }))
@@ -300,8 +297,9 @@ test.describe('call controls on phones', { tag: '@responsive' }, () => {
       const bar = page.getByTestId('control-bar')
       await expect(bar).toBeInViewport({ ratio: 1 })
       expect(await smallTargets(page, TOUCH_MIN, '[data-testid="control-bar"]'), 'control bar: under 44 px').toEqual([])
-      // pending finding: outside the control bar, the E2EE badge and the tile options button are under 44 px.
-      notePending(PENDING.callTopTargets, await smallTargets(page, TOUCH_MIN))
+      if (await isCoarsePointer(page)) {
+        expect(await smallTargets(page, TOUCH_MIN), 'call page: under 44 px').toEqual([])
+      }
     } finally {
       await leaveCalls(page)
     }

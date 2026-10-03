@@ -33,7 +33,7 @@ describe('normalizeApiError', () => {
     const error = h3ValidationError()
     expect(normalizeApiError(error)).toEqual({ kind: 'validation' })
     expect(error.statusCode).toBe(400)
-    expect(error.statusMessage).toBe('Some fields are invalid.')
+    expect(error.statusMessage).toBe('Some fields are invalid. Check them and try again.')
     expect(error.data).toEqual({ code: 'VALIDATION_FAILED', details: { issues: expect.any(Array) } })
     expect(error.unhandled).toBe(false)
   })
@@ -60,7 +60,7 @@ describe('normalizeApiError', () => {
     const error = createError({ statusCode: 404, statusMessage: 'Cannot find any path matching /api/x.' })
     expect(normalizeApiError(error).kind).toBe('not_found')
     expect(error.data).toEqual({ code: 'NOT_FOUND' })
-    expect(error.statusMessage).toBe('Not found.')
+    expect(error.statusMessage).toBe('Not found. It may have been deleted. Refresh and try again.')
   })
 
   it('hides internal failures behind INTERNAL and returns the original for logging', () => {
@@ -70,7 +70,7 @@ describe('normalizeApiError', () => {
     const result = normalizeApiError(error)
     expect(result).toEqual({ kind: 'internal', original: cause })
     expect(error.statusCode).toBe(500)
-    expect(error.message).toBe('Something went wrong on the server.')
+    expect(error.message).toBe('Something went wrong on the server. Try again in a moment.')
     expect(error.data).toEqual({ code: 'INTERNAL' })
     expect(error.unhandled).toBe(false)
   })

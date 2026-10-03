@@ -16,7 +16,6 @@ import {
   expect,
   expectAccessible,
   expectTheme,
-  PENDING,
   requirePasswordChange,
   seedRecordings,
   test,
@@ -27,8 +26,6 @@ import {
 
 /** Console errors of the error pages themselves: the document answers 403 or 404 on purpose. */
 const ERROR_PAGE_CONSOLE = /Failed to load resource: the server responded with a status of 40[34]/
-/** pending finding: the 403 page logs [NUXT_E1005] on load (admin middleware aborts the navigation during SSR). */
-const FORBIDDEN_PAGE_CONSOLE = /\[NUXT_E1005\]/
 
 async function signIn(page: Page, rooms: RoomsFixture, role: 'user' | 'admin' = 'user', displayName?: string) {
   const user = await rooms.createUser({
@@ -131,7 +128,6 @@ for (const theme of THEMES) {
 
     test(`error pages 404 and 403 (${theme})`, async ({ page, rooms, guards }) => {
       guards.allowConsoleError(ERROR_PAGE_CONSOLE)
-      guards.allowConsoleError(FORBIDDEN_PAGE_CONSOLE) // pending finding: see FORBIDDEN_PAGE_CONSOLE
       await page.goto('/this-page-does-not-exist')
       await expect(page.getByText('Error 404')).toBeVisible()
       await expectTheme(page, theme)
@@ -193,11 +189,7 @@ for (const theme of THEMES) {
 
       await page.getByTestId('delete-room-open').click()
       await expect(page.getByRole('alertdialog')).toBeVisible()
-      await expectAccessible(page, `delete-room confirmation (${theme})`, {
-        include: ['[role="alertdialog"]'],
-        // pending finding: the destructive "Delete room" button is 4.42:1 in the dark theme.
-        pending: theme === 'dark' ? { 'color-contrast': PENDING.destructiveContrast } : {},
-      })
+      await expectAccessible(page, `delete-room confirmation (${theme})`, { include: ['[role="alertdialog"]'] })
       await page.keyboard.press('Escape')
     })
 
@@ -223,10 +215,7 @@ for (const theme of THEMES) {
 
       await page.goto('/settings/sessions')
       await expect(page.getByTestId('session-item').first()).toBeVisible()
-      // pending finding: the session list (role="list") has items without role="listitem".
-      await expectAccessible(page, `sessions (${theme})`, {
-        pending: { 'aria-required-children': PENDING.sessionsList },
-      })
+      await expectAccessible(page, `sessions (${theme})`)
     })
 
     // ---- Admin --------------------------------------------------------------------------------------------------

@@ -117,8 +117,6 @@ test.describe('page headers', () => {
 
   test('error pages: 403 for a signed-in non-admin, 404 for an unknown path', { tag: '@ui' }, async ({ page, context, rooms, guards }) => {
     guards.allowConsoleError(HTTP_ERROR_CONSOLE)
-    // Nuxt reports the server-rendered error again while the error page hydrates (reported as a low finding).
-    guards.allowConsoleError(/^\[NUXT_E1005\]/)
     const user = await rooms.createUser({ displayName: 'Uma User' })
     await rooms.useIdentity(context, user)
     await checkDocument(page, await page.goto('/admin'), 403)
