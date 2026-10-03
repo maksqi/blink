@@ -1,4 +1,9 @@
-// Stub (W0a). Owner: admin (Stage 03). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('admin')
+// GET /api/admin/audit (admin): the audit log, newest first; `q` over the target, `action`, `actorUserId`.
+import { auditQuerySchema } from '#shared/schemas/admin'
+import { listAuditLog } from '../../services/admin'
+
+export default defineEventHandler(async (event) => {
+  await requireAdmin(event)
+  const query = await getValidatedQuery(event, auditQuerySchema.parse)
+  return listAuditLog(query)
 })

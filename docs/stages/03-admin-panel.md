@@ -56,55 +56,55 @@ rejects non-admins, the last admin cannot be removed, and every mutation is audi
   `POST /api/admin/users/:id/revoke-sessions` answers 204 even though the service returns `{ revoked }`.
 
 ### Backend
-- [ ] Every handler starts with `requireAdmin(event)`; list endpoints parse `paginationQuerySchema` extensions and
+- [x] Every handler starts with `requireAdmin(event)`; list endpoints parse `paginationQuerySchema` extensions and
       return `Paginated<T>`.
-- [ ] `GET /api/admin/users` (`adminUsersQuerySchema`: `q`, `role`, `status`) → `Paginated<AdminUser>`;
+- [x] `GET /api/admin/users` (`adminUsersQuerySchema`: `q`, `role`, `status`) → `Paginated<AdminUser>`;
       `GET /api/admin/users/:id` → `{ user: AdminUser }`.
-- [ ] `POST /api/admin/users` (`adminCreateUserSchema`): generated 16-character temporary password,
+- [x] `POST /api/admin/users` (`adminCreateUserSchema`): generated 16-character temporary password,
       `must_change_password = true`; returned once in the response, or emailed when `sendEmail` (requires SMTP, else
       503 `SERVICE_UNAVAILABLE`); existing email → 409 `CONFLICT`; audit `admin.user_created`.
-- [ ] `PATCH /api/admin/users/:id` (`adminUpdateUserSchema`): disabling revokes sessions and publishes `user.revoked`
+- [x] `PATCH /api/admin/users/:id` (`adminUpdateUserSchema`): disabling revokes sessions and publishes `user.revoked`
       (rooms-backend removes live call identities); a role change rotates the user's sessions; audit
       `admin.user_updated` with the changed field names.
-- [ ] `DELETE /api/admin/users/:id`: ends live meetings of the user's rooms (`DeleteRoom`), deletes the user's
+- [x] `DELETE /api/admin/users/:id`: ends live meetings of the user's rooms (`DeleteRoom`), deletes the user's
       recording files through the recording service, then deletes the row (rooms and recordings cascade); an admin
       cannot delete their own account (409 `CONFLICT`, `details.reason = 'self'`) (decision); audit
       `admin.user_deleted` (email kept in `details`).
-- [ ] Last-admin protection (already in `server/services/users/last-admin.ts`, used by the users service): demoting,
+- [x] Last-admin protection (already in `server/services/users/last-admin.ts`, used by the users service): demoting,
       disabling or deleting the only enabled admin → 409 `CONFLICT` with `details.reason = 'last_admin'`, checked in the
       same transaction with `SELECT … FOR UPDATE`. Verify it through the admin API.
-- [ ] `POST /api/admin/users/:id/reset-password` (`{ sendEmail?: boolean }`, schema to be added to
+- [x] `POST /api/admin/users/:id/reset-password` (`{ sendEmail?: boolean }`, schema to be added to
       `shared/schemas/admin.ts` (decision)): new temporary password returned once (or a reset link emailed), sets
       `must_change_password`, revokes sessions; audit `admin.user_password_reset`.
-- [ ] `POST /api/admin/users/:id/revoke-sessions`: audit `admin.user_sessions_revoked`.
-- [ ] `GET /api/admin/invites` → `Paginated<AdminInvite>`; `POST /api/admin/invites` (`adminCreateInviteSchema`:
+- [x] `POST /api/admin/users/:id/revoke-sessions`: audit `admin.user_sessions_revoked`.
+- [x] `GET /api/admin/invites` → `Paginated<AdminInvite>`; `POST /api/admin/invites` (`adminCreateInviteSchema`:
       admin-role invites need an email and expire within 24 h) → `CreatedInvite` (token shown once; link
       `${publicUrl}/invite#${token}`; stored as sha256 only; `sendEmail` requires SMTP); `DELETE /api/admin/invites/:id`
       revokes; audit `admin.invite_created`, `admin.invite_revoked`.
-- [ ] `GET /api/admin/settings` → `{ settings: Settings, smtp: { configured, host, from } }`; `PUT /api/admin/settings`
+- [x] `GET /api/admin/settings` → `{ settings: Settings, smtp: { configured, host, from } }`; `PUT /api/admin/settings`
       (`settingsUpdateSchema`, partial and strict; the merged result is re-validated; `registration.mode = 'domain'`
       without SMTP → 400 `VALIDATION_FAILED` with `details.field`) writes through the settings service so the next
       request sees it; audit `admin.settings_updated` with old and new values.
-- [ ] `POST /api/admin/settings/test-email` (`{ to?: string }`, default the admin's email): 503 when SMTP is off; SMTP
+- [x] `POST /api/admin/settings/test-email` (`{ to?: string }`, default the admin's email): 503 when SMTP is off; SMTP
       failures → 503 with `details.smtpError` (message only, never credentials); audit `admin.test_email_sent`.
-- [ ] `GET /api/admin/rooms` → `Paginated<AdminRoom>` with `live` and `participantCount` from LiveKit `listRooms`
+- [x] `GET /api/admin/rooms` → `Paginated<AdminRoom>` with `live` and `participantCount` from LiveKit `listRooms`
       (LiveKit unreachable → counts from the DB and `live` from the meeting row, never a 500).
-- [ ] `POST /api/admin/rooms/:id/end` (via the rooms-backend meeting service: `DeleteRoom`, meeting ended, waiting
+- [x] `POST /api/admin/rooms/:id/end` (via the rooms-backend meeting service: `DeleteRoom`, meeting ended, waiting
       requests get `ended`) and `DELETE /api/admin/rooms/:id` (soft delete via rooms-backend, ends a live meeting);
       audit `admin.room_ended`, `admin.room_deleted`.
-- [ ] `GET /api/admin/rooms/:id/meetings` → `Paginated<MeetingSummary>` (start, end, peak; never chat, media or keys).
-- [ ] `GET /api/admin/audit` (`auditQuerySchema`: `q` over target, `action`, `actorUserId`) → `Paginated<AuditEntry>`.
+- [x] `GET /api/admin/rooms/:id/meetings` → `Paginated<MeetingSummary>` (start, end, peak; never chat, media or keys).
+- [x] `GET /api/admin/audit` (`auditQuerySchema`: `q` over target, `action`, `actorUserId`) → `Paginated<AuditEntry>`.
 ### Frontend
-- [ ] `admin/index.vue`: counts (users, rooms, live meetings), SMTP status badge, links to sections.
-- [ ] `admin/users.vue`: table with search and filters; create dialog (shows the temporary password once with copy);
+- [x] `admin/index.vue`: counts (users, rooms, live meetings), SMTP status badge, links to sections.
+- [x] `admin/users.vue`: table with search and filters; create dialog (shows the temporary password once with copy);
       detail sheet with role, disable, reset password, revoke sessions, delete (decision: detail in a sheet, no
       separate page); last-admin and self errors shown inline.
-- [ ] `admin/invites.vue`: create dialog (link shown once with copy), list, revoke.
-- [ ] `admin/settings.vue`: one form section per group (registration, guests, media, limits, recording, privacy and
+- [x] `admin/invites.vue`: create dialog (link shown once with copy), list, revoke.
+- [x] `admin/settings.vue`: one form section per group (registration, guests, media, limits, recording, privacy and
       audit), SMTP status and "Send test email".
-- [ ] `admin/rooms.vue`: rooms with live counts, end and delete, expandable meeting history per room.
-- [ ] `admin/audit.vue`: filters and paging; details rendered as text (never `v-html`).
-- [ ] Destructive actions use an in-page confirmation dialog (no `confirm()`).
+- [x] `admin/rooms.vue`: rooms with live counts, end and delete, expandable meeting history per room.
+- [x] `admin/audit.vue`: filters and paging; details rendered as text (never `v-html`).
+- [x] Destructive actions use an in-page confirmation dialog (no `confirm()`).
 
 ## Tests
 - Unit: last-admin rules are covered by `tests/api/auth/last-admin.test.ts` (Wave 1); colocated unit tests for every new
@@ -124,21 +124,25 @@ rejects non-admins, the last admin cannot be removed, and every mutation is audi
   (`@responsive`: no horizontal overflow at 375/768/1440).
 
 ## Definition of Done
-- [ ] [auto] Every admin route answers 403 for non-admins and 401 for anonymous callers — evidence:
-      `tests/api/admin/authz.test.ts`.
-- [ ] [auto] A setting takes effect immediately, without a restart — evidence: `tests/api/admin/settings-live.test.ts`.
-- [ ] [auto] The last admin is protected (demote, disable, delete) — evidence: `tests/api/admin/last-admin.test.ts`.
-- [ ] [auto] Every admin mutation is audited — evidence: `tests/api/admin/audit.test.ts`.
-- [ ] [auto] The SMTP test email arrives; without SMTP the endpoint answers 503 — evidence:
+- [x] [auto] Every admin route answers 403 for non-admins and 401 for anonymous callers — evidence:
+      `tests/api/admin/authz.test.ts` (route list from the file tree; also 401 with only a guest cookie).
+- [x] [auto] A setting takes effect immediately, without a restart — evidence: `tests/api/admin/settings-live.test.ts`.
+- [x] [auto] The last admin is protected (demote, disable, delete) — evidence: `tests/api/admin/last-admin.test.ts`
+      (private server and database; concurrent self-demotions: exactly one wins).
+- [x] [auto] Every admin mutation is audited — evidence: `tests/api/admin/audit.test.ts`.
+- [x] [auto] The SMTP test email arrives; without SMTP the endpoint answers 503 — evidence:
       `tests/api/admin/test-email.test.ts`.
-- [ ] [auto] Ending or deleting a room calls `deleteRoom` and ends the meeting — evidence: `tests/api/admin/rooms.test.ts`.
-- [ ] [auto] Admin responses never contain room keys, proofs, invite tokens of rooms, chat or media — evidence:
+- [x] [auto] Ending or deleting a room calls `deleteRoom` and ends the meeting — evidence: `tests/api/admin/rooms.test.ts`.
+- [x] [auto] Admin responses never contain room keys, proofs, invite tokens of rooms, chat or media — evidence:
       `tests/api/admin/rooms.test.ts`.
-- [ ] [auto] Admin pages have no console errors, CSP violations or horizontal overflow — evidence:
-      `pnpm test:e2e -- admin`.
-- [ ] [auto] `lint`, `typecheck`, `test`, `test:api` are green — evidence: ci.yml.
-- [ ] [agent-manual] Disabling a user removes them from a live call within 1 s — evidence: manual two-browser run on the
-      dev stack, described in the report (automated in Stage 10).
+- [x] [auto] Admin pages have no console errors, CSP violations or horizontal overflow — evidence:
+      `sh scripts/e2e.sh --project=chromium --project=webkit-ui --project=mobile-chromium tests/e2e/admin` (14 passed;
+      tables are checked for sideways scrolling too).
+- [x] [auto] `lint`, `typecheck`, `test`, `test:api` are green — evidence: ci.yml; locally lint, typecheck, build,
+      895 unit tests and `test:api tests/api/admin tests/api/core tests/api/auth` (325 passed).
+- [x] [agent-manual] Disabling a user removes them from a live call within 1 s — evidence: automated already in
+      `tests/e2e/admin/disable-live.spec.ts` (dev LiveKit: the user's call reaches `removed` < 1 s after the admin
+      confirms in the UI; the server removed the identity 10 ms after the PATCH answered).
 
 ## Notes and gotchas
 - Lock admin rows in the same transaction for the last-admin check; two concurrent demotions must not both succeed.

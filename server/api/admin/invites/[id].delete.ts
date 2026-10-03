@@ -1,4 +1,10 @@
-// Stub (W0a). Owner: admin (Stage 03). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('admin')
+// DELETE /api/admin/invites/:id (admin): revokes an account invite (idempotent). 204; 404 NOT_FOUND.
+import { adminActor, routeId } from '../../../services/admin'
+import { revokeAccountInvite } from '../../../services/users'
+
+export default defineEventHandler(async (event) => {
+  const admin = await requireAdmin(event)
+  const id = routeId(getRouterParam(event, 'id'))
+  await revokeAccountInvite(id, adminActor(admin, event))
+  return sendNoContent(event)
 })
