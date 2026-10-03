@@ -7,10 +7,15 @@
  * - Mic off = `mute()` with the device kept open (`stopMicTrackOnMute: false`), so push to talk unmutes instantly.
  * - The mic runs through the MicChain (audio-context.ts) from the start; `setMicInsert`, `setMicGain` and
  *   `setMicProcessing` never replace the published track.
+ * - The status follows the tracks' own mute state, so a mute that did not come from here (a host muting the published
+ *   track: LiveKit mutes it locally) turns the toggle off too, and one click turns it back on.
+ * - After `dispose()` nothing opens a device any more: queued work is skipped, and a camera or mic that finishes
+ *   opening after dispose is stopped at once.
  */
 import {
   createLocalAudioTrack,
   createLocalVideoTrack,
+  TrackEvent,
   type LocalAudioTrack,
   type LocalVideoTrack,
   type Track,
@@ -85,23 +90,30 @@ export class LocalMedia {
     return this.queueCamera(async () => {
       this.update({ cameraBusy: true })
       try {
-        if (!this.camera) {
-          this.camera = markRaw(
+        let camera = this.camera
+        if (!camera) {
+          camera = markRaw(
             await createLocalVideoTrack({
               ...(deviceId ? { deviceId } : {}),
               resolution: cameraPreset(this.options.limits).resolution,
             }),
           )
+          // The page went away while the device opened: nobody else will ever stop this one.
+          if (this.stopIfDisposed(camera)) return
+          this.camera = camera
+          this.followMute(camera, 'cameraOn')
           this.options.onTracks()
-        } else if (this.camera.isMuted) {
-          if (deviceId) await this.camera.setDeviceId(deviceId)
-          await this.camera.unmute()
+        } else if (camera.isMuted) {
+          if (deviceId) await camera.setDeviceId(deviceId)
+          await camera.unmute()
+          if (this.stopIfDisposed(camera)) return
           this.options.onTracks()
         }
-        if (this.cameraProcessor && this.camera.getProcessor() !== this.cameraProcessor) {
-          await this.camera.setProcessor(this.cameraProcessor)
+        if (this.cameraProcessor && camera.getProcessor() !== this.cameraProcessor) {
+          await camera.setProcessor(this.cameraProcessor)
+          if (this.stopIfDisposed(camera)) return
         }
-        this.update({ cameraOn: true, cameraError: null, cameraDeviceId: await this.deviceIdOf(this.camera) })
+        this.update({ cameraOn: true, cameraError: null, cameraDeviceId: await this.deviceIdOf(camera) })
       } catch (error) {
         this.update({ cameraOn: false, cameraError: captureErrorOf(error) })
         throw error
@@ -237,14 +249,33 @@ export class LocalMedia {
     this.mic = null
   }
 
+  /** Stops a track that finished opening after dispose (true when it did). */
+  private stopIfDisposed(track: LocalVideoTrack | LocalAudioTrack): boolean {
+    if (!this.disposed) return false
+    track.stop()
+    return true
+  }
+
+  /** Keeps `status[key]` in line with the track's mute state, whoever muted it (F-005). */
+  private followMute(track: LocalVideoTrack | LocalAudioTrack, key: 'cameraOn' | 'micOn') {
+    const sync = () => {
+      if (this.disposed || (key === 'cameraOn' ? this.camera : this.mic) !== track) return
+      if (this.status[key] !== !track.isMuted) this.update({ [key]: !track.isMuted })
+    }
+    track.on(TrackEvent.Muted, sync).on(TrackEvent.Unmuted, sync)
+  }
+
   private async ensureMicInternal(deviceId?: string): Promise<boolean> {
     if (this.mic) return false
     this.update({ micBusy: true })
     try {
-      const mic = await createLocalAudioTrack({ ...(deviceId ? { deviceId } : {}), ...this.processing })
+      const mic = markRaw(await createLocalAudioTrack({ ...(deviceId ? { deviceId } : {}), ...this.processing }))
+      if (this.stopIfDisposed(mic)) return false
       mic.setAudioContext(this.chain.audioContext)
       await mic.setProcessor(this.chain)
-      this.mic = markRaw(mic)
+      if (this.stopIfDisposed(mic)) return false
+      this.mic = mic
+      this.followMute(mic, 'micOn')
       this.update({ micError: null, micDeviceId: await this.deviceIdOf(mic) })
       this.options.onTracks()
       return true
@@ -270,15 +301,23 @@ export class LocalMedia {
     this.options.onStatus(this.status)
   }
 
-  private queueCamera<T>(run: () => Promise<T>): Promise<T> {
-    const next = this.cameraQueue.then(run, run)
+  private queueCamera(run: () => Promise<void>): Promise<void> {
+    const next = this.cameraQueue.then(...this.unlessDisposed(run))
     this.cameraQueue = next.catch(() => undefined)
     return next
   }
 
-  private queueMic<T>(run: () => Promise<T>): Promise<T> {
-    const next = this.micQueue.then(run, run)
+  private queueMic(run: () => Promise<void>): Promise<void> {
+    const next = this.micQueue.then(...this.unlessDisposed(run))
     this.micQueue = next.catch(() => undefined)
     return next
+  }
+
+  /** Queued work that starts after dispose does nothing (it would open a device nobody stops). */
+  private unlessDisposed(run: () => Promise<void>): [() => Promise<void>, () => Promise<void>] {
+    const guarded = async () => {
+      if (!this.disposed) await run()
+    }
+    return [guarded, guarded]
   }
 }

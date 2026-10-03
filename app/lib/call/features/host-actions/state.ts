@@ -7,21 +7,13 @@ import type { ParticipantRole } from '#shared/schemas/livekit'
 import type { CallContext } from '../../../contracts/call'
 import { participantInfoStore } from '../participants/useParticipantInfo'
 import { createCallActions, type CallActions } from './actions'
-import type { NoticeSource } from './notices'
 import type { CallUi } from '~/composables/call/useCallUi'
 import { callToast } from '~/lib/call/notify'
-
-export interface ServerMuteEvent {
-  source: NoticeSource
-  seq: number
-}
 
 export interface HostActionsState {
   actions: CallActions
   /** The "The host asks you to unmute" prompt is open. */
   askUnmute: ShallowRef<boolean>
-  /** The latest server mute of a local track (the notices component brings call-core's toggles in line). */
-  serverMuted: ShallowRef<ServerMuteEvent | null>
   /** People this client removed during the call (drives the key-rotation reminder). */
   removedCount: ShallowRef<number>
   /** The local participant's last known role (kept after the call ends, for the end screen). */
@@ -43,7 +35,6 @@ export function hostActionsState(ctx: CallContext): HostActionsState {
         onTargetGone: () => info.refresh(0),
       }),
       askUnmute: shallowRef(false),
-      serverMuted: shallowRef(null),
       removedCount: shallowRef(0),
       role: shallowRef(null),
       ui: shallowRef(null),

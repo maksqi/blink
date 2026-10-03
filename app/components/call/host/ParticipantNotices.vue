@@ -1,11 +1,10 @@
 <script setup lang="ts">
 /**
- * The participant side of moderation that needs a mounted component (registered as a zero-footprint control-bar item;
- * it renders only portaled dialogs):
+ * The participant side of moderation that needs a mounted component (a call view overlay; it renders only a portaled
+ * dialog):
  * - the "The host asks you to unmute" prompt: nothing changes until the person clicks Unmute;
- * - after a server mute, call-core's microphone/camera/screen-share toggles are brought in line with the muted track,
- *   so one click turns it back on;
  * - it hands the call view's UI state to toasts and menus (opening side panels).
+ * After a server mute, call-core's toggles follow the muted track by themselves (LocalMedia).
  */
 import { MicIcon } from '@lucide/vue'
 import { onBeforeUnmount, onMounted, shallowRef, watch } from 'vue'
@@ -39,14 +38,6 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   if (state.ui.value === ui) state.ui.value = null
-})
-
-watch(state.serverMuted, (event) => {
-  if (!event) return
-  // The server muted the published track; switch the local toggle off too (no extra media change).
-  if (event.source === 'microphone') void session.setMicEnabled(false).catch(() => undefined)
-  else if (event.source === 'camera') void session.setCameraEnabled(false).catch(() => undefined)
-  else void session.stopScreenShare().catch(() => undefined)
 })
 
 function waitForMicPermission(): Promise<boolean> {

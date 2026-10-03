@@ -5,7 +5,7 @@
  * - `server.hint` `ask-unmute` opens the "The host asks you to unmute" prompt while the microphone is off. The hint is
  *   unauthenticated, so it only ever shows a prompt; only the person's click unmutes.
  * - A server mute of a local track (LiveKit's remote-mute request, `EngineEvent.RemoteMute`) shows "The host muted your
- *   microphone" (camera, screen share) and is published as `serverMuted` so call-core's toggles follow.
+ *   microphone" (camera, screen share). call-core's toggles follow the muted track by themselves.
  * - `ParticipantPermissionsChanged` of the local participant shows "The host turned off your microphone" / "You can
  *   unmute now" (and the camera and screen-share equivalents).
  * - Role changes of the local participant show a short notice.
@@ -47,7 +47,6 @@ export function setupParticipantSide(ctx: CallContext): () => void {
   const cleanups: Array<() => void> = []
   const revokedAt = new Map<NoticeSource, number>()
   const engines = new WeakSet<object>()
-  let seq = 0
 
   cleanups.push(
     ctx.events.on('server.hint', ({ type }) => {
@@ -78,8 +77,6 @@ export function setupParticipantSide(ctx: CallContext): () => void {
       const publication = room.localParticipant.trackPublications.get(trackSid)
       const source = publication ? serverMuteSource(publication.source) : null
       if (!source) return
-      seq++
-      state.serverMuted.value = { source, seq }
       if (!muteCoveredByRevoke(revokedAt.get(source), Date.now())) notice(source, serverMuteMessage(source))
     }
     // The engine is (re)created when the room connects, so attach once per engine when the call starts.

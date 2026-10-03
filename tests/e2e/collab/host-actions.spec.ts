@@ -49,6 +49,30 @@ test.describe('host actions', () => {
     await expect.poll(field(host.page, ana.identity, 'micEnabled')).toBe(true)
   })
 
+  test('stop a screen share; the share ends for the presenter too, who can share again', async ({ collab }) => {
+    const { room, call: host } = await collab.meeting({ waitingRoom: false })
+    const ana = await collab.addUser(room, host, { name: 'Ana Lima', camera: false })
+    const sharing = async () => (await viewOf(host.page, ana.identity))?.screenSharing
+    await ana.page.evaluate(() => {
+      const hooks = (window as unknown as { __blinqTest: { useFakeScreenSource?: (enabled: boolean) => void } })
+        .__blinqTest
+      hooks.useFakeScreenSource?.(true)
+    })
+    await ana.page.getByRole('button', { name: 'Share screen' }).click()
+    await expect.poll(sharing).toBe(true)
+
+    await openActions(host.page, ana.identity)
+    await actionsMenu(host.page).locator('[data-action="stop-screen-share"]').click()
+    await within1s(sharing, 'the host sees the share end').toBe(false)
+    await expect(toastWith(ana.page, 'The host stopped your screen share')).toBeVisible()
+    // F-005: call-core's own state follows the server mute (the share is stopped, not left muted).
+    await expect.poll(async () => (await callState(ana.page))?.screenShare.active).toBe(false)
+    await expect(ana.page.getByRole('button', { name: 'Share screen' })).toBeVisible()
+
+    await ana.page.getByRole('button', { name: 'Share screen' }).click()
+    await expect.poll(sharing).toBe(true)
+  })
+
   test('a revoked microphone cannot be unmuted until the host gives it back', async ({ collab }) => {
     const { room, call: host } = await collab.meeting({ waitingRoom: false })
     const ana = await collab.addUser(room, host, { name: 'Ana Lima', camera: false })

@@ -13,6 +13,7 @@ import {
   LocalVideoTrack,
   RoomEvent,
   Track,
+  TrackEvent,
   type DisconnectReason,
   type ExternalE2EEKeyProvider,
   type LocalTrack,
@@ -270,8 +271,11 @@ export class CallSession {
       wantCamera ? this.local.enableCamera(prefs.videoinput) : Promise.resolve(),
       wantMic ? this.local.enableMic(prefs.audioinput) : this.local.ensureMic(prefs.audioinput),
     ])
+    // Every await can outlive the page: a disposed session never touches the store (the next session owns it) and
+    // never adds listeners (they would keep it alive).
+    if (this.disposed) return
     // A fast Join can connect while a device is still opening; connect() published only what existed then.
-    if (this.isConnected && !this.disposed) {
+    if (this.isConnected) {
       await Promise.allSettled([
         this.publishMic(),
         this.store.media.cameraOn ? this.publishCamera() : Promise.resolve(),
@@ -279,6 +283,7 @@ export class CallSession {
       this.scheduleViews()
     }
     await this.refreshDevices()
+    if (this.disposed) return
     if (prefs.audiooutput) this.store.outputDevice = prefs.audiooutput
     this.watchDevices()
   }
@@ -308,9 +313,11 @@ export class CallSession {
     try {
       keys = await this.ensureKeys(grant.epoch)
     } catch {
-      this.fail('invalid-key')
+      if (!this.disposed) this.fail('invalid-key')
       return
     }
+    // Disposed while the keys were derived: dispose() saw no connection to close, so never open one.
+    if (this.disposed) return
     this.store.safetyCode = keys.safetyCode
 
     try {
@@ -427,7 +434,7 @@ export class CallSession {
       this.store.outputDevice = deviceId
       await this.audio.setOutputDevice(deviceId)
     }
-    if (kind !== 'audiooutput') this.store.media = { ...this.local.status }
+    if (kind !== 'audiooutput' && !this.disposed) this.store.media = { ...this.local.status }
   }
 
   get canShareScreen(): boolean {
@@ -466,6 +473,11 @@ export class CallSession {
       this.screenTracks = tracks.map((track) => markRaw(track))
       for (const track of this.screenTracks) {
         if (track.kind === Track.Kind.Video) {
+          // A host stopping the share mutes the published track (LiveKit's remote mute): end the share here too, so
+          // the toggle shows it off and one click shares again (F-005).
+          track.once(TrackEvent.Muted, () => {
+            if (this.screenTracks.includes(track)) void this.stopScreenShare().catch(() => undefined)
+          })
           track.mediaStreamTrack.contentHint = choice.contentHint
           await room.localParticipant.publishTrack(track, {
             source: Track.Source.ScreenShare,
@@ -529,6 +541,7 @@ export class CallSession {
     await this.room?.startAudio().catch(() => undefined)
     await this.audio.resume()
     await resumeSharedAudioContext()
+    if (this.disposed) return
     this.store.audioBlocked = this.room ? !this.room.canPlaybackAudio : false
   }
 
@@ -977,9 +990,10 @@ export class CallSession {
   }
 
   private async refreshDevices() {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return
+    if (this.disposed || typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return
     try {
       const lists = toDeviceLists(await navigator.mediaDevices.enumerateDevices())
+      if (this.disposed) return
       this.store.devices = lists
       // A device that vanished (unplugged headset): move to the next one.
       const media = this.store.media
@@ -1012,6 +1026,7 @@ export class CallSession {
     }
     const media = this.store.media
     const [camera, microphone] = await Promise.all([query('camera'), query('microphone')])
+    if (this.disposed) return
     this.store.devicePermissions = {
       camera: media.cameraError === 'denied' ? 'denied' : camera,
       microphone: media.micError === 'denied' ? 'denied' : microphone,
@@ -1019,7 +1034,7 @@ export class CallSession {
   }
 
   private watchDevices() {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.addEventListener) return
+    if (this.disposed || typeof navigator === 'undefined' || !navigator.mediaDevices?.addEventListener) return
     const onChange = () => void this.refreshDevices()
     navigator.mediaDevices.addEventListener('devicechange', onChange)
     this.cleanups.push(() => navigator.mediaDevices.removeEventListener('devicechange', onChange))
