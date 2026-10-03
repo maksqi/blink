@@ -61,9 +61,25 @@ export function whiteNoise(length: number, db: number, seed: number): Float32Arr
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
-export async function measureNoiseSuppression(): Promise<NoiseMeasurement> {
+/**
+ * The worklet's processor instantiates its wasm asynchronously after construction and outputs silence until then.
+ * Offline rendering outruns that (Firefox has no OfflineAudioContext.suspend(), and suspending mid-render shifts
+ * Chromium's worklet buffering), so the render starts only after the processor had time to load. Waiting is the only
+ * signal: the library's processor reports nothing. A render whose measured part contains silent stretches is retried
+ * with a longer wait.
+ */
+const READY_WAITS_MS = [500, 2_000] as const
+const SEGMENT = MEASURE_SAMPLE_RATE / 2
+
+function hasSilentSegment(samples: Float32Array): boolean {
+  for (let start = MEASURE_FROM; start < samples.length; start += SEGMENT) {
+    if (rmsDb(samples, start, Math.min(samples.length, start + SEGMENT)) === Number.NEGATIVE_INFINITY) return true
+  }
+  return false
+}
+
+async function renderOnce(input: Float32Array<ArrayBuffer>, readyWaitMs: number): Promise<Float32Array> {
   const context = new OfflineAudioContext(1, MEASURE_LENGTH, MEASURE_SAMPLE_RATE)
-  const input = whiteNoise(MEASURE_LENGTH, MEASURE_NOISE_DB, MEASURE_SEED)
   const buffer = context.createBuffer(1, MEASURE_LENGTH, MEASURE_SAMPLE_RATE)
   buffer.copyToChannel(input, 0)
   const source = context.createBufferSource()
@@ -76,20 +92,19 @@ export async function measureNoiseSuppression(): Promise<NoiseMeasurement> {
   })
   source.connect(node).connect(context.destination)
   source.start()
-
-  // The worklet instantiates its wasm asynchronously. Offline rendering can outrun that, so pause after the first
-  // render quanta and give the worklet a moment; the warm-up second is excluded from the measurement anyway.
-  try {
-    void context
-      .suspend(0.05)
-      .then(() => sleep(300))
-      .then(() => context.resume())
-  } catch {
-    // suspend() is not supported for offline contexts here: render straight through.
-  }
+  await sleep(readyWaitMs)
   const rendered = await context.startRendering()
   if (failed) throw new Error('The RNNoise processor reported an error')
-  const output = rendered.getChannelData(0)
+  return rendered.getChannelData(0)
+}
+
+export async function measureNoiseSuppression(): Promise<NoiseMeasurement> {
+  const input = whiteNoise(MEASURE_LENGTH, MEASURE_NOISE_DB, MEASURE_SEED)
+  let output = new Float32Array(MEASURE_LENGTH)
+  for (const wait of READY_WAITS_MS) {
+    output = await renderOnce(input, wait)
+    if (!hasSilentSegment(output)) break
+  }
   return {
     inputDb: rmsDb(input, MEASURE_FROM, MEASURE_LENGTH),
     outputDb: rmsDb(output, MEASURE_FROM, MEASURE_LENGTH),

@@ -286,6 +286,7 @@ export class EffectsController {
       if (hooks) {
         delete hooks.measureNoiseSuppression
         delete hooks.state.media
+        delete hooks.state.mediaFx
       }
     }
   }
@@ -508,12 +509,26 @@ export class EffectsController {
         rnnoiseActive: this.state.rnnoiseActive,
         noiseBusy: this.state.noiseBusy,
         sampleRate: this.sampleRate(),
+        micProcessing: { ...this.appliedProcessing },
+        cameraDeviceId: this.store.media.cameraDeviceId,
+        micDeviceId: this.store.media.micDeviceId,
         blurSupport: { ...this.state.blurSupport },
         rnnoiseSupport: { ...this.state.rnnoiseSupport },
       }
     }
     publish()
     this.timers.push(setInterval(publish, 250))
+    hooks.state.mediaFx = {
+      /**
+       * Restarts the published camera track the way a device switch does (`setDeviceId` → `restartTrack`): the fake
+       * media of the E2E browsers has a single camera.
+       */
+      restartCamera: async () => {
+        const camera = this.ctx.room.value?.localParticipant.getTrackPublication(Track.Source.Camera)?.videoTrack as
+          LocalVideoTrack | undefined
+        await camera?.restartTrack()
+      },
+    }
   }
 }
 
