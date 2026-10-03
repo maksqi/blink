@@ -160,15 +160,18 @@ watch(
     />
 
     <form
-      class="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-[minmax(0,1fr)_9rem_8rem_auto] sm:items-start"
+      class="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start"
       novalidate
       data-testid="invite-form"
       @submit.prevent.stop="form.handleSubmit()"
     >
-      <FormAlert class="sm:col-span-4" :message="formError" />
+      <FormAlert class="sm:col-span-3" :message="formError" />
       <form.Field name="label" :validators="{ onSubmit: labelSchema }">
         <template #default="{ field }">
-          <Field :data-invalid="fieldMessages(field.state.meta.errors).length > 0 || undefined" class="gap-1.5">
+          <Field
+            :data-invalid="fieldMessages(field.state.meta.errors).length > 0 || undefined"
+            class="gap-1.5 sm:col-span-3"
+          >
             <FieldLabel for="invite-label">Label (optional)</FieldLabel>
             <Input
               id="invite-label"
@@ -229,7 +232,7 @@ watch(
           Create invite
         </Button>
       </div>
-      <FieldDescription class="sm:col-span-4">
+      <FieldDescription class="sm:col-span-3">
         Each person who joins with an invite uses it once. Hosts and co-hosts don't need one.
       </FieldDescription>
     </form>
