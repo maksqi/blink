@@ -35,8 +35,6 @@ export type E2eDb = ReturnType<typeof drizzle>
  * and its uses, which turns the full check back on.
  */
 export const PENDING = {
-  sliderName:
-    'pending finding: slider thumbs (role=slider) have no accessible name; aria-label stays on the root (ui/slider)',
   chatList:
     'pending finding: chat messages are <li> inside <ol role="log">, which drops the list semantics (ChatPanel)',
   destructiveContrast:
