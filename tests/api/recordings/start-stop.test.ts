@@ -4,11 +4,13 @@
  */
 import { and, desc, eq, isNull } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { roomMetadataSchema } from '#shared/schemas/livekit'
 import type { PublishRoomState } from '../../../server/contracts'
 import { auditLog, recordings, users } from '../../../server/database/schema'
 import { startRecording, stopRecording } from '../../../server/services/recordings/lifecycle'
 import { invalidateSettingsCache } from '../../../server/services/settings/settings'
 import { createClient, createUser, expectApiError, fakeEvent, loginAs, testDb, useServerEnvInProcess } from '../_harness'
+import { livekitCalls, usesFakeLivekit } from '../rooms/_support'
 import { joinAs, liveCall, recordingRow, seedReadyRecording, setRecordingSettings } from './_support'
 
 useServerEnvInProcess()
@@ -201,18 +203,17 @@ describe('REC indicator (publishRoomState)', () => {
     expect(await testDb().select().from(recordings).where(eq(recordings.roomId, call.room.id))).toHaveLength(0)
   })
 
-  it('sends the metadata through the fake RoomService (once rooms-backend provides it)', async (ctx) => {
+  it.skipIf(!usesFakeLivekit())('sends the metadata through the fake RoomService', async () => {
     const call = await liveCall()
-    const probe = await createClient().get('/api/__test/livekit-calls')
-    // The fake adapter and publishRoomState belong to rooms-backend (Stage 04); until they exist this is covered above.
-    if (probe.status !== 200) return ctx.skip()
     expect(await start(call.client, call.room.id)).toMatchObject({ status: 201 })
     expect(await stop(call.client, call.room.id)).toMatchObject({ status: 204 })
-    const res = await createClient().get('/api/__test/livekit-calls')
-    const updates = (res.body as Array<{ method: string; args: unknown[] }>)
-      .filter((c) => c.method === 'updateRoomMetadata' && c.args[0] === call.room.id)
-      .map((c) => JSON.parse(String(c.args[1])).recording)
-    expect(updates.at(-2)).toMatchObject({ mode: 'server', by: call.owner.displayName })
+    const updates = (await livekitCalls(call.room.id, 'updateRoomMetadata')).map((c) => {
+      expect(c.args[0]).toBe(call.room.id)
+      const metadata = roomMetadataSchema.parse(JSON.parse(String(c.args[1])))
+      expect(metadata.epoch).toBe(call.meeting.epoch)
+      return metadata.recording
+    })
+    expect(updates.at(-2)).toEqual({ mode: 'server', by: call.owner.displayName, startedAt: expect.any(String) })
     expect(updates.at(-1)).toBeNull()
   })
 })

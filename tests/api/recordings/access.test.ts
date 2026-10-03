@@ -151,6 +151,7 @@ describe('recording access', () => {
     const started = await call.client.post(`/api/calls/${call.room.id}/recording/start`, {
       body: { mode: 'server', mimeType: 'video/webm' },
     })
+    expect(started.status, started.text).toBe(201)
     const id = started.body.recordingId as string
     const adminUser = await createAdmin()
     const admin = await loginAs(adminUser)

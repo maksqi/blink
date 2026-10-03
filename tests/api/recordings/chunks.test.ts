@@ -194,6 +194,7 @@ describe('chunk upload', () => {
   it('refuses chunks for local recordings and after completion (409 not_recording), accepts them after stop', async () => {
     const call = await liveCall()
     const local = await call.client.post(`/api/calls/${call.room.id}/recording/start`, { body: { mode: 'local' } })
+    expect(local.status, local.text).toBe(201)
     created.push(local.body.recordingId)
     const refused = await putChunk(call.client, local.body.recordingId, 0, Buffer.from('x'))
     expectApiError(refused, 409, 'CONFLICT')
