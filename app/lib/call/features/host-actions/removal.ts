@@ -14,6 +14,8 @@ export { roomSettingsPath } from './links'
 export const HOST_ROTATE_TEXT =
   "People you remove still know this meeting's key. Rotate it in the room settings after the meeting."
 export const COHOST_ROTATE_TEXT = 'Ask the host to rotate the room key after the meeting.'
+/** Shown before a removal: an invite link still admits the person again (F-018). */
+export const REMOVE_REJOIN_HINT = 'They can rejoin with an invite link unless you lock the room or revoke the link.'
 
 export function rotateReminderText(role: string | null | undefined): string {
   return role === 'host' ? HOST_ROTATE_TEXT : COHOST_ROTATE_TEXT

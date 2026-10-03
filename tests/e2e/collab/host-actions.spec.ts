@@ -176,7 +176,9 @@ test.describe('host actions', () => {
     await participantAction(host.page, ana.identity, 'remove')
     const confirm = host.page.getByTestId('remove-dialog')
     await expect(confirm).toContainText('Remove Ana Lima?')
-    await expect(confirm).toContainText('They cannot rejoin this meeting.')
+    await expect(confirm).toContainText(
+      'They can rejoin with an invite link unless you lock the room or revoke the link.',
+    )
     await confirm.getByTestId('remove-confirm').click()
 
     await waitForPhase(ana.page, 'removed', 5_000)

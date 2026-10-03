@@ -45,7 +45,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useCall } from '~/composables/call'
 import { participantMenu, type MenuItem, type MenuItemId } from '~/lib/call/features/host-actions/menu'
-import { afterRemoval } from '~/lib/call/features/host-actions/removal'
+import { afterRemoval, REMOVE_REJOIN_HINT } from '~/lib/call/features/host-actions/removal'
 import { callActions } from '~/lib/call/features/host-actions/state'
 import { participantInfoStore } from '~/lib/call/features/participants/useParticipantInfo'
 import type { ParticipantView } from '~/lib/contracts/call'
@@ -280,7 +280,7 @@ async function confirmRemove() {
       <AlertDialogContent data-testid="remove-dialog">
         <AlertDialogHeader>
           <AlertDialogTitle>Remove {{ participant.name }}?</AlertDialogTitle>
-          <AlertDialogDescription>They cannot rejoin this meeting.</AlertDialogDescription>
+          <AlertDialogDescription>{{ REMOVE_REJOIN_HINT }}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="removing">Cancel</AlertDialogCancel>
