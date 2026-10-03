@@ -16,8 +16,6 @@ import {
   expect,
   expectFocusTrapped,
   longMotion,
-  notePending,
-  PENDING,
   removePeer,
   tabKey,
   tabTo,
@@ -260,9 +258,7 @@ test.describe('keyboard in the call', () => {
       await page.keyboard.press('Escape')
       await expect(settings).toBeHidden()
       await settle(page)
-      // pending finding: focus lands on <body>; the fix agent restores
-      // expect(await activeElement(page)).toMatch(/More options/)
-      notePending(PENDING.settingsFocus, await activeElement(page))
+      expect(await activeElement(page)).toMatch(/More options/)
 
       // End-meeting confirmation from the host controls.
       const hostControls = page.locator('[data-control="host-controls"]')

@@ -22,7 +22,6 @@ import {
   expect,
   expectAccessible,
   expectTheme,
-  PENDING,
   removePeer,
   test,
   useTheme,
@@ -119,8 +118,7 @@ test.describe('axe on the meeting page', () => {
       await peer.page.getByTestId('chat-send').click()
       await openPanel(page, 'chat')
       await expect(page.getByTestId('chat-message')).toHaveCount(1)
-      // pending finding: chat messages are <li> inside <ol role="log"> (no list parent left for axe).
-      await expectAccessible(page, 'chat panel', { pending: { listitem: PENDING.chatList } })
+      await expectAccessible(page, 'chat panel')
       await closePanel(page, 'chat')
 
       await openPanel(page, 'participants')

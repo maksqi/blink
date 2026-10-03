@@ -73,6 +73,12 @@ All derivations use HKDF-SHA256 via WebCrypto. The exact info strings are in [`A
 - **Unencrypted media is blocked.** `autoSubscribe` is off; the SubscriptionManager subscribes only to
   publications whose encryption is not `NONE`.
   - Anything else is never attached, mixed or recorded, and the UI shows a warning.
+  - The block is per participant and sticky for the session: once any publication of a participant is `NONE`, or
+    LiveKit reports their encryption as off, none of their tracks is subscribed, played, mixed or recorded again in
+    this call, even if the unencrypted publication goes away. livekit-client keeps a single decrypt flag per
+    participant, so a forged `NONE` publication could otherwise turn decryption off for their encrypted tracks.
+  - The patched E2EE worker (`patches/livekit-client@2.22.3.patch`) drops frames it cannot decrypt instead of passing
+    them to the decoder, and never sends a frame unencrypted.
   - The E2EE badge means "all remote media in this call is encrypted", not merely "my encryption is on".
 - **Codecs:** VP8 simulcast. AV1, backup codecs and Opus RED are disabled (not supported under E2EE). Safari
   earlier than 17.2 publishes without simulcast.
@@ -84,8 +90,9 @@ All derivations use HKDF-SHA256 via WebCrypto. The exact info strings are in [`A
 - **Receivers drop** a packet whose:
   - LiveKit `encryptionType` is `NONE`,
   - sender is unknown,
-  - envelope sender differs from the LiveKit sender, or
-  - message id was already seen.
+  - envelope sender differs from the LiveKit sender,
+  - message id was already seen, or
+  - timestamp is more than 5 minutes away from the local clock (limits replays by the SFU after a reload).
 - **Server hints:** data sent by the server (`blinq.srv.v1`) is only a hint to refetch state from the authenticated
   API.
   - It never carries tokens or secrets, and never triggers destructive actions.
@@ -270,8 +277,10 @@ All derivations use HKDF-SHA256 via WebCrypto. The exact info strings are in [`A
   - `minimumReleaseAge` avoids freshly published (possibly malicious) versions.
   - The lockfile is committed and CI installs with `--frozen-lockfile`.
   - Local patches (`patchedDependencies`, `patches/`) are reviewed like code and each one states why it exists. The
-    only one, for livekit-client 2.22.3, marks encrypted data packets as GCM so receivers can keep rejecting
-    unencrypted ones (§3.3); a unit test fails when an upgrade stops applying it.
+    livekit-client 2.22.3 patch marks encrypted data packets as GCM so receivers can keep rejecting unencrypted ones
+    (§3.3), makes the E2EE worker drop undecryptable frames (§3.2) and removes listeners that kept every Room alive;
+    the @tanstack/vue-form 1.33.5 patch runs the form's mount cleanup on unmount. Unit tests fail when an upgrade
+    stops applying them.
 - **Pinning:** GitHub Actions are pinned by commit SHA. Container images are pinned by full version (digest pinning
   optional). The app runtime image has no package manager. Caddy is built with patched Go modules
   (`xcaddy --replace`) until a Caddy release includes the fixes.

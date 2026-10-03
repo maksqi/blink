@@ -32,13 +32,9 @@ export type E2eDb = ReturnType<typeof drizzle>
 /**
  * Product defects these specs found (Stage 10, reported to the orchestrator for the Findings list). Every place that
  * works around one carries a `// pending finding:` comment and uses the summary below; the fix agent deletes the entry
- * and its uses, which turns the full check back on.
+ * and its uses, which turns the full check back on. Empty since the W3 fixes (F-051 to F-059) merged.
  */
-export const PENDING = {
-  chatList:
-    'pending finding: chat messages are <li> inside <ol role="log">, which drops the list semantics (ChatPanel)',
-  settingsFocus: 'pending finding: closing the call settings dialog (opened from the More menu) leaves focus on <body>',
-} as const
+export const PENDING = {} as const
 
 // ---- Themes -------------------------------------------------------------------------------------------------------
 

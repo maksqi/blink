@@ -400,7 +400,8 @@ test builds, `LIVEKIT_URL=fake://local` selects an in-memory `RoomServiceAdapter
   `"blinq/app/v1|" + slug + "|" + senderIdentity`; plaintext UTF-8 JSON `{ id, type: 'chat' | 'reaction', from:
   identity, ts: epochMs, body }` (≤ 15 KiB); `chatBodySchema = { text: 1..2000 chars }`,
   `reactionBodySchema = { reaction: 'thumbs_up' | 'clap' | 'heart' | 'laugh' | 'surprised' | 'party' }`. Receivers drop
-  packets with `encryptionType` NONE, unknown senders, `from` ≠ LiveKit sender, and duplicate ids.
+  packets with `encryptionType` NONE, unknown senders, `from` ≠ LiveKit sender, duplicate ids, and a `ts` more than
+  5 minutes away from the local clock.
 - **No RPC methods** are registered. Clients connect with `autoSubscribe: false` and subscribe only to publications whose
   `encryptionType` is not NONE.
 

@@ -225,7 +225,12 @@ Local-only mode records the same way but saves the file on the recorder's device
   - Playback uses media elements. Per-participant volume is multiplied by the host-set `vol` attribute.
   - The speaker picker appears only where `supportsAudioOutputSelection()`.
   - The mic chain (48 kHz AudioContext) is: optional RNNoise → GainNode (own mic gain). The recording mixer uses
-    its own AudioContext.
+    its own AudioContext. If the chain's AudioContext is not running after 3 s (no audio output device, a blocked
+    autoplay policy), the raw microphone track is published instead and the user sees a notice.
+- **Feature registry:** call features (`app/lib/call/features/*`, `CallFeature` in `app/lib/contracts/call.ts`)
+  contribute control-bar items, panels and always-mounted `overlays` (participant-side dialogs). Their components load
+  on demand, so the pre-join screen does not download the in-call UI. `CallContext` carries the room's display name
+  (`roomName`) for file names such as local recordings.
 - **Layout math** (`app/lib/layout/`) computes grid columns/rows and tile sizes for 1–25 tiles and each viewport
   class (phone paging). Pure and unit-tested.
 

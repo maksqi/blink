@@ -149,16 +149,16 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       status: accepted (the overview says "100+" beyond 100 rooms; a counts endpoint is a feature, backlog)
 - [x] F-004 [low] ci — nightly.yml runs `--project=msedge`, which `playwright.config.ts` did not define — owner:
       orchestrator — status: fixed (W3 kickoff, `E2E_NIGHTLY_BROWSERS=1`)
-- [ ] F-005 [medium] call — `LocalMedia` ignores server-side mutes, so the local toggles stay "on" after a host mute;
-      collab-ui works around it in `ParticipantNotices` — owner: fix-call — status: open
-- [ ] F-006 [low] call — the SDK logs data-channel errors when a room is deleted (end for all) — owner: fix-call —
-      status: open
-- [ ] F-007 [low] call — participant-side dialogs live in a zero-footprint `start` control-bar item; no always-mounted
-      overlay slot in `CallFeature` — owner: orchestrator (contract) + fix-call — status: open
+- [x] F-005 [medium] call — `LocalMedia` ignores server-side mutes, so the local toggles stay "on" after a host mute;
+      collab-ui works around it in `ParticipantNotices` — owner: fix-call — status: fixed (fix-call 9a420fa)
+- [x] F-006 [low] call — the SDK logs data-channel errors when a room is deleted (end for all) — owner: fix-call —
+      status: fixed (fix-call: data-channel errors reported only if the session is still up after 2 s; server aborts warn)
+- [x] F-007 [low] call — participant-side dialogs live in a zero-footprint `start` control-bar item; no always-mounted
+      overlay slot in `CallFeature` — owner: orchestrator (contract) + fix-call — status: fixed (fix-call 145ab8a: `CallFeature.overlays`)
 - [x] F-008 [low] rooms — co-hosts can only be promoted during a call (no user lookup for non-admins) — owner:
       orchestrator — status: accepted (a user lookup for non-admins would reveal accounts; co-hosts are promoted during a call, backlog)
-- [ ] F-009 [low] recording — local-only file names use the slug; the room name is not in `CallContext` — owner:
-      orchestrator (contract) + fix-call — status: open
+- [x] F-009 [low] recording — local-only file names use the slug; the room name is not in `CallContext` — owner:
+      orchestrator (contract) + fix-call — status: fixed (fix-call: `CallContext.roomName`)
 - [x] F-010 [low] media — `/vendor/mediapipe/*.tflite` is served as `text/plain` (with `nosniff`) — owner:
       orchestrator (`nuxt.config.ts`) — status: fixed (route rule; `check-build.mjs production` asserts it)
 - [x] F-011 [low] rooms — the sessionStorage fragment store (`blinq:fragment:/m/<slug>`) can keep an untaken key after
@@ -172,10 +172,10 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
 - [x] F-014 [medium] ui — after creating a room the "Room created" toast (bottom right) covers the pre-join Join button
       at 1280×720; hovering it to click Join pauses its dismissal (`rooms/create-and-join` fails in Firefox) — owner:
       fix-ui — status: fixed (fix-ui: no "Room created" toast; toasts at the top in calls)
-- [ ] F-015 [high] call — E2EE: livekit-client keeps one decrypt flag per participant that every `TrackPublished`
+- [x] F-015 [high] call — E2EE: livekit-client keeps one decrypt flag per participant that every `TrackPublished`
       overwrites, and the worker passes frames through undecrypted when it is off; blinq checks encryption per track,
       so a compromised SFU can announce one `NONE` track and get plaintext played, mixed and recorded on that
-      participant's encrypted tracks (security-review S-01) — owner: fix-call (+ the livekit-client patch) — status: open
+      participant's encrypted tracks (security-review S-01) — owner: fix-call (+ the livekit-client patch) — status: fixed (fix-call e65a485 worker drops undecryptable frames, eebdb98 sticky per-participant block; media/mixed-encryption spec)
 - [ ] F-016 [medium] server — login: the DB backoff races (40 parallel wrong passwords → 40×401, no 429), there is no
       `auth-ip` limiter, the argon2 semaphore queue is unbounded (a 200-request flood slows a real login to ~1 s), and
       `PATCH /api/rooms/:id {password}` re-hashes with no limiter (S-02) — owner: fix-server — status: open
@@ -211,8 +211,8 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       hook) (S-16, SECURITY.md §3.1) — owner: fix-ui — status: fixed (fix-ui + `blinq:session-lost` hook in useApi.ts)
 - [x] F-030 [low] ui — `/M/<slug>#k=…` (mixed case) keeps the key in the address bar: the fragment store matches the
       path case-sensitively (S-17) — owner: fix-ui — status: fixed (fix-ui)
-- [ ] F-031 [low] call — chat and reaction envelopes can be replayed by the SFU after a reload or 5000 ids (in-memory
-      dedupe, no freshness check) (S-18) — owner: fix-call — status: open
+- [x] F-031 [low] call — chat and reaction envelopes can be replayed by the SFU after a reload or 5000 ids (in-memory
+      dedupe, no freshness check) (S-18) — owner: fix-call — status: fixed (fix-call dfcc19d: envelopes more than 5 min from the local clock are dropped)
 - [ ] F-032 [low] server — Nitro error bodies reflect `X-Forwarded-Host` in `url` (Caddy overwrites it in production)
       — owner: fix-server (with F-002) — status: open
 - [x] F-033 [low] server — a resume within 120 s skips the lock and capacity checks (`resume.ts`) — owner:
@@ -221,12 +221,12 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       (SECURITY.md "manage co-hosts" means promoting and demoting, which stays host-only)
 - [x] F-035 [low] server — an invited guest can fill the 50-slot lobby for an hour; there is no deny-all — owner:
       orchestrator — status: accepted (hosts lock the room or revoke the invite; deny-all is a feature, backlog)
-- [ ] F-036 [high] call — a camera or mic that finishes opening after leave/dispose is never stopped
+- [x] F-036 [high] call — a camera or mic that finishes opening after leave/dispose is never stopped
       (`app/lib/livekit/local-media.ts:84-110,240-256`; `dispose` does not drain the queues): the camera light stays on
-      (quality-review) — owner: fix-call — status: open
-- [ ] F-037 [medium] call — the heap grows ~1.3 MB per join/leave in one tab: livekit-client's WeakRef
+      (quality-review) — owner: fix-call — status: fixed (fix-call 9a420fa; hygiene/late-devices spec)
+- [x] F-037 [medium] call — the heap grows ~1.3 MB per join/leave in one tab: livekit-client's WeakRef
       `onDeviceChange` closure keeps every `Room`, and @tanstack/vue-form drops `formApi.mount()`'s cleanup so form
-      devtools listeners keep the component and the `CallSession` — owner: fix-call (patches) — status: open
+      devtools listeners keep the component and the `CallSession` — owner: fix-call (patches) — status: fixed (fix-call: livekit-client and @tanstack/vue-form patches; ~1.3 MB → 76–125 KB per cycle; hygiene heap spec)
 - [x] F-038 [medium] ui — join error screens keep the preview session (camera, mic, Room, E2EE worker) alive
       (`app/composables/rooms/useJoinFlow.ts:99-107`) — owner: fix-ui — status: fixed (fix-ui)
 - [ ] F-039 [medium] server — a LiveKit full reconnect (left on the old session, joined on the new one) is enforced as
@@ -234,13 +234,13 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
 - [x] F-040 [medium] db — `recordings.meeting_id` has no index (deleting a user with 5000 meetings takes 4.5 s vs
       68 ms); `room_invites.created_by`, `user_invites.created_by/used_by` are unindexed FKs; no partial index for the
       stale-waiting sweep or `recordings.started_at` — owner: orchestrator — status: fixed 55a129b (migration 0001_w3_indexes)
-- [ ] F-041 [medium] call — `startPreview` and `watchDevices` continue after dispose and add a `devicechange` listener
-      that keeps the session alive (`app/lib/call/session.ts:270-279,997-1002`) — owner: fix-call — status: open
-- [ ] F-042 [medium] call — unhandled promise rejections from the hotkeys and pre-join toggles (`CallView.vue:89-98`,
-      `PreJoin.vue:163,172`) — owner: fix-call — status: open
-- [ ] F-043 [medium] perf — initial JS is over the Stage 10 budget (gzip: `/` 222 KiB, `/login` 225 KiB, `/m/<slug>`
+- [x] F-041 [medium] call — `startPreview` and `watchDevices` continue after dispose and add a `devicechange` listener
+      that keeps the session alive (`app/lib/call/session.ts:270-279,997-1002`) — owner: fix-call — status: fixed (fix-call 9a420fa)
+- [x] F-042 [medium] call — unhandled promise rejections from the hotkeys and pre-join toggles (`CallView.vue:89-98`,
+      `PreJoin.vue:163,172`) — owner: fix-call — status: fixed (fix-call 0776dda)
+- [x] F-043 [medium] perf — initial JS is over the Stage 10 budget (gzip: `/` 222 KiB, `/login` 225 KiB, `/m/<slug>`
       no-key screen 464 KiB); one 814 KB chunk with livekit-client and all call code loads even on error screens —
-      owner: fix-ui (pages, entry) + fix-call (call chunk) — status: open
+      owner: fix-ui (pages, entry) + fix-call (call chunk) — status: fixed (fix-ui + fix-call 0f48008: `/` 144 KiB, `/login` 182 KiB, pre-join 414 KiB gzip; perf/budget asserts it)
 - [ ] F-044 [medium] api — drift: request schemas strip unknown keys (API.md says strict); 503 `SERVICE_UNAVAILABLE`
       is undocumented and the join screen shows it as unknown; `VALIDATION_FAILED` with status 416; 413/415 normalized
       to `VALIDATION_FAILED`; `recording_busy` documented under upload but thrown by DELETE — owner: orchestrator
@@ -255,9 +255,9 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       `utils/cookies.ts` — owner: fix-server — status: open
 - [x] F-048 [low] server — the dashboard room list (`OR`) and own-recordings list plus count use seq scans at volume
       (5–16 ms at 60k rooms) — owner: orchestrator (indexes, with F-040) — status: accepted (5–16 ms at 60k rooms; `recordings.started_at` indexed in 0001_w3_indexes)
-- [ ] F-049 [low] client — a BroadcastChannel can open after dispose (`useJoinFlow.ts:156-162`); `MicChain.destroy`
+- [x] F-049 [low] client — a BroadcastChannel can open after dispose (`useJoinFlow.ts:156-162`); `MicChain.destroy`
       does not stop `processedTrack`; recording uploads retry forever after unmount; livekit's iOS `visibilitychange`
-      listener is never removed (upstream) — owner: fix-ui + fix-call — status: open
+      listener is never removed (upstream) — owner: fix-ui + fix-call — status: fixed (fix-ui BroadcastChannel; fix-call MicChain output, upload retries, iOS listener)
 - [ ] F-050 [low] code — dead code (`RECORDING_INVALID_MEDIA`, `notImplemented()`, hint `room.changed`,
       `hasModerationMenu`, `bytesEqual`, `queuePosition`, `displayedSetting`) and duplicates (UUID regex ×8,
       `likePattern` ×5, moderator check ×3, server forks of `StreamEvent` and the settings patch schema) — owner:
@@ -269,32 +269,32 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
 - [x] F-053 [medium] ui-kit — slider thumbs (`role="slider"`) have no accessible name; `aria-label` stays on the root
       (`app/components/ui/slider/Slider.vue`) — owner: orchestrator — status: fixed (the thumb gets the name; a11y
       `axe-call` runs without the exception)
-- [ ] F-054 [medium] call — chat messages are `<li>` inside `<ol role="log">`, which drops the list semantics
-      (ChatPanel) — owner: fix-call — status: open
+- [x] F-054 [medium] call — chat messages are `<li>` inside `<ol role="log">`, which drops the list semantics
+      (ChatPanel) — owner: fix-call — status: fixed (fix-call e7bc3ca)
 - [x] F-055 [medium] ui — destructive buttons in the dark theme are 4.42:1 (#f66c6d on #432c33) — owner: fix-ui —
       status: fixed (fix-ui: dark `--destructive` oklch(0.75 0.15 22))
-- [ ] F-056 [medium] call — closing the device settings dialog opened from More options leaves focus on `<body>`
-      (WCAG 2.4.3) — owner: fix-call — status: open
+- [x] F-056 [medium] call — closing the device settings dialog opened from More options leaves focus on `<body>`
+      (WCAG 2.4.3) — owner: fix-call — status: fixed (fix-call f6b2d06)
 - [x] F-057 [medium] ui — a long room name overflows the dashboard by 118 px at 375 px and pushes dialogs past the
       screen edge (RoomListItem `ItemTitle`) — owner: fix-ui — status: fixed (fix-ui)
 - [x] F-058 [medium] ui — touch targets under 44 px on phones on every page except the call control bar (shadcn
       buttons, inputs, selects, switches, toggle groups, pagination, sidebar trigger, slider thumb; logo, Show password,
       text links; the E2EE badge and tile options in the call) — owner: fix-ui (+ fix-call for call controls) —
       status: fixed (fix-ui: `(pointer: coarse)` minimum 44 px; desktop keeps compact controls)
-- [ ] F-059 [low] call — toggling the mic right after joining, before the first publish, logs "could not update mute
-      status for unpublished track" — owner: fix-call — status: open
-- [ ] F-060 [low] call — when the mic chain's AudioContext never runs (e.g. no audio backend), the published mic is
-      silence with no warning (e2e-prod, Firefox in the Playwright Linux image) — owner: fix-call — status: open
-- [ ] F-061 [low] e2e — `call/e2ee` and `media/mic-chain` assert `totalAudioEnergy > 0`, which comfort noise from a
-      silent sender satisfies — owner: e2e-flows (call) + fix-call (media) — status: open
+- [x] F-059 [low] call — toggling the mic right after joining, before the first publish, logs "could not update mute
+      status for unpublished track" — owner: fix-call — status: fixed (fix-call dbb0af4)
+- [x] F-060 [low] call — when the mic chain's AudioContext never runs (e.g. no audio backend), the published mic is
+      silence with no warning (e2e-prod, Firefox in the Playwright Linux image) — owner: fix-call — status: fixed (fix-call 62529f3: raw mic plus a notice when the AudioContext is not running after 3 s)
+- [x] F-061 [low] e2e — `call/e2ee` and `media/mic-chain` assert `totalAudioEnergy > 0`, which comfort noise from a
+      silent sender satisfies — owner: e2e-flows (call) + fix-call (media) — status: fixed (call/e2ee threshold on main; media/mic-chain by fix-call a57f198)
 - [x] F-062 [low] infra — Caddy logs livekit-client's `join_request=` query (the SDP offer with ICE credentials) —
       owner: fix-infra (+ orchestrator for the e2e Caddyfile) — status: fixed (fix-infra 5687e71, 7b5c966)
 - [x] F-063 [low] ui — reloading `/dashboard` aborts route chunk imports, which surface as uncaught page errors
       ("Importing a module script failed"); `auth/first-admin` fails on webkit-ui (2/2) and once on Firefox (e2e-flows)
       — owner: fix-ui — status: fixed (spec race: fix-ui waits in first-admin; the guard allows only the benign `[NUXT_E5002]` manifest abort)
-- [ ] F-064 [low] call — Firefox sometimes never fires `load` on a fully rendered pre-join page (a guest in
+- [x] F-064 [low] call — Firefox sometimes never fires `load` on a fully rendered pre-join page (a guest in
       `rooms/key-leak` hung for 113 s with no request pending); `openToPrejoin` now waits for `domcontentloaded` — owner:
-      fix-call — status: open
+      fix-call — status: fixed (fix-call 7b04c73: pre-join devices open after `load`; not reproducible on macOS, unconfirmed)
 
 ## Tests
 - API: `tests/api/security/{authz-matrix,idor,csrf,rate-limits,cookies,headers}.test.ts`.
