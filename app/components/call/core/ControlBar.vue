@@ -24,7 +24,9 @@ const LEAVE_ID = 'core.leave'
 
 const ctx = useCall()
 const ui = useCallUi()
-const wide = useMediaQuery('(min-width: 768px)')
+// Three groups (start · center · end + panels) need about 900 px once every Wave 2 feature registers its controls;
+// narrower screens use the single scrolling row, where nothing can overlap.
+const wide = useMediaQuery('(min-width: 1024px)')
 
 const items = computed(() => visibleItems(callRegistry.controlBar, ctx))
 const leave = computed(() => items.value.find((item) => item.id === LEAVE_ID))

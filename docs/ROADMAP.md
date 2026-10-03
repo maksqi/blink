@@ -157,6 +157,12 @@ Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-
 - `admin` (optional): a counts endpoint or a `live` filter on `GET /api/admin/rooms`; the overview counts live
   meetings from the first 100 rooms and shows "100+" beyond that.
 - `nightly.yml` runs `--project=msedge`, which `playwright.config.ts` does not define yet (devops).
+- `collab-ui`: call-core's `LocalMedia` ignores server-side mutes, so the local mic and camera toggles stay "on" after a
+  host mutes you; collab-ui works around it from `ParticipantNotices` via `useCallSession()`. Sync it in call-core (or
+  expose a toggle on `CallContext.media`).
+- `collab-ui`: the SDK logs data-channel errors when a room is deleted (end for all); `collab/host-actions` allows them.
+- `collab-ui`: participant-side dialogs (ask to unmute) live in a zero-footprint `start` control-bar item because no
+  always-mounted overlay slot exists; consider a dedicated slot in `CallFeature`.
 
 ## Backlog (not in v1)
 
@@ -192,3 +198,7 @@ Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-
   and 4 E2E spec files (incl. disabling a user removes them from a live call). API.md lists the admin audit actions
   and `CONFLICT` `not_live`. Gate on main: lint, typecheck, 895 unit tests, check:english, 691 API tests (the admin
   settings helper now deletes the rows it restores, so `core/services.test.ts` sees unset keys again).
+- 2026-10-03 — W2 `collab-ui` merged (Stage 06): participants, lobby, hands, host actions, live settings, chat and
+  reactions as call features. Blocker found: livekit-client 2.22.3 never sets `encryptionType` on the encrypted data
+  packets it sends, so receivers see `NONE` and `messaging.ts` drops every chat and reaction message (decision
+  pending with the maintainer). Control bar: the three-group layout starts at 1024 px (it overlapped at 768 px).
