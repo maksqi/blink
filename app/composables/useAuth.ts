@@ -7,7 +7,8 @@
  *
  * - `refresh()`: `GET /api/auth/me`; a session that disappeared (revoked elsewhere, expired) counts as a sign-out.
  * - `logout()` and a detected session loss clear every localStorage key starting with `blinq:keys:` (the room key
- *   vault of `rooms-ui`) (decision).
+ *   vault of `rooms-ui`) (decision). So does any session check that finds nobody signed in: vault entries left behind
+ *   by an expired session are dropped on the next page load (`forgetOrphanedKeys()`, docs/SECURITY.md §3.1).
  * - Errors are `ApiError`s from `useApi()`; `authErrorText(error)` and `apiFieldErrors(error)` turn them into copy.
  */
 import type { RouteLocationRaw } from 'vue-router'
@@ -15,7 +16,13 @@ import type { AuthUser, InvitePreview, MeResponse, SessionInfo } from '#shared/s
 import type { PublicConfig } from '#shared/schemas/settings'
 import { COMMON_ERRORS, errorMessage } from '#shared/utils/error-codes'
 import { isSafeRedirectPath } from '~/lib/shell/redirect'
-import { clearKeyVault, clearTabKeys, signOut as runSignOut, type KeyListStorage } from '~/lib/shell/sign-out'
+import {
+  clearKeyVault,
+  clearTabKeys,
+  keysToForget,
+  signOut as runSignOut,
+  type KeyListStorage,
+} from '~/lib/shell/sign-out'
 import { ApiError } from './useApi'
 
 export type RegisterResult = { user: AuthUser } | { verificationRequired: true }
@@ -42,6 +49,13 @@ function tabStorage(): KeyListStorage | null {
 function clearRoomKeys(): void {
   clearKeyVault(browserStorage())
   clearTabKeys(tabStorage())
+}
+
+/** Applies `keysToForget()` after a session check. */
+function forgetKeysAfterCheck(previousUserId: string | null, nextUserId: string | null): void {
+  const forget = keysToForget(previousUserId, nextUserId)
+  if (forget === 'all') clearRoomKeys()
+  else if (forget === 'vault') clearKeyVault(browserStorage())
 }
 
 /** `/login`, remembering where to come back to (relative paths only, docs/SECURITY.md §3.4). */
@@ -83,10 +97,27 @@ export function useAuth() {
     user.value = null
   }
 
+  /**
+   * An API call answered 401 `UNAUTHENTICATED`: a signed-in user's session ended (expired or revoked), so this device
+   * forgets the user and every room key; for a visitor who was never signed in only stray vault entries go.
+   */
+  function sessionLost(): void {
+    forgetKeysAfterCheck(user.value?.id ?? null, null)
+    user.value = null
+  }
+
+  /**
+   * Client start-up: the session was loaded during SSR, so `refresh()` did not run in this browser. When nobody is
+   * signed in, vault entries of an earlier, expired session are dropped now.
+   */
+  function forgetOrphanedKeys(): void {
+    if (loaded.value) forgetKeysAfterCheck(null, user.value?.id ?? null)
+  }
+
   async function refresh(): Promise<AuthUser | null> {
     const previous = user.value
     const { user: next } = await api<MeResponse>('/api/auth/me')
-    if (previous && (!next || next.id !== previous.id)) clearRoomKeys()
+    forgetKeysAfterCheck(previous?.id ?? null, next?.id ?? null)
     return setUser(next)
   }
 
@@ -177,6 +208,8 @@ export function useAuth() {
     loaded,
     refresh,
     forgetSession,
+    sessionLost,
+    forgetOrphanedKeys,
     login,
     logout,
     register,
