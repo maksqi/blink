@@ -4,7 +4,6 @@
  * right after it is created. More settings live on the room page.
  */
 import { useForm } from '@tanstack/vue-form'
-import { toast } from 'vue-sonner'
 import { createRoomSchema, roomSettingsSchema } from '#shared/schemas/rooms'
 import { Button } from '@/components/ui/button'
 import {
@@ -49,8 +48,9 @@ const form = useForm({
         allowGuests: value.allowGuests,
         ...(value.password ? { password: value.password } : {}),
       })
+      // No "Room created" toast: the meeting page that opens is the confirmation, and a toast carried over to it
+      // would sit on top of its Join button (F-014).
       open.value = false
-      toast.success('Room created', { description: 'Share invite links from the room page.' })
     } catch (error) {
       formError.value = authErrorText(error)
     }
