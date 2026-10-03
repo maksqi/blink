@@ -10,10 +10,10 @@
  * - `ADMIN_ROOM_KEYS`, `ADMIN_USER_KEYS`, `ADMIN_INVITE_KEYS`, `MEETING_KEYS`, `AUDIT_KEYS`: the documented fields.
  */
 import { join } from 'node:path'
-import { and, eq, type SQL } from 'drizzle-orm'
+import { and, eq, inArray, type SQL } from 'drizzle-orm'
 import { expect } from 'vitest'
 import { SETTINGS_DEFAULTS } from '#shared/schemas/settings'
-import { auditLog } from '../../../server/database/schema'
+import { auditLog, settings } from '../../../server/database/schema'
 import {
   type ApiClient,
   createAdmin,
@@ -64,9 +64,16 @@ export async function putSettings(api: ApiClient, patch: Record<string, unknown>
 }
 
 /** Puts every setting back to its default through the API. */
+/**
+ * Back to the defaults: the PUT invalidates the server's settings cache at once, and deleting the rows afterwards
+ * leaves the table as other files expect it (an unset key has no row and means its default).
+ */
 export async function restoreSettings(api: ApiClient): Promise<void> {
   const res = await putSettings(api, { ...SETTINGS_DEFAULTS })
   expect(res.status, res.text).toBe(200)
+  await testDb()
+    .delete(settings)
+    .where(inArray(settings.key, Object.keys(SETTINGS_DEFAULTS)))
 }
 
 export const ADMIN_USER_KEYS = [

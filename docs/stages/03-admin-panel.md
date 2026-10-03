@@ -1,6 +1,6 @@
 # Stage 03 — Admin panel
 
-Status: todo
+Status: done
 Owner(s): `admin` (Wave 2)
 Depends on: Stage 02 (`auth`: users service, mail), Stage 04 backend (`rooms-backend`: LiveKit adapter, room end and
 delete, meetings)

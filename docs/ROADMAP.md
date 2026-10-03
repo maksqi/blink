@@ -13,7 +13,7 @@ and verifying a stage.
 | [00](stages/00-docs-and-planning.md) | Docs and planning | orchestrator + doc agents | W0-docs | — | done |
 | [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | done |
 | [02](stages/02-auth-and-accounts.md) | Auth and accounts | auth | W1 | 01 | done |
-| [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | in progress |
+| [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | done |
 | [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | backend done; UI in progress (W2) |
 | [05](stages/05-call-core.md) | Call core | call-core | W1 | 01 | done |
 | [06](stages/06-host-controls-collaboration.md) | Host controls and collaboration | collab-ui | W2 | 04 (backend), 05 | in progress |
@@ -190,4 +190,5 @@ Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-
   tests (4 LiveKit-only skips).
 - 2026-10-03 — W2 `admin` merged (Stage 03): admin API, services in `server/services/admin/`, six admin pages, 8 API
   and 4 E2E spec files (incl. disabling a user removes them from a live call). API.md lists the admin audit actions
-  and `CONFLICT` `not_live`.
+  and `CONFLICT` `not_live`. Gate on main: lint, typecheck, 895 unit tests, check:english, 691 API tests (the admin
+  settings helper now deletes the rows it restores, so `core/services.test.ts` sees unset keys again).
