@@ -59,6 +59,8 @@ export function useJoinFlow(slug: string) {
   const api = useApi()
   const user = useAuthState()
   const vault = useKeyVault()
+  // The dashboard and the auth pages may have loaded GET /api/config already.
+  const cachedConfig = useNuxtData<PublicConfig>('blinq:public-config').data
 
   const state = shallowRef<JoinState>(INITIAL_JOIN_STATE)
   const session = shallowRef<CallSession | null>(null)
@@ -141,8 +143,7 @@ export function useJoinFlow(slug: string) {
   }
 
   async function loadConfig(): Promise<PublicConfig | null> {
-    const cached = useNuxtData<PublicConfig>('blinq:public-config').data.value
-    if (cached) return cached
+    if (cachedConfig.value) return cachedConfig.value
     try {
       return await api<PublicConfig>('/api/config')
     } catch {
@@ -198,9 +199,11 @@ export function useJoinFlow(slug: string) {
     }
   }
 
+  /** Creates the call session for pre-join (SDK, E2EE worker, connection warm-up); never for an error screen. */
   function ensureSession() {
-    const info = state.value.info
-    if (session.value || !key || !info || state.value.duplicate || disposed) return
+    const { info, phase, duplicate } = state.value
+    if (session.value || !key || !info || duplicate || disposed) return
+    if (phase !== 'prejoin' && phase !== 'password') return
     const cfg = config.value
     const created = createCallSession({
       slug,

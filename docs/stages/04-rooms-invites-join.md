@@ -116,34 +116,34 @@ service, webhooks with enforcement and `publishRoomState`, so Stage 06 is UI-onl
 - [x] `server/tasks/rooms/**` (if needed beyond `maintenance:cleanup`): close waiting rows older than 1 h.
 - [x] Limiters: `join-ip` (info and join), `room-create` (rooms and invites), `call-actions` (in-call routes).
 ### Frontend (rooms-ui, Wave 2)
-- [ ] `app/pages/dashboard.vue` (`auth` middleware): rooms list, "New room", "Instant meeting", per room: copy host link,
+- [x] `app/pages/dashboard.vue` (`auth` middleware): rooms list, "New room", "Instant meeting", per room: copy host link,
       settings, join.
-- [ ] Create flow: `generateSlug()`, `generateRoomKey()`, `deriveJoinProof(K, slug)` → `POST /api/rooms` (retry once
+- [x] Create flow: `generateSlug()`, `generateRoomKey()`, `deriveJoinProof(K, slug)` → `POST /api/rooms` (retry once
       with a new slug on 409 `CONFLICT`) → store K in the key vault → open `/m/<slug>` with K in the tab's
       sessionStorage (no fragment for in-app navigation) (decision). Instant meeting = the same with `ephemeral: true`.
-- [ ] Key vault `app/lib/e2ee/key-vault.ts`: localStorage `blinq:keys:<userId>` → `{ [roomId]: { k, slug, keyVersion,
+- [x] Key vault `app/lib/e2ee/key-vault.ts`: localStorage `blinq:keys:<userId>` → `{ [roomId]: { k, slug, keyVersion,
       savedAt } }` for rooms the user owns or co-hosts; sessionStorage `blinq:tabkey:<slug>` for the current tab
       (guests too); entries of another user id are ignored; `auth` clears `blinq:keys:*` on logout; every storage access
       is wrapped in try/catch.
-- [ ] `app/pages/rooms/[id].vue`: settings (`roomSettingsSchema` fields, password set/clear), co-host list with remove,
+- [x] `app/pages/rooms/[id].vue`: settings (`roomSettingsSchema` fields, password set/clear), co-host list with remove,
       "Rotate key" (disabled while live; new K + proof via `PUT /api/rooms/:id/key`; old links then fail with
       `ROOM_KEY_INVALID`), meetings history, delete (in-page confirmation).
-- [ ] Invite manager `app/components/rooms/InviteManager.vue`: create (label, `1h|24h|7d|never`, max uses), list,
+- [x] Invite manager `app/components/rooms/InviteManager.vue`: create (label, `1h|24h|7d|never`, max uses), list,
       revoke; link = `buildRoomLink(publicUrl, slug, K, token)`; share by copy, `navigator.share` when available and
       `mailto:` (address shown as text too). The server never emails room links. Without K in the vault the UI says
       links cannot be built on this device.
-- [ ] `/m/[slug]` flow (`app/lib/join/machine.ts` pure reducer + `app/composables/rooms/useJoinFlow.ts`) using the
+- [x] `/m/[slug]` flow (`app/lib/join/machine.ts` pure reducer + `app/composables/rooms/useJoinFlow.ts`) using the
       `CallPhase` names: `loading` (K and t from `$fragment.take('/m/<slug>')`, the tab key or the vault; `clientId`
       from sessionStorage `blinq:clientId`, created once per tab) → `needKey` | `info` (`POST /api/join/:slug/info`) →
       `prejoin` (`call-core` pre-join; REC notice when `recordingActive`) → `password` (when `needsPassword`) → join
       (`POST /api/join/:slug`) → `waiting` (EventSource; cancel; `denied` and `ended` are final) → `connecting`
       (`call-core` connect with `url`, `token`, `epoch`, `identity`, `slug`, K) → `inCall` → `left` | `ended` |
       `removed` | `error`.
-- [ ] `app/components/join/JoinError.vue`: a clear message and next step for every join code (`ROOM_KEY_INVALID`,
+- [x] `app/components/join/JoinError.vue`: a clear message and next step for every join code (`ROOM_KEY_INVALID`,
       `ROOM_NOT_FOUND`, `ROOM_INVITE_REQUIRED`, `ROOM_INVITE_INVALID`, `ROOM_GUESTS_NOT_ALLOWED`, `ROOM_LOCKED`,
       `ROOM_FULL`, `ROOM_PASSWORD_INVALID`, `JOIN_REMOVED`, `JOIN_DENIED`, `LOBBY_FULL`, `RATE_LIMITED`), a key missing
       or truncated in the link (`parseRoomFragment().invalidKey`), and an unsupported browser.
-- [ ] Duplicate tabs: `BroadcastChannel('blinq:call:<slug>')`; a tab in the call answers `hello`; the new tab offers
+- [x] Duplicate tabs: `BroadcastChannel('blinq:call:<slug>')`; a tab in the call answers `hello`; the new tab offers
       "Use here", which asks the other tab to leave (decision).
 
 ## Tests
@@ -167,13 +167,14 @@ service, webhooks with enforcement and `publishRoomState`, so Stage 06 is UI-onl
   WebSocket frame and SSE URL; then greps a `pg_dump` of the test DB and the app and Caddy logs for K).
 
 ## Definition of Done
-- [ ] [auto] A guest joins via invite within the join-time budget (PR gate < 6 s; nightly p95 < 3 s) — evidence:
-      `pnpm test:e2e -- join/guest-invite`, nightly.yml.
+- [x] [auto] A guest joins via invite within the join-time budget (PR gate < 6 s; nightly p95 < 3 s) — evidence:
+      `pnpm test:e2e -- join/guest-invite`, nightly.yml (rooms-ui, local Chromium: 280 ms click → first remote frame).
 - [x] [auto] Bad, expired, revoked and overused invites are rejected — evidence: `tests/api/join/invites.test.ts`.
 - [x] [auto] A wrong key is rejected by the proof — evidence: `tests/api/join/proof.test.ts`.
 - [x] [auto] SSE and cancel reject non-owners — evidence: `tests/api/join/lobby-sse.test.ts`.
-- [ ] [auto] The key never leaves the browser — evidence: `pnpm test:e2e -- rooms/key-leak` (request URLs and bodies,
-      WebSocket frames, SSE URLs, DB dump, app and Caddy logs).
+- [x] [auto] The key never leaves the browser — evidence: `pnpm test:e2e -- rooms/key-leak` (request URLs, headers
+      and bodies, WebSocket frames, SSE URLs, DB dump, app and Caddy logs; K plus the per-meeting media and chat keys,
+      and the join proof outside the three request bodies that carry it).
 - [x] [auto] Lobby admit reaches the SSE in under 1 s (API level) — evidence: `tests/api/join/lobby-latency.test.ts`.
 - [x] [auto] A locked room rejects joins; capacity is enforced — evidence: `tests/api/join/limits.test.ts`.
 - [x] [auto] Token grants are unit-tested per role — evidence: `server/services/livekit/token.test.ts`.
@@ -184,9 +185,10 @@ service, webhooks with enforcement and `publishRoomState`, so Stage 06 is UI-onl
 - [x] [auto] Every in-call route enforces the permission matrix — evidence: `tests/api/calls/authz.test.ts`.
 - [x] [auto] Room metadata is written only through `publishRoomState` and matches the DB — evidence:
       `tests/api/rooms/room-state.test.ts`.
-- [ ] [auto] Join error screens and duplicate-tab detection work — evidence: `pnpm test:e2e -- join`.
-- [ ] [auto] No console errors or CSP violations on dashboard, room settings and `/m/[slug]` — evidence:
-      `pnpm test:e2e -- rooms join` (base fixture).
+- [x] [auto] Join error screens and duplicate-tab detection work — evidence: `pnpm test:e2e -- join`
+      (`join/errors`, `join/duplicate-tab`, `join/lobby`).
+- [x] [auto] No console errors or CSP violations on dashboard, room settings and `/m/[slug]` — evidence:
+      `pnpm test:e2e -- rooms join` (base fixture; `rooms/create-and-join`, `rooms/room-page`).
 - [x] [auto] `lint`, `typecheck`, `test`, `test:api` are green — evidence: ci.yml.
 - [x] [agent-manual] `/m/<slug>` is not server-rendered — evidence: `curl -s <base>/m/abc-defg-hjk` shows the SPA shell
       without room data, pasted into the report.
@@ -233,3 +235,29 @@ Decisions taken while implementing the backend (each also listed in the rooms-ba
   `clientId`).
 - `muteOnJoin` is stored, returned in `RoomDetails` and, since the Wave 2 preparation, in `JoinInfo` (pre-join
   defaults for joiners).
+
+## Frontend behavior (rooms-ui, Wave 2)
+Decisions taken while implementing the UI (each also listed in the rooms-ui report):
+- **Key sources.** `/m/<slug>` takes K and the invite token from the fragment first, then this tab's key
+  (`blinq:tabkey:<slug>` = `{ k, t? }`, written on every visit, so reloads and sign-in round trips work), then the
+  signed-in user's vault. A damaged `k` in the link always shows the "damaged link" screen. Hosts and co-hosts who open
+  a link get the key saved into their vault (with the room's `keyVersion`).
+- **Early answers.** After `info`, a participant without an invite gets `ROOM_INVITE_REQUIRED` and a guest of an
+  account-only room gets `ROOM_GUESTS_NOT_ALLOWED` (with "Sign in", which returns to the meeting) before the camera
+  opens, in the server's check order.
+- **Inline vs full screen.** Locked, full, waiting room full, rate limited, wrong password and network problems stay
+  on the pre-join (or password) screen as an inline notice; Join is the retry. Key, room, invite, guest, removed and
+  denied problems end on `JoinError`. A lock while waiting (`denied { reason: 'locked' }`) returns to pre-join.
+- **Password** is asked after pre-join only when `needsPassword` (or the join answers `ROOM_PASSWORD_REQUIRED`); an
+  accepted password is reused for retries.
+- **Waiting room.** Cancel returns to pre-join. Leaving the page does not cancel, so a reload keeps the place (the server
+  returns the same request); abandoned requests expire on the server.
+- **Rejoin** after leaving reloads the page (a call session connects once); resume gives the same identity.
+- **Duplicate tabs.** A new tab probes the channel for 250 ms in parallel with `info`; a tab in `connecting`, `inCall` or
+  `reconnecting` answers. "Use here" asks it to leave (it shows a toast and the "left" screen) and continues to pre-join.
+- **Instant meetings** are rooms named "Instant meeting" with `ephemeral: true` and the default settings.
+- **Sharing.** Invite links are shown as selectable text next to Copy, the share sheet (where available) and a `mailto:`
+  link without a preset recipient; nothing is copied automatically. The room page's key status says when this device has
+  no key or an outdated one; rotating the key (owner) puts a new key on this device.
+- **Test hooks.** `window.__blinqTest.state.join` = `{ phase, problem, notice, requestId, duplicate, leave() }` (test
+  builds only).
