@@ -266,6 +266,14 @@ export class CallSession {
       wantCamera ? this.local.enableCamera(prefs.videoinput) : Promise.resolve(),
       wantMic ? this.local.enableMic(prefs.audioinput) : this.local.ensureMic(prefs.audioinput),
     ])
+    // A fast Join can connect while a device is still opening; connect() published only what existed then.
+    if (this.isConnected && !this.disposed) {
+      await Promise.allSettled([
+        this.publishMic(),
+        this.store.media.cameraOn ? this.publishCamera() : Promise.resolve(),
+      ])
+      this.scheduleViews()
+    }
     await this.refreshDevices()
     if (prefs.audiooutput) this.store.outputDevice = prefs.audiooutput
     this.watchDevices()

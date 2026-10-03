@@ -163,6 +163,13 @@ Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-
 - `collab-ui`: the SDK logs data-channel errors when a room is deleted (end for all); `collab/host-actions` allows them.
 - `collab-ui`: participant-side dialogs (ask to unmute) live in a zero-footprint `start` control-bar item because no
   always-mounted overlay slot exists; consider a dedicated slot in `CallFeature`.
+- `rooms-ui`: co-hosts can only be promoted during a call; the room page cannot add them because non-admins have no
+  user lookup. Decide whether to add one (privacy: it reveals accounts).
+- `recording-client`: local-only file names use the slug; add the room name (title) to `CallContext`.
+- `media-fx`: `/vendor/mediapipe/*.tflite` is served as `text/plain` (with `nosniff`); `application/octet-stream`
+  would be cleaner (`nuxt.config.ts`).
+- The sessionStorage fragment store (`blinq:fragment:/m/<slug>`) can still hold a key that was never taken; consider
+  clearing it on sign-out too.
 
 ## Backlog (not in v1)
 
@@ -202,3 +209,8 @@ Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-
   reactions as call features. Blocker found: livekit-client 2.22.3 never sets `encryptionType` on the encrypted data
   packets it sends, so receivers see `NONE` and `messaging.ts` drops every chat and reaction message (decision
   pending with the maintainer). Control bar: the three-group layout starts at 1024 px (it overlapped at 768 px).
+- 2026-10-03 — livekit-client patched (maintainer's decision): encrypted data packets carry `encryption_type: GCM`
+  (`patches/livekit-client@2.22.3.patch`, guarded by `app/lib/livekit/sdk-patch.test.ts`). W2 `media-fx`,
+  `recording-client` and `rooms-ui` merged without conflicts. Follow-ups on main: devices that finish opening after
+  `connect()` are published (media-fx report), sign-out also clears the per-tab meeting keys (rooms-ui report), the
+  control bar keeps More options in view, `joinAs` specs allow in-call 403s, TESTING.md lists the Wave 2 hooks.

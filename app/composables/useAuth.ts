@@ -15,7 +15,7 @@ import type { AuthUser, InvitePreview, MeResponse, SessionInfo } from '#shared/s
 import type { PublicConfig } from '#shared/schemas/settings'
 import { COMMON_ERRORS, errorMessage } from '#shared/utils/error-codes'
 import { isSafeRedirectPath } from '~/lib/shell/redirect'
-import { clearKeyVault, signOut as runSignOut, type KeyListStorage } from '~/lib/shell/sign-out'
+import { clearKeyVault, clearTabKeys, signOut as runSignOut, type KeyListStorage } from '~/lib/shell/sign-out'
 import { ApiError } from './useApi'
 
 export type RegisterResult = { user: AuthUser } | { verificationRequired: true }
@@ -27,6 +27,21 @@ function browserStorage(): KeyListStorage | null {
   } catch {
     return null
   }
+}
+
+function tabStorage(): KeyListStorage | null {
+  if (!import.meta.client) return null
+  try {
+    return window.sessionStorage
+  } catch {
+    return null
+  }
+}
+
+/** Forgets every room key on this device: the vault and the keys of meetings opened in this tab. */
+function clearRoomKeys(): void {
+  clearKeyVault(browserStorage())
+  clearTabKeys(tabStorage())
 }
 
 /** `/login`, remembering where to come back to (relative paths only, docs/SECURITY.md §3.4). */
@@ -64,14 +79,14 @@ export function useAuth() {
 
   /** This device is signed out (the server says so): forget the user and the room keys. */
   function forgetSession(): void {
-    clearKeyVault(browserStorage())
+    clearRoomKeys()
     user.value = null
   }
 
   async function refresh(): Promise<AuthUser | null> {
     const previous = user.value
     const { user: next } = await api<MeResponse>('/api/auth/me')
-    if (previous && (!next || next.id !== previous.id)) clearKeyVault(browserStorage())
+    if (previous && (!next || next.id !== previous.id)) clearRoomKeys()
     return setUser(next)
   }
 
@@ -93,6 +108,7 @@ export function useAuth() {
       navigate: () => (options.redirect === false ? undefined : navigateTo(options.redirect ?? '/login')),
       onError: options.onError ?? (() => {}),
       vault: browserStorage(),
+      tabKeys: tabStorage(),
     })
   }
 

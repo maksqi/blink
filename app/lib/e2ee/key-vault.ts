@@ -11,11 +11,10 @@
  * Every storage access is wrapped in try/catch (private modes, blocked site data and full quotas throw), and malformed
  * entries are dropped, never half-used. Pure module: storages are passed in, so it runs in plain Vitest.
  */
-import { KEY_VAULT_PREFIX } from '../shell/sign-out'
+import { KEY_VAULT_PREFIX, TAB_KEY_PREFIX } from '../shell/sign-out'
 import { decodeRoomKey, encodeRoomKey, isValidSlug, type RoomKey } from './keys'
 
-export { KEY_VAULT_PREFIX }
-export const TAB_KEY_PREFIX = 'blinq:tabkey:'
+export { KEY_VAULT_PREFIX, TAB_KEY_PREFIX }
 
 /** The subset of the Web Storage API the vault needs. */
 export interface KeyStorage {

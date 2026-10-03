@@ -4,6 +4,8 @@
  */
 /** localStorage prefix of the room key vault (`blinq:keys:<userId>`), cleared on sign-out (docs/SECURITY.md §3.1). */
 export const KEY_VAULT_PREFIX = 'blinq:keys:'
+/** sessionStorage prefix of the per-tab meeting keys (`blinq:tabkey:<slug>`), also cleared on sign-out. */
+export const TAB_KEY_PREFIX = 'blinq:tabkey:'
 
 export interface KeyListStorage {
   readonly length: number
@@ -20,23 +22,34 @@ export interface SignOutDeps {
   /** Called when the server did not confirm the sign-out. */
   onError: (error: unknown) => void
   vault?: KeyListStorage | null
+  /** sessionStorage, for the per-tab meeting keys. */
+  tabKeys?: KeyListStorage | null
 }
 
 function isUnauthenticated(error: unknown): boolean {
   return typeof error === 'object' && error !== null && (error as { status?: unknown }).status === 401
 }
 
-/** Removes every key-vault entry. Storage access can throw in private modes; there is nothing to clear then. */
-export function clearKeyVault(storage: KeyListStorage | null | undefined): void {
+function clearPrefix(storage: KeyListStorage | null | undefined, prefix: string): void {
   if (!storage) return
   try {
     for (let index = storage.length - 1; index >= 0; index--) {
       const key = storage.key(index)
-      if (key?.startsWith(KEY_VAULT_PREFIX)) storage.removeItem(key)
+      if (key?.startsWith(prefix)) storage.removeItem(key)
     }
   } catch {
     // Unusable storage holds no keys.
   }
+}
+
+/** Removes every key-vault entry. Storage access can throw in private modes; there is nothing to clear then. */
+export function clearKeyVault(storage: KeyListStorage | null | undefined): void {
+  clearPrefix(storage, KEY_VAULT_PREFIX)
+}
+
+/** Removes every per-tab meeting key (and the invite token stored with it). */
+export function clearTabKeys(storage: KeyListStorage | null | undefined): void {
+  clearPrefix(storage, TAB_KEY_PREFIX)
 }
 
 export async function signOut(deps: SignOutDeps): Promise<void> {
@@ -47,6 +60,7 @@ export async function signOut(deps: SignOutDeps): Promise<void> {
     if (!isUnauthenticated(error)) deps.onError(error)
   }
   clearKeyVault(deps.vault)
+  clearTabKeys(deps.tabKeys)
   deps.clearUser()
   await deps.navigate()
 }

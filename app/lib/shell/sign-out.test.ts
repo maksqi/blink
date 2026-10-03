@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { clearKeyVault, signOut, type KeyListStorage } from './sign-out'
+import { clearKeyVault, clearTabKeys, signOut, type KeyListStorage } from './sign-out'
 
 function listStorage(entries: Record<string, string>): KeyListStorage & { data: Map<string, string> } {
   const data = new Map(Object.entries(entries))
@@ -32,12 +32,14 @@ function deps(logout: () => Promise<unknown>) {
 describe('signOut', () => {
   it('signs out on the server, clears local state, then leaves', async () => {
     const vault = listStorage({ 'blinq:keys:u1': '{}', 'blinq-color-mode': 'dark' })
+    const tabKeys = listStorage({ 'blinq:tabkey:abc-defg-hjk': '{}', 'blinq:clientId': 'c1' })
     const d = deps(async () => undefined)
-    await signOut({ ...d, vault })
+    await signOut({ ...d, vault, tabKeys })
 
     expect(d.calls).toEqual(['logout', 'clearUser', 'navigate'])
     expect(d.onError).not.toHaveBeenCalled()
     expect([...vault.data.keys()]).toEqual(['blinq-color-mode'])
+    expect([...tabKeys.data.keys()]).toEqual(['blinq:clientId'])
   })
 
   it('reports a failed server call and still signs out locally', async () => {
@@ -78,5 +80,14 @@ describe('clearKeyVault', () => {
       removeItem: () => {},
     }
     expect(() => clearKeyVault(broken)).not.toThrow()
+  })
+})
+
+describe('clearTabKeys', () => {
+  it('removes every per-tab meeting key and nothing else', () => {
+    const storage = listStorage({ 'blinq:tabkey:a': '{}', 'blinq:tabkey:b': '{}', 'blinq:fragment:/m/a': '{}' })
+    clearTabKeys(storage)
+    expect([...storage.data.keys()]).toEqual(['blinq:fragment:/m/a'])
+    expect(() => clearTabKeys(null)).not.toThrow()
   })
 })

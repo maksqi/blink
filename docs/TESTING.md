@@ -288,7 +288,7 @@ builds. ci.yml proves the production build has no `__blinqTest` and that `/dev/c
 | `publishUnencryptedTrack()` | `call/unencrypted-blocked`, from a harness client joined with `e2ee=off`: peers must never subscribe to its track |
 | `forceRecordingMime(mime)` | recording format specs (implemented by `recording-client`) |
 | `measureNoiseSuppression()` | `media/rnnoise-offline`: input and output RMS in dBFS plus the output peak (implemented by `media-fx`) |
-| `state` | feature snapshots: `state.call` (phase and local media), `state.subscriptions` (policy output incl. requested sizes), `state.inboundVideo` / `state.inboundAudio` (`getStats` per remote track, every 500 ms), `state.audio`, `state.localScreen`, `state.harness` (harness only); Wave 2 adds `state.media` (`media-fx`) and `state.recording` (`recording-client`) |
+| `state` | feature snapshots: `state.call` (phase and local media), `state.subscriptions` (policy output incl. requested sizes), `state.inboundVideo` / `state.inboundAudio` (`getStats` per remote track, every 500 ms), `state.audio`, `state.localScreen`, `state.harness` (harness only), `state.roomState` (collab-ui); `state.join` (rooms-ui: `{ phase, problem, notice, requestId, duplicate, leave() }`); `state.media` (media-fx: `blur`, `noise`, `gain`, `cameraTrackSid`, `micTrackSid`, plus `blurActive`, `blurLoading`, `blurFrames`, `rnnoiseActive`, `noiseBusy`, `sampleRate`, `micProcessing`, device ids and `support`) and `state.mediaFx.restartCamera()`; `state.recording` (recording-client: `recordingId`, `mime`, `chunksProduced`, `chunksAcked`, `retries`, plus `phase`, `mode`, `error`, `backlogBytes`, `startedAt`, `framesDrawn`) |
 
 App code reaches the hooks only through `testHooks()` (`app/lib/contracts/test-hooks.ts`), which returns `undefined`
 outside dev and test builds.
@@ -296,7 +296,7 @@ outside dev and test builds.
 ### 6.7 Timing policy
 
 Join time runs from `blinq:join:click` to `blinq:join:first-remote-frame` (detected with `requestVideoFrameCallback`),
-with the remote peer already publishing. Specs: `call/join-time` (harness) and `rooms/guest-invite-join` (real flow).
+with the remote peer already publishing. Specs: `call/join-time` (harness) and `join/guest-invite` (real flow).
 
 | Where | Samples | Assertion |
 |---|---|---|
@@ -322,6 +322,10 @@ Other latency limits in stage DoDs are asserted as written, everywhere: lobby ad
   still be complete.
 - **At rest (API tests).** Stored bytes are ciphertext, tampering or truncation is an error, Range responses are exact,
   and the malicious fixtures in `tests/fixtures/media/` are rejected.
+- **Background tab (`recording/background`, `@nightly`).** Playwright keeps every page visible (even minimized or
+  headed), so the spec emulates a hidden tab: `visibilityState` hidden, no `requestAnimationFrame`, main-thread
+  timers at most once per second; workers are untouched. The compositor's worker clock must keep about 30 fps for
+  60 s, and `freezedetect` finds no frozen stretch in the file.
 - **Nightly.** One long recording (≥ 30 min, decision) covers upload backlog, memory and the `partial` finalize path.
 
 ### 6.9 Network degradation (nightly, Stage 10)
