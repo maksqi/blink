@@ -27,6 +27,8 @@ const registrationOpen = computed(() => (config.value?.registration.mode ?? 'inv
 const formError = ref<string | null>(null)
 const passwordRequired = z.string().min(1, 'Enter your password')
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { email: '', password: '' },
   onSubmit: async ({ value }) => {
@@ -56,7 +58,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
     </CardHeader>
 
     <CardContent>
-      <form class="flex flex-col gap-5" novalidate data-testid="login-form" @submit.prevent.stop="form.handleSubmit()">
+      <form method="post" class="flex flex-col gap-5" novalidate data-testid="login-form" @submit.prevent.stop="form.handleSubmit()">
         <FormAlert :message="formError" />
         <FieldGroup class="gap-4">
           <form.Field name="email" :validators="{ onBlur: emailSchema, onSubmit: emailSchema }">
@@ -112,7 +114,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
           </form.Field>
         </FieldGroup>
 
-        <Button type="submit" size="lg" class="w-full" :disabled="submitting">
+        <Button type="submit" size="lg" class="w-full" :disabled="submitting || !hydrated">
           <Spinner v-if="submitting" />
           Sign in
         </Button>

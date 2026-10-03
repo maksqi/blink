@@ -113,6 +113,7 @@ watch(
 
 <template>
   <form
+    method="post"
     class="flex flex-col gap-6"
     novalidate
     data-testid="room-settings-form"

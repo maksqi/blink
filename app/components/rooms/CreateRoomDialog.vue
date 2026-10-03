@@ -77,7 +77,7 @@ watch(open, (value) => {
         </DialogDescription>
       </DialogHeader>
 
-      <form class="flex flex-col gap-6" novalidate @submit.prevent.stop="form.handleSubmit()">
+      <form method="post" class="flex flex-col gap-6" novalidate @submit.prevent.stop="form.handleSubmit()">
         <FormAlert :message="formError" />
         <FieldGroup class="gap-5">
           <form.Field name="name" :validators="{ onBlur: nameSchema, onSubmit: nameSchema }">

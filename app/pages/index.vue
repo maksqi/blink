@@ -37,6 +37,8 @@ function validateLink({ value }: { value: string }) {
   return result.ok ? undefined : MEETING_LINK_ERRORS[result.error]
 }
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { link: '' },
   onSubmit: ({ value }) => {
@@ -113,6 +115,7 @@ const features = [
           </div>
 
           <form
+            method="post"
             class="mt-10 max-w-xl rounded-2xl border bg-card/85 p-4 shadow-sm backdrop-blur sm:p-5 motion-safe:animate-rise motion-safe:[animation-delay:320ms]"
             novalidate
             data-testid="join-link-form"
@@ -132,7 +135,6 @@ const features = [
                       </InputGroupAddon>
                       <InputGroupInput
                         :id="field.name"
-                        :name="field.name"
                         :model-value="field.state.value"
                         type="text"
                         inputmode="url"
@@ -151,7 +153,7 @@ const features = [
                         @blur="field.handleBlur"
                       />
                     </InputGroup>
-                    <Button type="submit" size="lg" variant="secondary" class="h-11 px-5">Join</Button>
+                    <Button type="submit" size="lg" variant="secondary" class="h-11 px-5" :disabled="!hydrated">Join</Button>
                   </div>
                   <FieldError :id="`${field.name}-error`" :errors="field.state.meta.errors" />
                 </Field>

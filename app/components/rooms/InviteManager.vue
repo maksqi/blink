@@ -85,6 +85,8 @@ function validateMaxUses({ value }: { value: string }) {
   return result.success ? undefined : 'Enter a whole number from 1 to 1000, or leave it empty'
 }
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { label: '', expiresIn: '24h' as InviteExpiry, maxUses: '' },
   onSubmit: async ({ value, formApi }) => {
@@ -160,6 +162,7 @@ watch(
     />
 
     <form
+      method="post"
       class="grid gap-4 rounded-lg border bg-muted/30 p-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-start"
       novalidate
       data-testid="invite-form"
@@ -226,7 +229,7 @@ watch(
         </template>
       </form.Field>
       <div class="flex sm:pt-[1.375rem]">
-        <Button type="submit" class="w-full sm:w-auto" :disabled="submitting" data-testid="invite-create">
+        <Button type="submit" class="w-full sm:w-auto" :disabled="submitting || !hydrated" data-testid="invite-create">
           <Spinner v-if="submitting" data-icon="inline-start" />
           <PlusIcon v-else data-icon="inline-start" aria-hidden="true" />
           Create invite

@@ -23,6 +23,8 @@ const smtpEnabled = computed(() => config.value?.smtpEnabled === true && !unavai
 const sentTo = ref<string | null>(null)
 const formError = ref<string | null>(null)
 
+// Submit only once hydrated: a native submission would send the fields to the page URL (F-020).
+const hydrated = useHydrated()
 const form = useForm({
   defaultValues: { email: '' },
   onSubmit: async ({ value }) => {
@@ -71,6 +73,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
       </CardHeader>
       <CardContent>
         <form
+          method="post"
           class="flex flex-col gap-5"
           novalidate
           data-testid="forgot-password-form"
@@ -102,7 +105,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
               </template>
             </form.Field>
           </FieldGroup>
-          <Button type="submit" size="lg" class="w-full" :disabled="submitting">
+          <Button type="submit" size="lg" class="w-full" :disabled="submitting || !hydrated">
             <Spinner v-if="submitting" />
             Send reset link
           </Button>
