@@ -20,6 +20,24 @@ async function fits(page: Page, what: string) {
   expect(await horizontalOverflow(page), `${what}: horizontal overflow`).toBeLessThanOrEqual(0)
 }
 
+/** Control-bar buttons another control covers (their center point hits something else). */
+async function coveredControls(page: Page): Promise<string[]> {
+  return page.getByTestId('control-bar').evaluate((bar) => {
+    const covered: string[] = []
+    for (const button of bar.querySelectorAll<HTMLElement>('button')) {
+      const box = button.getBoundingClientRect()
+      if (box.width === 0 || box.height === 0) continue
+      // Buttons scrolled out of a horizontally scrolling group are reachable by scrolling: skip them.
+      const scroller = button.parentElement?.closest<HTMLElement>('[class*="overflow-x-auto"]')
+      const clip = scroller?.getBoundingClientRect()
+      if (clip && (box.left < clip.left - 1 || box.right > clip.right + 1)) continue
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2)
+      if (hit && !button.contains(hit)) covered.push(button.getAttribute('aria-label') ?? button.textContent ?? '?')
+    }
+    return covered
+  })
+}
+
 test.describe('collaboration UI fits', { tag: '@responsive' }, () => {
   for (const width of WIDTHS) {
     test(`panels, menus and dialogs at ${width}px`, async ({ collab, rooms, page }) => {
@@ -34,6 +52,9 @@ test.describe('collaboration UI fits', { tag: '@responsive' }, () => {
       await rooms.join(room, { guest: 'Wanda Waiting' }, { inviteToken: await rooms.createInvite(room, hostUser) })
       await expect(page.getByTestId('control-bar')).toBeInViewport({ ratio: 1 })
       await fits(page, 'call')
+      // Scrolled into view, every control is reachable (none sits on top of another).
+      await page.locator('[data-control="host-controls"]').scrollIntoViewIfNeeded()
+      expect(await coveredControls(page), 'control-bar buttons covered by other controls').toEqual([])
 
       // People panel and the moderation menu.
       await openPanel(page, 'participants')
