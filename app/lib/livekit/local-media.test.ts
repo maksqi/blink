@@ -218,3 +218,25 @@ describe('LocalMedia status (F-005)', () => {
     expect(statuses).toHaveLength(count)
   })
 })
+
+describe('LocalMedia.idle (F-059)', () => {
+  it('resolves once the work queued so far has finished, also after a failure', async () => {
+    const { local } = media()
+    const mic = pendingDevice('audio')
+    const enabling = local.enableMic()
+    let idle = false
+    const waiting = local.idle('mic').then(() => (idle = true))
+    await vi.waitFor(() => expect(devices.audio).toHaveLength(0))
+    expect(idle).toBe(false)
+    mic.open()
+    await enabling
+    await waiting
+    expect(idle).toBe(true)
+
+    devices.video.push(async () => {
+      throw new DOMException('denied', 'NotAllowedError')
+    })
+    await expect(local.enableCamera()).rejects.toThrow('denied')
+    await expect(local.idle('camera')).resolves.toBeUndefined()
+  })
+})

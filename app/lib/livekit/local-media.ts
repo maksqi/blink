@@ -228,6 +228,11 @@ export class LocalMedia {
     this.chain.setGain(gain)
   }
 
+  /** Resolves once the camera or microphone work queued so far has finished (never rejects). */
+  idle(kind: 'camera' | 'mic'): Promise<void> {
+    return (kind === 'camera' ? this.cameraQueue : this.micQueue).then(() => undefined)
+  }
+
   /** Current camera MediaStreamTrack after processors, or null while off. */
   cameraTrack(): MediaStreamTrack | null {
     if (!this.camera || this.camera.isMuted) return null

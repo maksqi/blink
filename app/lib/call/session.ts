@@ -102,6 +102,7 @@ export interface CallSessionOptions {
 }
 
 type VideoSource = 'camera' | 'screen_share'
+type PublishSource = 'microphone' | 'camera'
 
 const LAST_INVITE_EXPIRY = '24h'
 
@@ -160,6 +161,7 @@ export class CallSession {
   private viewsScheduled = false
   private audioContainer: HTMLElement | null = null
   private screenTracks: LocalTrack[] = []
+  private readonly publishing = new Map<PublishSource, Promise<void>>()
   private readonly api: ApiClient
   private readonly options: CallSessionOptions
 
@@ -404,6 +406,8 @@ export class CallSession {
 
   async setMicEnabled(enabled: boolean): Promise<void> {
     if (this.disposed) return
+    await this.settlePublish('microphone')
+    if (this.disposed) return
     const connected = this.isConnected
     if (enabled) {
       if (connected && !this.store.permissions.microphone) return
@@ -416,6 +420,8 @@ export class CallSession {
   }
 
   async setCameraEnabled(enabled: boolean): Promise<void> {
+    if (this.disposed) return
+    await this.settlePublish('camera')
     if (this.disposed) return
     const connected = this.isConnected
     if (enabled) {
@@ -846,30 +852,62 @@ export class CallSession {
     await Promise.allSettled([this.publishMic(), this.store.media.cameraOn ? this.publishCamera() : Promise.resolve()])
   }
 
-  private async publishMic(): Promise<void> {
-    const room = this.room
-    const mic = this.local.mic
-    if (!room || !mic || !this.store.permissions.microphone) return
-    if (room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track === mic) return
-    try {
-      await room.localParticipant.publishTrack(mic, { source: Track.Source.Microphone })
-    } catch (error) {
-      console.warn('blinq: could not publish the microphone', error instanceof Error ? error.name : 'error')
-    }
-    this.bumpTracks()
+  private publishMic(): Promise<void> {
+    return this.publishOnce('microphone', async () => {
+      // A mute or unmute already queued finishes before the publish starts (see settlePublish).
+      await this.local.idle('mic')
+      const room = this.room
+      const mic = this.local.mic
+      if (!room || !mic || !this.store.permissions.microphone) return
+      if (room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track === mic) return
+      try {
+        await room.localParticipant.publishTrack(mic, { source: Track.Source.Microphone })
+      } catch (error) {
+        console.warn('blinq: could not publish the microphone', error instanceof Error ? error.name : 'error')
+      }
+      this.bumpTracks()
+    })
   }
 
-  private async publishCamera(): Promise<void> {
-    const room = this.room
-    const camera = this.local.camera
-    if (!room || !camera || camera.isMuted || !this.store.permissions.camera) return
-    if (room.localParticipant.getTrackPublication(Track.Source.Camera)?.track === camera) return
-    try {
-      await room.localParticipant.publishTrack(camera, { source: Track.Source.Camera })
-    } catch (error) {
-      console.warn('blinq: could not publish the camera', error instanceof Error ? error.name : 'error')
-    }
-    this.bumpTracks()
+  private publishCamera(): Promise<void> {
+    return this.publishOnce('camera', async () => {
+      await this.local.idle('camera')
+      const room = this.room
+      const camera = this.local.camera
+      if (!room || !camera || camera.isMuted || !this.store.permissions.camera) return
+      if (room.localParticipant.getTrackPublication(Track.Source.Camera)?.track === camera) return
+      try {
+        await room.localParticipant.publishTrack(camera, { source: Track.Source.Camera })
+      } catch (error) {
+        console.warn('blinq: could not publish the camera', error instanceof Error ? error.name : 'error')
+      }
+      this.bumpTracks()
+    })
+  }
+
+  /**
+   * One publish per source at a time: a second request joins the one under way (it would publish the track twice),
+   * and mute changes wait for it (see `settlePublish`). Never rejects.
+   */
+  private publishOnce(source: PublishSource, run: () => Promise<void>): Promise<void> {
+    const current = this.publishing.get(source)
+    if (current) return current
+    const next = run()
+      .catch(() => undefined)
+      .finally(() => {
+        if (this.publishing.get(source) === next) this.publishing.delete(source)
+      })
+    this.publishing.set(source, next)
+    return next
+  }
+
+  /**
+   * LiveKit reports a mute to the server only for a published track: muting during the publish logged "could not
+   * update mute status for unpublished track". A toggle right after joining waits for that publish, and a publish
+   * waits for the toggles queued before it, so the two never overlap (F-059).
+   */
+  private async settlePublish(source: PublishSource): Promise<void> {
+    await this.publishing.get(source)
   }
 
   private syncPermissions() {
