@@ -9,8 +9,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { Browser, BrowserContext, Page } from '@playwright/test'
-import { expect } from '../fixtures'
-import type { Guards } from '../fixtures/base'
+// From base.ts, not the merged fixtures: fixtures/flows.ts imports this module (no import cycle).
+import { expect, type Guards } from '../fixtures/base'
 
 /** Browser console errors of deliberate 4xx answers (negative tests only). */
 export const HTTP_ERROR_CONSOLE = /Failed to load resource: the server responded with a status of 4\d\d/
