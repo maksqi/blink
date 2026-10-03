@@ -15,7 +15,7 @@ import {
   VideoOffIcon,
 } from '@lucide/vue'
 import { supportsAudioOutputSelection } from 'livekit-client'
-import { computed, onMounted, provide, shallowRef } from 'vue'
+import { computed, onMounted, provide, shallowRef, watch } from 'vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -30,6 +30,8 @@ import VideoTrackView from './VideoTrackView.vue'
 import { CALL_SESSION_KEY } from '~/lib/call/context-key'
 import { CAPTURE_ERROR_TEXT, type DeviceKind } from '~/lib/call/devices'
 import { callRegistry } from '~/lib/call/features'
+import { changeMedia, type MediaKind } from '~/lib/call/media-toggles'
+import { callToast } from '~/lib/call/notify'
 import type { CallSession } from '~/lib/call/session'
 import { displayNameSchema } from '#shared/schemas/common'
 
@@ -67,6 +69,11 @@ const emit = defineEmits<{
 
 provide(CALL_SESSION_KEY, props.session)
 const store = props.session.store
+watch(
+  () => props.title,
+  (title) => props.session.setRoomName(title),
+  { immediate: true },
+)
 
 const name = shallowRef(props.displayName)
 const nameError = shallowRef<string | null>(null)
@@ -94,6 +101,12 @@ function deviceValue(kind: DeviceKind) {
 }
 function selectDevice(kind: DeviceKind, value: unknown) {
   if (typeof value === 'string' && value) void props.session.selectDevice(kind, value)
+}
+
+/** A toggle's device change; a failure shows a toast (the button also shows the reason). */
+function toggle(kind: MediaKind) {
+  const run = kind === 'microphone' ? () => props.session.toggleMic() : () => props.session.toggleCamera()
+  void changeMedia(kind, run, () => store.media, callToast.error)
 }
 
 function onName(value: string | number) {
@@ -160,7 +173,7 @@ onMounted(() => {
               :tone="store.media.micOn ? 'default' : 'off'"
               :disabled="locked || store.media.micBusy || (!store.media.micOn && Boolean(store.media.micError))"
               :disabled-reason="locked ? 'The host has everyone join muted' : (micError ?? undefined)"
-              @click="session.toggleMic()"
+              @click="toggle('microphone')"
             />
             <CallControlButton
               label="Camera"
@@ -169,7 +182,7 @@ onMounted(() => {
               :tone="store.media.cameraOn ? 'default' : 'off'"
               :disabled="locked || store.media.cameraBusy"
               :disabled-reason="locked ? 'The host has everyone join with the camera off' : undefined"
-              @click="session.toggleCamera()"
+              @click="toggle('camera')"
             />
           </div>
           <MicLevelMeter v-if="store.media.micOn" class="absolute top-3 left-3" />

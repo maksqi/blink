@@ -67,7 +67,9 @@ class FakeTransport implements UploadTransport {
   }
 }
 
-function setup(options: { phase?: CallPhase; startError?: unknown; maxDurationMs?: number } = {}) {
+function setup(
+  options: { phase?: CallPhase; startError?: unknown; maxDurationMs?: number; roomName?: string | null } = {},
+) {
   log.length = 0
   const phase = shallowRef<CallPhase>(options.phase ?? 'inCall')
   const roomState = shallowRef<RoomMetadata | null>({
@@ -96,6 +98,7 @@ function setup(options: { phase?: CallPhase; startError?: unknown; maxDurationMs
     phase,
     roomState: computed(() => roomState.value),
     slug: shallowRef('abc-defg-hjk'),
+    roomName: shallowRef(options.roomName === undefined ? null : options.roomName),
     callApi,
   } as unknown as CallContext
 
@@ -359,6 +362,30 @@ describe('RecordingController stop', () => {
     expect(t.saved[0]!.name).toMatch(/^blinq-abc-defg-hjk-\d{4}-\d{2}-\d{2}-\d{4}\.webm$/)
     expect(t.notify.success).toHaveBeenCalledWith(MESSAGES.savedLocal)
     expect(t.calls.map((call) => call.path)).toEqual(['/recording/start', '/recording/stop'])
+  })
+
+  it('stops retrying uploads once the page went away (F-049)', async () => {
+    const t = await recording()
+    vi.useFakeTimers()
+    try {
+      t.transport.putResponse = { status: 503 }
+      t.pipelines[0]!.chunk('a')
+      t.controller.dispose()
+      await vi.advanceTimersByTimeAsync(120_000)
+      expect(t.controller.state.value.phase).toBe('idle')
+      // One attempt per queued chunk, no retry loop.
+      expect(t.transport.puts.length).toBeLessThanOrEqual(2)
+      expect(t.transport.completes).toEqual([])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('names local recordings after the room name (F-009)', async () => {
+    const t = await recording('local', { roomName: 'Design review: Q4' })
+    t.pipelines[0]!.chunk('a')
+    await t.controller.stop('user')
+    expect(t.saved[0]!.name).toMatch(/^blinq-design-review-q4-\d{4}-\d{2}-\d{2}-\d{4}\.webm$/)
   })
 
   it('is idempotent', async () => {

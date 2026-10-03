@@ -5,7 +5,6 @@ import {
   handQueue,
   handSnapshot,
   newlyRaised,
-  queuePosition,
   type QueueParticipant,
 } from './queue'
 
@@ -36,12 +35,12 @@ describe('handQueue', () => {
 
   it('drops lowered hands and moves later people up', () => {
     const before = handQueue([p('a', 1), p('b', 2), p('c', 3)])
-    expect(queuePosition(before, 'c')).toBe(3)
+    expect(before.find((e) => e.participant.identity === 'c')?.position).toBe(3)
     const after = handQueue([p('a', null), p('b', 2), p('c', 3)])
-    expect(after.map((e) => e.participant.identity)).toEqual(['b', 'c'])
-    expect(queuePosition(after, 'c')).toBe(2)
-    expect(queuePosition(after, 'a')).toBeNull()
-    expect(queuePosition(after, null)).toBeNull()
+    expect(after.map((e) => [e.participant.identity, e.position])).toEqual([
+      ['b', 1],
+      ['c', 2],
+    ])
   })
 
   it('puts a re-raised hand at the end (the server sets a new time)', () => {

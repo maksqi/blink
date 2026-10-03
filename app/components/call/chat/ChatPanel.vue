@@ -102,9 +102,10 @@ function onInput(value: string | number) {
 <template>
   <div class="flex h-full min-h-[18rem] flex-col" data-testid="chat-panel">
     <div class="relative min-h-0 flex-1">
-      <ol
+      <!-- The live region wraps the list, so the messages keep their list semantics (F-054). -->
+      <div
         ref="list"
-        class="absolute inset-0 flex flex-col gap-1 overflow-y-auto px-3 py-3"
+        class="absolute inset-0 overflow-y-auto px-3 py-3"
         role="log"
         aria-live="polite"
         aria-relevant="additions"
@@ -112,18 +113,20 @@ function onInput(value: string | number) {
         data-testid="chat-messages"
         @scroll.passive="onScroll"
       >
-        <li v-if="messages.length === 0" class="m-auto max-w-60 text-center text-sm text-muted-foreground">
-          Messages are end-to-end encrypted. People who join later don't see earlier messages.
-        </li>
-        <ChatMessageItem
-          v-for="(message, index) in messages"
-          :key="message.id"
-          :message="message"
-          :show-name="showName(index)"
-          @retry="chat.retry(message)"
-          @dismiss="chat.dismiss(message)"
-        />
-      </ol>
+        <ol class="flex min-h-full flex-col gap-1">
+          <li v-if="messages.length === 0" class="m-auto max-w-60 text-center text-sm text-muted-foreground">
+            Messages are end-to-end encrypted. People who join later don't see earlier messages.
+          </li>
+          <ChatMessageItem
+            v-for="(message, index) in messages"
+            :key="message.id"
+            :message="message"
+            :show-name="showName(index)"
+            @retry="chat.retry(message)"
+            @dismiss="chat.dismiss(message)"
+          />
+        </ol>
+      </div>
       <button
         v-if="unseen"
         type="button"

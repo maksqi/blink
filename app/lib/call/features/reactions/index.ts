@@ -3,9 +3,11 @@
  * sender's latest reaction on their tile. Reactions are end-to-end encrypted app messages.
  */
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { reactionsState } from './useReactions'
-import ReactionsButton from '~/components/call/reactions/ReactionsButton.vue'
-import ReactionTileBadge from '~/components/call/reactions/ReactionTileBadge.vue'
+
+const ReactionsButton = lazyCallComponent(() => import('~/components/call/reactions/ReactionsButton.vue'))
+const ReactionTileBadge = lazyCallComponent(() => import('~/components/call/reactions/ReactionTileBadge.vue'))
 
 export default defineCallFeature({
   id: 'reactions',

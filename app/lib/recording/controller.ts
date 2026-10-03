@@ -325,7 +325,7 @@ export class RecordingController {
   private saveLocal(run: Run) {
     if (run.parts.length === 0) return
     const mime = this.state.value.mime ?? 'video/webm'
-    const name = localFileName(this.ctx.slug.value ?? 'meeting', new Date(run.startedAt), mime)
+    const name = localFileName([this.ctx.roomName.value, this.ctx.slug.value], new Date(run.startedAt), mime)
     try {
       if (this.deps.saveFile) this.deps.saveFile(run.parts, mime, name)
       else if (this.doc) saveRecordingFile(run.parts, mime, name, this.doc)
@@ -373,6 +373,8 @@ export class RecordingController {
   dispose(): void {
     if (this.disposed) return
     this.disposed = true
+    // The rest still uploads after the page went away, but a failure no longer retries for ever (F-049).
+    this.run?.uploader?.stopRetrying()
     void this.stop('dispose')
   }
 

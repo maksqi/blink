@@ -8,7 +8,9 @@
  * - LiveKit reports `encryptionType` NONE (the data channel itself was not encrypted),
  * - the sender is unknown (no participant, or one this client does not know),
  * - the envelope does not open (wrong key, tampering, or envelope sender ≠ LiveKit sender),
- * - the envelope type does not match the topic, or
+ * - the envelope type does not match the topic,
+ * - the envelope's sender timestamp is more than 5 minutes away from this device's clock (a replay after a reload or
+ *   after the id memory overflowed; the margin allows for clock skew between devices), or
  * - the message id was seen before (replay).
  *
  * `blinq.srv.v1` is accepted only without a sender participant, parsed with `serverHintSchema` and emitted as a
@@ -31,12 +33,19 @@ const TYPE_BY_TOPIC = new Map<string, AppMessageType>(
 /** Server hints are tiny JSON objects; anything bigger is not a hint. */
 const MAX_HINT_BYTES = 1024
 
+/**
+ * How far an envelope's timestamp (the sender's clock, authenticated by the envelope) may be from this device's clock,
+ * either way. Delivery takes milliseconds; the margin is for devices whose clocks disagree (decision).
+ */
+export const MESSAGE_FRESHNESS_MS = 5 * 60_000
+
 export type DropReason =
   | 'unencrypted'
   | 'unknown-sender'
   | 'no-key'
   | 'envelope'
   | 'type-mismatch'
+  | 'stale'
   | 'duplicate'
   | 'hint-from-participant'
   | 'hint-invalid'
@@ -139,6 +148,8 @@ export function createMessaging(options: MessagingOptions): CallMessaging {
       return drop('envelope', packet)
     }
     if (message.type !== type) return drop('type-mismatch', packet)
+    // The id memory is per page and bounded, so an old envelope replayed after a reload would look new (F-031).
+    if (Math.abs(now() - message.ts) > MESSAGE_FRESHNESS_MS) return drop('stale', packet)
     if (!seen.add(message.id)) return drop('duplicate', packet)
     if (disposed) return
 

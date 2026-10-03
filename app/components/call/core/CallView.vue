@@ -2,7 +2,8 @@
 /**
  * The in-call view (`<CallView :session>`): top bar with the E2EE badge, grid or speaker/presentation stage, side
  * panels and the control bar from the feature registries, reconnect banner, notices and dialogs. Terminal phases
- * show the highest-order registered phase screen. Hotkeys: M, V, Space (push to talk), ?.
+ * show the highest-order registered phase screen. Feature overlays (participant-side dialogs) stay mounted in every
+ * phase. Hotkeys: M, V, Space (push to talk), ?.
  */
 import { LoaderCircleIcon, UsersIcon, XIcon } from '@lucide/vue'
 import { useIntervalFn, useMediaQuery, useWindowSize } from '@vueuse/core'
@@ -25,6 +26,8 @@ import { provideCallUi } from '~/composables/call/useCallUi'
 import { CALL_SESSION_KEY } from '~/lib/call/context-key'
 import { isTerminalPhase } from '~/lib/call/disconnect'
 import { callRegistry } from '~/lib/call/features'
+import { changeMedia } from '~/lib/call/media-toggles'
+import { callToast } from '~/lib/call/notify'
 import { phaseScreenFor, visibleItems } from '~/lib/call/registry'
 import type { CallSession } from '~/lib/call/session'
 import { viewportClass } from '~/lib/layout/grid'
@@ -49,6 +52,11 @@ watch(
 
 const store = props.session.store
 const ctx = props.session.context
+watch(
+  () => props.title,
+  (title) => props.session.setRoomName(title),
+  { immediate: true },
+)
 const phase = computed(() => store.phase)
 const terminal = computed(() => isTerminalPhase(phase.value))
 const phaseScreen = computed(() => (terminal.value ? phaseScreenFor(callRegistry, phase.value) : undefined))
@@ -80,22 +88,27 @@ const elapsed = computed(() => {
   return h > 0 ? `${h}:${mm}:${String(s).padStart(2, '0')}` : `${mm}:${String(s).padStart(2, '0')}`
 })
 
+/** A hotkey's device change; a failure shows a toast (never an unhandled rejection). */
+function change(kind: 'microphone' | 'camera', run: () => Promise<void>) {
+  void changeMedia(kind, run, () => store.media, callToast.error)
+}
+
 useCallHotkeys({
   enabled: () => phase.value === 'inCall' || phase.value === 'reconnecting',
   micMuted: () => !store.media.micOn,
   onAction: (action) => {
     switch (action) {
       case 'toggle-mic':
-        void props.session.toggleMic()
+        change('microphone', () => props.session.toggleMic())
         break
       case 'toggle-camera':
-        void props.session.toggleCamera()
+        change('camera', () => props.session.toggleCamera())
         break
       case 'ptt-start':
-        void props.session.setMicEnabled(true)
+        change('microphone', () => props.session.setMicEnabled(true))
         break
       case 'ptt-end':
-        void props.session.setMicEnabled(false)
+        change('microphone', () => props.session.setMicEnabled(false))
         break
       case 'help':
         ui.hotkeysOpen.value = true
@@ -203,6 +216,7 @@ useCallHotkeys({
       <SettingsDialog />
       <HotkeyHelp />
       <SafetyCodeDialog />
+      <component :is="overlay.component" v-for="overlay in callRegistry.overlays" :key="overlay.id" />
     </div>
   </TooltipProvider>
 </template>

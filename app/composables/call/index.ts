@@ -3,4 +3,5 @@
 export { useCall, useCallSession } from './useCall'
 export { useCallHotkeys } from './useCallHotkeys'
 export { useCallUi } from './useCallUi'
+export { useReturnFocus } from './useReturnFocus'
 export { useVideoTile } from './useVideoTile'

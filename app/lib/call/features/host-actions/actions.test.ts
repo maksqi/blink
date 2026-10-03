@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { ERROR_MESSAGES } from '#shared/utils/error-codes'
 import { createCallActions, failureMessage, type CallApi } from './actions'
 
 interface Call {
@@ -107,9 +108,9 @@ describe('createCallActions', () => {
   it('maps error codes to the shared English messages', async () => {
     const { actions, notify } = setup(() => new FakeApiError(403, 'CALL_FORBIDDEN'))
     expect(await actions.remove(tara)).toEqual({ ok: false, code: 'CALL_FORBIDDEN', status: 403 })
-    expect(notify).toHaveBeenCalledWith('Only the host or a co-host can do that.')
+    expect(notify).toHaveBeenCalledWith(ERROR_MESSAGES.CALL_FORBIDDEN)
     expect(failureMessage('NETWORK')).toBe('Network error. Check your connection.')
-    expect(failureMessage('SOMETHING_ELSE')).toBe('Something went wrong on the server. Try again in a moment.')
+    expect(failureMessage('SOMETHING_ELSE')).toBe(ERROR_MESSAGES.INTERNAL)
   })
 
   it('treats 404 on a target as "they left" and refetches', async () => {
@@ -131,7 +132,7 @@ describe('createCallActions', () => {
     }
     const { actions, notify } = setup(() => new FakeApiError(409, 'ROOM_FULL'))
     await actions.admit('r1')
-    expect(notify).toHaveBeenCalledWith('This meeting is full. Try again when someone leaves.')
+    expect(notify).toHaveBeenCalledWith(ERROR_MESSAGES.ROOM_FULL)
   })
 
   it('keeps reads quiet', async () => {

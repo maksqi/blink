@@ -5,9 +5,11 @@
 import { UsersIcon } from '@lucide/vue'
 import { effectScope, watch } from 'vue'
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { isModeratorRole, participantInfoStore } from './useParticipantInfo'
-import ParticipantsPanel from '~/components/call/participants/ParticipantsPanel.vue'
-import RoleBadge from '~/components/call/participants/RoleBadge.vue'
+
+const ParticipantsPanel = lazyCallComponent(() => import('~/components/call/participants/ParticipantsPanel.vue'))
+const RoleBadge = lazyCallComponent(() => import('~/components/call/participants/RoleBadge.vue'))
 
 export default defineCallFeature({
   id: 'participants',

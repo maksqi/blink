@@ -43,9 +43,10 @@ test.describe('media effects fallback', () => {
     const peer = await joinAs('participant', { name: 'Pete Peer', room: host.room })
     await waitForRemoteFrames(peer.page, host.identity, 10)
     await waitForRemoteFrames(page, peer.identity, 10)
+    // A meaningful level, not the comfort noise of a silent sender (about 4e-9; F-061).
     await expect
       .poll(async () => (await inboundAudio(peer.page, host.identity))[0]?.totalAudioEnergy ?? 0, { timeout: 20_000 })
-      .toBeGreaterThan(0)
+      .toBeGreaterThan(1e-3)
 
     // In the call the More menu entry is disabled and says why.
     await page.getByRole('button', { name: 'More options' }).click()

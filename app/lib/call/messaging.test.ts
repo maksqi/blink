@@ -6,13 +6,15 @@ import { sealAppMessage, type AppMessage } from '../e2ee/envelope'
 import { deriveMeetingKeys, generateRoomKey } from '../e2ee/keys'
 import { toBase64Url, utf8 } from '../e2ee/encoding'
 import { createEventBus } from './event-bus'
-import { createMessaging, type DropReason, type IncomingPacket } from './messaging'
+import { createMessaging, MESSAGE_FRESHNESS_MS, type DropReason, type IncomingPacket } from './messaging'
 
 const SLUG = 'abc-defg-hjk'
 const EPOCH = toBase64Url(new Uint8Array(16).fill(7))
 const ALICE = 'p_AliceAliceAlice1'
 const BOB = 'p_BobBobBobBobBob1'
 const LOCAL = 'p_LocalLocalLocal1'
+/** This device's clock: a moment after the test messages were sent. */
+const NOW = 1_700_000_000_000 + 1_500
 
 function view(identity: string, isLocal = false): ParticipantView {
   return {
@@ -63,6 +65,7 @@ function setup() {
     },
     lookup: (identity) => known.get(identity) ?? null,
     events,
+    now: () => NOW,
     onDrop: (reason) => drops.push(reason),
   })
   const chats: Array<{ body: unknown; from: string; ts: number }> = []
@@ -157,6 +160,21 @@ describe('AppMessaging receive', () => {
     expect(drops).toEqual(['duplicate', 'duplicate'])
   })
 
+  it('drops envelopes whose timestamp is too far from this clock, so replays after a reload fail (F-031)', async () => {
+    const { messaging, chats, drops } = setup()
+    const sent = 1_700_000_000_000
+    // A replay of an old message (the id memory starts empty after a reload).
+    await messaging.handlePacket(await packet({ message: message({ ts: NOW - MESSAGE_FRESHNESS_MS - 1 }) }))
+    // A sender clock far ahead.
+    await messaging.handlePacket(await packet({ message: message({ ts: NOW + MESSAGE_FRESHNESS_MS + 1 }) }))
+    expect(chats).toEqual([])
+    expect(drops).toEqual(['stale', 'stale'])
+    // Clock skew within the margin, either way, is fine.
+    await messaging.handlePacket(await packet({ message: message({ ts: sent - 4 * 60_000 }) }))
+    await messaging.handlePacket(await packet({ message: message({ ts: NOW + 4 * 60_000 }) }))
+    expect(chats).toHaveLength(2)
+  })
+
   it('drops an envelope whose type does not match its topic', async () => {
     const { messaging, chats, drops } = setup()
     await messaging.handlePacket(await packet({ message: message({ type: 'reaction' }), topic: DATA_TOPICS.chat }))
@@ -187,6 +205,7 @@ describe('AppMessaging receive', () => {
       transport: { localIdentity: () => LOCAL, publish: async () => {} },
       lookup: (identity) => (identity === ALICE ? view(ALICE) : null),
       events,
+      now: () => NOW,
       onHandlerError,
     })
     const received: unknown[] = []

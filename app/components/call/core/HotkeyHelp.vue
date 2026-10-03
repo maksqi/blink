@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Kbd } from '@/components/ui/kbd'
-import { useCallUi } from '~/composables/call'
+import { useCallUi, useReturnFocus } from '~/composables/call'
 
 const ui = useCallUi()
+// Opened from the More options menu or with "?": closing returns focus there.
+const returnFocus = useReturnFocus(ui.hotkeysOpen)
 
 const shortcuts = [
   { keys: ['M'], text: 'Turn your microphone on or off' },
@@ -15,7 +17,7 @@ const shortcuts = [
 
 <template>
   <Dialog v-model:open="ui.hotkeysOpen.value">
-    <DialogContent class="sm:max-w-md" data-testid="hotkey-help">
+    <DialogContent class="sm:max-w-md" data-testid="hotkey-help" @close-auto-focus="returnFocus">
       <DialogHeader>
         <DialogTitle>Keyboard shortcuts</DialogTitle>
         <DialogDescription>

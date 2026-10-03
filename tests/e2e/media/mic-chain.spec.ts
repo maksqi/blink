@@ -6,6 +6,12 @@ import { chooseNoise, closeSettings, mediaState, openSettings, waitForMedia, wai
 // Stage 07 DoD: noise suppression browser → rnnoise → off → browser and the own mic gain change the mic chain without
 // republishing: the microphone keeps its trackSid on both sides and the peer keeps hearing the fake tone.
 
+/**
+ * Received audio energy that means the tone arrives (F-061). A silent sender still produces comfort noise (about 4e-9),
+ * which `> 0` accepted; the fake microphones deliver several tenths over a few seconds.
+ */
+const AUDIBLE_ENERGY = 1e-3
+
 /** Audio energy the viewer receives from the publisher during `ms` (call-core's getStats snapshots). */
 async function energyOver(viewer: JoinedPeer, publisher: JoinedPeer, ms = 2_500): Promise<number> {
   const read = async () => (await inboundAudio(viewer.page, publisher.identity))[0]?.totalAudioEnergy ?? 0
@@ -35,7 +41,7 @@ test.describe('microphone chain', () => {
     const peer = await joinAs('participant', { name: 'Pete Peer', room: host.room })
     await expect
       .poll(async () => (await inboundAudio(peer.page, host.identity))[0]?.totalAudioEnergy ?? 0, { timeout: 20_000 })
-      .toBeGreaterThan(0)
+      .toBeGreaterThan(AUDIBLE_ENERGY)
 
     const initial = await waitForNoise(host.page, 'browser')
     const micSid = initial.micTrackSid
@@ -43,7 +49,7 @@ test.describe('microphone chain', () => {
     expect(await receivedSid(peer.page, host)).toBe(micSid)
     expect(initial.micProcessing.noiseSuppression).toBe(true)
     const live = await energyOver(peer, host)
-    expect(live, 'peer hears the fake tone with browser noise suppression').toBeGreaterThan(0)
+    expect(live, 'peer hears the fake tone with browser noise suppression').toBeGreaterThan(AUDIBLE_ENERGY)
 
     const expectSameSids = async (step: string) => {
       expect((await mediaState(host.page))?.micTrackSid, `local mic sid after ${step}`).toBe(micSid)
@@ -86,7 +92,9 @@ test.describe('microphone chain', () => {
     const browser = await waitForNoise(host.page, 'browser')
     expect(browser.micProcessing.noiseSuppression).toBe(true)
     await host.page.waitForTimeout(1_000)
-    expect(await energyOver(peer, host), 'peer hears the tone with browser suppression').toBeGreaterThan(0)
+    expect(await energyOver(peer, host), 'peer hears the tone with browser suppression').toBeGreaterThan(
+      AUDIBLE_ENERGY,
+    )
     await expectSameSids('browser')
     await closeSettings(host.page)
   })

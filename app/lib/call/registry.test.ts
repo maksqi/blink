@@ -35,6 +35,7 @@ describe('buildRegistry', () => {
     expect(registry.preJoin.map((item) => item.id)).toEqual(['beta-slot'])
     expect(registry.settings.map((item) => item.id)).toEqual(['beta-settings'])
     expect(registry.phaseScreens.map((item) => item.id)).toEqual(['alpha-ended', 'beta-ended'])
+    expect(registry.overlays.map((item) => item.id)).toEqual(['beta-overlay-early', 'beta-overlay-late'])
   })
 
   it('breaks order ties by id so the result is stable', () => {

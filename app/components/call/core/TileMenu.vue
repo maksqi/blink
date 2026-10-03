@@ -34,7 +34,7 @@ function setVolume(value: number[] | undefined) {
       <button
         type="button"
         :aria-label="`Options for ${participant.name}`"
-        class="inline-flex size-7 items-center justify-center rounded-md bg-black/50 text-white opacity-100 transition-opacity hover:bg-black/70 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring sm:opacity-0 sm:group-hover/tile:opacity-100 sm:group-focus-within/tile:opacity-100 data-[state=open]:opacity-100"
+        class="inline-flex size-7 items-center justify-center rounded-md bg-black/50 max-sm:size-11 pointer-coarse:size-11 text-white opacity-100 transition-opacity hover:bg-black/70 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring sm:opacity-0 sm:group-hover/tile:opacity-100 sm:group-focus-within/tile:opacity-100 data-[state=open]:opacity-100"
       >
         <EllipsisVerticalIcon class="size-4" aria-hidden="true" />
       </button>

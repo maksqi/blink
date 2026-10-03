@@ -85,6 +85,12 @@ describe('toParticipantView', () => {
     expect(view.mediaEncrypted).toBe(false)
   })
 
+  it('keeps a blocked participant marked after the unencrypted publication is gone', () => {
+    const encryptedOnly = participant({ trackPublications: new Map([['a', { isEncrypted: true }]]) })
+    expect(toParticipantView(encryptedOnly, options).mediaEncrypted).toBe(true)
+    expect(toParticipantView(encryptedOnly, { ...options, blocked: true }).mediaEncrypted).toBe(false)
+  })
+
   it('uses the local E2EE state for the local participant', () => {
     const local = participant({ isLocal: true, trackPublications: new Map([['a', { isEncrypted: false }]]) })
     expect(toParticipantView(local, { localEncrypted: true, now: 1 }).mediaEncrypted).toBe(true)

@@ -3,9 +3,11 @@
  * end for all). Test builds also expose the room metadata every client sees as `state.roomState` in the test hooks.
  */
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { testHooks } from '../../../contracts/test-hooks'
 import { hasRoomControls } from './controls'
-import HostControlsMenu from '~/components/call/host/HostControlsMenu.vue'
+
+const HostControlsMenu = lazyCallComponent(() => import('~/components/call/host/HostControlsMenu.vue'))
 
 export default defineCallFeature({
   id: 'room-settings',

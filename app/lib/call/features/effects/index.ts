@@ -3,13 +3,15 @@
  * gain, in pre-join and during the call, remembered per device. Switching never republishes a track.
  */
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { browserStorage, readDevicePrefs } from '../../devices'
 import { currentMediaFxEnv, probeWebGL2 } from '../../../media/support'
 import { EffectsController, registerEffects } from './controller'
-import BlurToggle from '~/components/call/effects/BlurToggle.vue'
-import EffectsSettings from '~/components/call/effects/EffectsSettings.vue'
 import PreJoinEffects from '~/components/call/effects/PreJoinEffects.vue'
 import { useCallStore } from '~/stores/call'
+
+const BlurToggle = lazyCallComponent(() => import('~/components/call/effects/BlurToggle.vue'))
+const EffectsSettings = lazyCallComponent(() => import('~/components/call/effects/EffectsSettings.vue'))
 
 export default defineCallFeature({
   id: 'effects',

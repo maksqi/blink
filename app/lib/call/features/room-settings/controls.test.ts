@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { canPerform, type CallKind, type CallRole } from '#shared/utils/permissions'
 import {
   controlAction,
-  displayedSetting,
   hasRoomControls,
   PendingSettings,
   settlePending,
@@ -77,12 +76,6 @@ describe('pending settings', () => {
     const pending = { chatEnabled: false, screenSharePolicy: 'hosts' as const }
     expect(settlePending(pending, { ...STATE, chatEnabled: false })).toEqual({ screenSharePolicy: 'hosts' })
     expect(settlePending(pending, STATE)).toBe(pending)
-  })
-
-  it('displays the pending value first, then the server truth', () => {
-    expect(displayedSetting('locked', { locked: true }, STATE)).toBe(true)
-    expect(displayedSetting('locked', {}, STATE)).toBe(false)
-    expect(displayedSetting('chatEnabled', {}, null)).toBeUndefined()
   })
 })
 

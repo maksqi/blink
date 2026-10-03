@@ -5,8 +5,10 @@
 import { HourglassIcon } from '@lucide/vue'
 import { effectScope, watch } from 'vue'
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { lobbyState } from './useLobby'
-import LobbyPanel from '~/components/call/lobby/LobbyPanel.vue'
+
+const LobbyPanel = lazyCallComponent(() => import('~/components/call/lobby/LobbyPanel.vue'))
 
 export default defineCallFeature({
   id: 'lobby',

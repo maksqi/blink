@@ -13,6 +13,7 @@ import {
   LocalVideoTrack,
   RoomEvent,
   Track,
+  TrackEvent,
   type DisconnectReason,
   type ExternalE2EEKeyProvider,
   type LocalTrack,
@@ -43,6 +44,7 @@ import { AudioEngine } from '../livekit/audio-engine'
 import { resumeSharedAudioContext } from '../livekit/audio-context'
 import { connectRoom } from '../livekit/connect'
 import { LocalMedia } from '../livekit/local-media'
+import { waitUntilRunning } from '../livekit/mic-chain-check'
 import { DEFAULT_MEDIA_LIMITS, screenSharePreset, type MediaLimits } from '../livekit/presets'
 import { createRoom } from '../livekit/room-factory'
 import { collectInboundStats } from '../livekit/stats'
@@ -62,7 +64,9 @@ import {
 import { outcomeForDisconnect, isTerminalPhase } from './disconnect'
 import { createEventBus, type DisposableEventBus } from './event-bus'
 import { callRegistry } from './features'
+import { preloadCallComponents } from './lazy'
 import { createMessaging, type CallMessaging } from './messaging'
+import { afterPageLoad } from './page-load'
 import { joinClickMarked, markJoin, markJoinClick, JOIN_MARKS } from './metrics'
 import { toParticipantView } from './participant-view'
 import { setupFeatures } from './registry'
@@ -77,6 +81,8 @@ export type ApiClient = <T>(
 
 export interface CallSessionOptions {
   slug: string
+  /** The meeting's name, when known (the call view also sets it from its title). */
+  roomName?: string
   /** The room key K (from the fragment, the tab key or the key vault). Stays inside the session. */
   key: RoomKey
   /** Admin media limits from `GET /api/config` (`media`); defaults to the settings defaults. */
@@ -99,6 +105,7 @@ export interface CallSessionOptions {
 }
 
 type VideoSource = 'camera' | 'screen_share'
+type PublishSource = 'microphone' | 'camera'
 
 const LAST_INVITE_EXPIRY = '24h'
 
@@ -151,10 +158,13 @@ export class CallSession {
   private readonly scope: EffectScope
   private readonly cleanups: Array<() => void> = []
   private featureCleanup: (() => void) | null = null
+  /** The test hook this session installed (dispose removes only its own, never a newer session's). */
+  private unencryptedHook: (() => Promise<void>) | null = null
   private readonly views = new Map<string, ParticipantView>()
   private viewsScheduled = false
   private audioContainer: HTMLElement | null = null
   private screenTracks: LocalTrack[] = []
+  private readonly publishing = new Map<PublishSource, Promise<void>>()
   private readonly api: ApiClient
   private readonly options: CallSessionOptions
 
@@ -166,6 +176,7 @@ export class CallSession {
     this.store = useCallStore()
     this.store.reset(this.id)
     this.store.slug = options.slug
+    this.store.roomName = options.roomName?.trim() || null
     this.store.e2eeRequired = this.e2ee
     this.store.muteOnJoin = options.muteOnJoin === true
     this.api = options.api ?? (useApi() as ApiClient)
@@ -188,6 +199,7 @@ export class CallSession {
           events: this.events,
           localEncrypted: () => this.e2ee && Boolean(this.room?.isE2EEEnabled),
           onPlan: (plan) => this.onPlan(plan),
+          onBlocked: (identity) => this.onBlocked(identity),
         }),
       )
     }
@@ -206,6 +218,7 @@ export class CallSession {
         createElement: () => document.createElement('audio'),
         container: () => this.ensureAudioContainer(),
         hostVolume: (identity) => this.views.get(identity)?.volumeForEveryone ?? 100,
+        blocked: (identity) => this.isBlocked(identity),
         setMicGain: (gain) => {
           this.local.setMicGain(gain)
           this.store.micGain = gain
@@ -252,12 +265,22 @@ export class CallSession {
     this.setPhaseInternal(phase)
   }
 
+  /** The meeting's name for `CallContext.roomName` (pre-join and the call view pass their title; empty is ignored). */
+  setRoomName(name: string | null | undefined): void {
+    const trimmed = name?.trim()
+    if (this.disposed || !trimmed || this.store.roomName === trimmed) return
+    this.store.roomName = trimmed
+  }
+
   /** Opens camera and microphone for the pre-join preview (with the remembered devices). */
   async startPreview(): Promise<void> {
     if (!this.support.ok || this.disposed) return
     // A remounted pre-join keeps the user's choices; it only refreshes the device lists.
     if (this.previewStarted) return this.refreshDevices()
     this.previewStarted = true
+    // Media elements created before `load` can hold it for ever (Firefox): open the devices after it (F-064).
+    await afterPageLoad(typeof document === 'undefined' ? undefined : document)
+    if (this.disposed) return
     const prefs = readDevicePrefs(browserStorage())
     const forcedOff = this.store.muteOnJoin
     const wantCamera = this.options.camera !== false && !forcedOff
@@ -266,8 +289,11 @@ export class CallSession {
       wantCamera ? this.local.enableCamera(prefs.videoinput) : Promise.resolve(),
       wantMic ? this.local.enableMic(prefs.audioinput) : this.local.ensureMic(prefs.audioinput),
     ])
+    // Every await can outlive the page: a disposed session never touches the store (the next session owns it) and
+    // never adds listeners (they would keep it alive).
+    if (this.disposed) return
     // A fast Join can connect while a device is still opening; connect() published only what existed then.
-    if (this.isConnected && !this.disposed) {
+    if (this.isConnected) {
       await Promise.allSettled([
         this.publishMic(),
         this.store.media.cameraOn ? this.publishCamera() : Promise.resolve(),
@@ -275,6 +301,7 @@ export class CallSession {
       this.scheduleViews()
     }
     await this.refreshDevices()
+    if (this.disposed) return
     if (prefs.audiooutput) this.store.outputDevice = prefs.audiooutput
     this.watchDevices()
   }
@@ -282,6 +309,8 @@ export class CallSession {
   /** Call from the Join click handler (before any network request) so the join-time measurement starts there. */
   markJoinClick(): void {
     markJoinClick()
+    // The call view's feature components load on demand (lazy.ts); fetch them now, while the join request runs.
+    void preloadCallComponents()
     void resumeSharedAudioContext()
     void this.room?.startAudio().catch(() => undefined)
   }
@@ -304,9 +333,11 @@ export class CallSession {
     try {
       keys = await this.ensureKeys(grant.epoch)
     } catch {
-      this.fail('invalid-key')
+      if (!this.disposed) this.fail('invalid-key')
       return
     }
+    // Disposed while the keys were derived: dispose() saw no connection to close, so never open one.
+    if (this.disposed) return
     this.store.safetyCode = keys.safetyCode
 
     try {
@@ -337,6 +368,21 @@ export class CallSession {
     await Promise.allSettled([this.publishLocalTracks(), Promise.resolve(this.subscriptions?.apply())])
     this.scheduleViews()
     if (this.store.outputDevice) void this.audio.setOutputDevice(this.store.outputDevice)
+    void this.checkMicChain()
+  }
+
+  /**
+   * The mic chain sends what its AudioContext renders; one that never runs (no audio backend) would send silence.
+   * Then the raw microphone is sent and the person is told (F-060, mic-chain-check.ts).
+   */
+  private async checkMicChain(): Promise<void> {
+    const context = this.local.audioContext
+    void context.resume().catch(() => undefined)
+    if (await waitUntilRunning(context)) return
+    if (this.disposed || !this.isConnected) return
+    if (!(await this.local.bypassMicChain()) || this.disposed) return
+    console.warn('blinq: the audio context does not run; the microphone is sent without the mic chain')
+    this.store.micChainBypassed = true
   }
 
   /** Leaves the call (the phase becomes `left`). */
@@ -372,15 +418,18 @@ export class CallSession {
     if (__BLINQ_TEST_HOOKS__) {
       const hooks = testHooks()
       if (hooks) {
-        delete hooks.publishUnencryptedTrack
+        if (hooks.publishUnencryptedTrack === this.unencryptedHook) delete hooks.publishUnencryptedTrack
         delete hooks.state.call
       }
+      this.unencryptedHook = null
     }
   }
 
   // ---- Media controls -------------------------------------------------------------------------------------------------
 
   async setMicEnabled(enabled: boolean): Promise<void> {
+    if (this.disposed) return
+    await this.settlePublish('microphone')
     if (this.disposed) return
     const connected = this.isConnected
     if (enabled) {
@@ -394,6 +443,8 @@ export class CallSession {
   }
 
   async setCameraEnabled(enabled: boolean): Promise<void> {
+    if (this.disposed) return
+    await this.settlePublish('camera')
     if (this.disposed) return
     const connected = this.isConnected
     if (enabled) {
@@ -422,7 +473,7 @@ export class CallSession {
       this.store.outputDevice = deviceId
       await this.audio.setOutputDevice(deviceId)
     }
-    if (kind !== 'audiooutput') this.store.media = { ...this.local.status }
+    if (kind !== 'audiooutput' && !this.disposed) this.store.media = { ...this.local.status }
   }
 
   get canShareScreen(): boolean {
@@ -461,6 +512,11 @@ export class CallSession {
       this.screenTracks = tracks.map((track) => markRaw(track))
       for (const track of this.screenTracks) {
         if (track.kind === Track.Kind.Video) {
+          // A host stopping the share mutes the published track (LiveKit's remote mute): end the share here too, so
+          // the toggle shows it off and one click shares again (F-005).
+          track.once(TrackEvent.Muted, () => {
+            if (this.screenTracks.includes(track)) void this.stopScreenShare().catch(() => undefined)
+          })
           track.mediaStreamTrack.contentHint = choice.contentHint
           await room.localParticipant.publishTrack(track, {
             source: Track.Source.ScreenShare,
@@ -524,6 +580,7 @@ export class CallSession {
     await this.room?.startAudio().catch(() => undefined)
     await this.audio.resume()
     await resumeSharedAudioContext()
+    if (this.disposed) return
     this.store.audioBlocked = this.room ? !this.room.canPlaybackAudio : false
   }
 
@@ -564,6 +621,7 @@ export class CallSession {
       if (source === 'camera') return this.local.camera && !this.local.camera.isMuted ? this.local.camera : null
       return null
     }
+    if (this.isBlocked(identity)) return null
     const participant = room.remoteParticipants.get(identity)
     const publication = participant?.getTrackPublication(lkSource) as RemoteTrackPublication | undefined
     if (!publication || !publication.isEncrypted || publication.isMuted) return null
@@ -610,6 +668,7 @@ export class CallSession {
       room,
       roomId: toRef(store, 'roomId'),
       slug: toRef(store, 'slug'),
+      roomName: toRef(store, 'roomName'),
       phase: toRef(store, 'phase'),
       self: computed(() => store.self),
       participants: computed(() => store.participants),
@@ -739,8 +798,9 @@ export class CallSession {
   }
 
   private onTrackSubscribed(track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) {
-    // Defense in depth: the policy never subscribes NONE, but never play one even if it happened.
-    if (!publication.isEncrypted) {
+    // Defense in depth: the policy never subscribes NONE or a blocked participant, but never play one even if it
+    // happened.
+    if (!publication.isEncrypted || this.isBlocked(participant.identity)) {
       publication.setSubscribed(false)
       return
     }
@@ -815,30 +875,62 @@ export class CallSession {
     await Promise.allSettled([this.publishMic(), this.store.media.cameraOn ? this.publishCamera() : Promise.resolve()])
   }
 
-  private async publishMic(): Promise<void> {
-    const room = this.room
-    const mic = this.local.mic
-    if (!room || !mic || !this.store.permissions.microphone) return
-    if (room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track === mic) return
-    try {
-      await room.localParticipant.publishTrack(mic, { source: Track.Source.Microphone })
-    } catch (error) {
-      console.warn('blinq: could not publish the microphone', error instanceof Error ? error.name : 'error')
-    }
-    this.bumpTracks()
+  private publishMic(): Promise<void> {
+    return this.publishOnce('microphone', async () => {
+      // A mute or unmute already queued finishes before the publish starts (see settlePublish).
+      await this.local.idle('mic')
+      const room = this.room
+      const mic = this.local.mic
+      if (!room || !mic || !this.store.permissions.microphone) return
+      if (room.localParticipant.getTrackPublication(Track.Source.Microphone)?.track === mic) return
+      try {
+        await room.localParticipant.publishTrack(mic, { source: Track.Source.Microphone })
+      } catch (error) {
+        console.warn('blinq: could not publish the microphone', error instanceof Error ? error.name : 'error')
+      }
+      this.bumpTracks()
+    })
   }
 
-  private async publishCamera(): Promise<void> {
-    const room = this.room
-    const camera = this.local.camera
-    if (!room || !camera || camera.isMuted || !this.store.permissions.camera) return
-    if (room.localParticipant.getTrackPublication(Track.Source.Camera)?.track === camera) return
-    try {
-      await room.localParticipant.publishTrack(camera, { source: Track.Source.Camera })
-    } catch (error) {
-      console.warn('blinq: could not publish the camera', error instanceof Error ? error.name : 'error')
-    }
-    this.bumpTracks()
+  private publishCamera(): Promise<void> {
+    return this.publishOnce('camera', async () => {
+      await this.local.idle('camera')
+      const room = this.room
+      const camera = this.local.camera
+      if (!room || !camera || camera.isMuted || !this.store.permissions.camera) return
+      if (room.localParticipant.getTrackPublication(Track.Source.Camera)?.track === camera) return
+      try {
+        await room.localParticipant.publishTrack(camera, { source: Track.Source.Camera })
+      } catch (error) {
+        console.warn('blinq: could not publish the camera', error instanceof Error ? error.name : 'error')
+      }
+      this.bumpTracks()
+    })
+  }
+
+  /**
+   * One publish per source at a time: a second request joins the one under way (it would publish the track twice),
+   * and mute changes wait for it (see `settlePublish`). Never rejects.
+   */
+  private publishOnce(source: PublishSource, run: () => Promise<void>): Promise<void> {
+    const current = this.publishing.get(source)
+    if (current) return current
+    const next = run()
+      .catch(() => undefined)
+      .finally(() => {
+        if (this.publishing.get(source) === next) this.publishing.delete(source)
+      })
+    this.publishing.set(source, next)
+    return next
+  }
+
+  /**
+   * LiveKit reports a mute to the server only for a published track: muting during the publish logged "could not
+   * update mute status for unpublished track". A toggle right after joining waits for that publish, and a publish
+   * waits for the toggles queued before it, so the two never overlap (F-059).
+   */
+  private async settlePublish(source: PublishSource): Promise<void> {
+    await this.publishing.get(source)
   }
 
   private syncPermissions() {
@@ -886,7 +978,24 @@ export class CallSession {
     return toParticipantView(participant, {
       localEncrypted: this.e2ee && Boolean(this.room?.isE2EEEnabled),
       now: this.store.connectedAt ?? Date.now(),
+      blocked: !participant.isLocal && this.isBlocked(participant.identity),
     })
+  }
+
+  /**
+   * A remote participant with an unencrypted publication (now or earlier in this call) is blocked for the rest of the
+   * call: livekit-client keeps one decrypt flag per participant, which that publication may have turned off for their
+   * encrypted tracks too (docs/SECURITY.md §3.2, F-015).
+   */
+  private isBlocked(identity: string): boolean {
+    return this.subscriptions?.isBlocked(identity) ?? false
+  }
+
+  private onBlocked(identity: string) {
+    // The policy unsubscribes everything of theirs; stop what already plays and drop their video at once.
+    this.audio.removeIdentity(identity)
+    this.bumpTracks()
+    this.scheduleViews()
   }
 
   private scheduleViews() {
@@ -953,9 +1062,10 @@ export class CallSession {
   }
 
   private async refreshDevices() {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return
+    if (this.disposed || typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return
     try {
       const lists = toDeviceLists(await navigator.mediaDevices.enumerateDevices())
+      if (this.disposed) return
       this.store.devices = lists
       // A device that vanished (unplugged headset): move to the next one.
       const media = this.store.media
@@ -988,6 +1098,7 @@ export class CallSession {
     }
     const media = this.store.media
     const [camera, microphone] = await Promise.all([query('camera'), query('microphone')])
+    if (this.disposed) return
     this.store.devicePermissions = {
       camera: media.cameraError === 'denied' ? 'denied' : camera,
       microphone: media.micError === 'denied' ? 'denied' : microphone,
@@ -995,7 +1106,7 @@ export class CallSession {
   }
 
   private watchDevices() {
-    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.addEventListener) return
+    if (this.disposed || typeof navigator === 'undefined' || !navigator.mediaDevices?.addEventListener) return
     const onChange = () => void this.refreshDevices()
     navigator.mediaDevices.addEventListener('devicechange', onChange)
     this.cleanups.push(() => navigator.mediaDevices.removeEventListener('devicechange', onChange))
@@ -1010,15 +1121,14 @@ export class CallSession {
   private installTestHooks() {
     const hooks = testHooks()
     if (!hooks) return
+    const room = this.room
     void import('./test-support').then((support) => {
       if (this.disposed) return
-      hooks.useFakeScreenSource = (enabled) => support.setFakeScreenSource(enabled)
-      if (!this.e2ee && this.room) {
-        const room = this.room
-        hooks.publishUnencryptedTrack = () => support.publishUnencryptedTrack(room)
-      } else {
-        delete hooks.publishUnencryptedTrack
-      }
+      // The module function itself: a closure created here would keep this session alive after dispose (F-037).
+      hooks.useFakeScreenSource = support.setFakeScreenSource
+      if (!room) return
+      this.unencryptedHook = () => support.publishUnencryptedTrack(room)
+      hooks.publishUnencryptedTrack = this.unencryptedHook
     })
     this.scope.run(() => {
       watch(
@@ -1035,6 +1145,7 @@ export class CallSession {
           this.store.layout,
           this.store.pinned,
           this.store.micGain,
+          this.store.micChainBypassed,
           this.store.localVolumes,
         ],
         () => {
@@ -1052,6 +1163,7 @@ export class CallSession {
             layout: this.store.layout,
             pinned: this.store.pinned,
             micGain: this.store.micGain,
+            micChainBypassed: this.store.micChainBypassed,
             localVolumes: { ...this.store.localVolumes },
             participants: this.store.participants.map((p) => ({ ...p })),
             safetyCode: this.store.safetyCode,

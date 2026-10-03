@@ -49,6 +49,30 @@ test.describe('host actions', () => {
     await expect.poll(field(host.page, ana.identity, 'micEnabled')).toBe(true)
   })
 
+  test('stop a screen share; the share ends for the presenter too, who can share again', async ({ collab }) => {
+    const { room, call: host } = await collab.meeting({ waitingRoom: false })
+    const ana = await collab.addUser(room, host, { name: 'Ana Lima', camera: false })
+    const sharing = async () => (await viewOf(host.page, ana.identity))?.screenSharing
+    await ana.page.evaluate(() => {
+      const hooks = (window as unknown as { __blinqTest: { useFakeScreenSource?: (enabled: boolean) => void } })
+        .__blinqTest
+      hooks.useFakeScreenSource?.(true)
+    })
+    await ana.page.getByRole('button', { name: 'Share screen' }).click()
+    await expect.poll(sharing).toBe(true)
+
+    await openActions(host.page, ana.identity)
+    await actionsMenu(host.page).locator('[data-action="stop-screen-share"]').click()
+    await within1s(sharing, 'the host sees the share end').toBe(false)
+    await expect(toastWith(ana.page, 'The host stopped your screen share')).toBeVisible()
+    // F-005: call-core's own state follows the server mute (the share is stopped, not left muted).
+    await expect.poll(async () => (await callState(ana.page))?.screenShare.active).toBe(false)
+    await expect(ana.page.getByRole('button', { name: 'Share screen' })).toBeVisible()
+
+    await ana.page.getByRole('button', { name: 'Share screen' }).click()
+    await expect.poll(sharing).toBe(true)
+  })
+
   test('a revoked microphone cannot be unmuted until the host gives it back', async ({ collab }) => {
     const { room, call: host } = await collab.meeting({ waitingRoom: false })
     const ana = await collab.addUser(room, host, { name: 'Ana Lima', camera: false })
@@ -152,7 +176,9 @@ test.describe('host actions', () => {
     await participantAction(host.page, ana.identity, 'remove')
     const confirm = host.page.getByTestId('remove-dialog')
     await expect(confirm).toContainText('Remove Ana Lima?')
-    await expect(confirm).toContainText('They cannot rejoin this meeting.')
+    await expect(confirm).toContainText(
+      'They can rejoin with an invite link unless you lock the room or revoke the link.',
+    )
     await confirm.getByTestId('remove-confirm').click()
 
     await waitForPhase(ana.page, 'removed', 5_000)
@@ -174,9 +200,9 @@ test.describe('host actions', () => {
     expect((rejoin.body.data as { code?: string } | undefined)?.code).toBe('JOIN_REMOVED')
   })
 
-  test('end for all ends every client', async ({ collab, guards }) => {
-    // The SDK logs its data channels closing when the server deletes the room under it; that is the expected end.
-    guards.allowConsoleError(/DataChannel error on \w+: User-Initiated Abort|data channel '\w+' closed unexpectedly/)
+  test('end for all ends every client', async ({ collab }) => {
+    // F-006: no console error either. The SCTP abort of the deleted room can arrive before the leave message; the
+    // patched SDK reports a data channel error only if the session is still open after a grace period.
     const { room, call: host } = await collab.meeting({ waitingRoom: false })
     const ana = await collab.addUser(room, host, { name: 'Ana Lima', camera: false })
     const ben = await collab.addGuest(room, host, { name: 'Ben Guest', camera: false })
@@ -189,5 +215,7 @@ test.describe('host actions', () => {
     for (const peer of [ana, ben, host]) await waitForPhase(peer.page, 'ended', 5_000)
     await expect(ana.page.getByTestId('call-end-notice-text')).toHaveText('The host ended the meeting for everyone.')
     await expect(ben.page.getByTestId('call-end-notice')).toBeVisible()
+    // Longer than the SDK's grace period, so a data channel error it would still report reaches the console guard.
+    await host.page.waitForTimeout(3_000)
   })
 })

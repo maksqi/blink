@@ -60,12 +60,15 @@ export interface ViewOptions {
   localEncrypted: boolean
   /** Used when LiveKit has no join time yet. */
   now: number
+  /** The participant is blocked for the rest of the call (an unencrypted publication, now or earlier). */
+  blocked?: boolean
 }
 
 export function toParticipantView(participant: ParticipantLike, options: ViewOptions): ParticipantView {
   const attributes = parseAttributes(participant.attributes)
   let mediaEncrypted = true
   if (participant.isLocal) mediaEncrypted = options.localEncrypted
+  else if (options.blocked) mediaEncrypted = false
   else
     for (const publication of participant.trackPublications.values())
       if (!publication.isEncrypted) mediaEncrypted = false

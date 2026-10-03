@@ -17,6 +17,18 @@ describe('localFileName', () => {
   it('keeps only safe characters', () => {
     expect(localFileName('../Team Sync: Q4!', date, 'video/webm')).toBe('blinq-team-sync-q4-2026-10-03-0905.webm')
     expect(localFileName('\u0000///', date, 'video/webm')).toBe('blinq-meeting-2026-10-03-0905.webm')
+    expect(localFileName('Caf\u00e9 r\u00e9union', date, 'video/webm')).toBe('blinq-cafe-reunion-2026-10-03-0905.webm')
+    expect(localFileName('a'.repeat(59) + ' b', date, 'video/webm')).toBe(`blinq-${'a'.repeat(59)}-2026-10-03-0905.webm`)
+  })
+
+  it('uses the room name and falls back to the slug when nothing of the name is left (F-009)', () => {
+    expect(localFileName(['Weekly sync', 'abc-defg-hjk'], date, 'video/webm')).toBe(
+      'blinq-weekly-sync-2026-10-03-0905.webm',
+    )
+    expect(localFileName(['\u65e5\u672c', 'abc-defg-hjk'], date, 'video/webm')).toBe(
+      'blinq-abc-defg-hjk-2026-10-03-0905.webm',
+    )
+    expect(localFileName([null, undefined], date, 'video/webm')).toBe('blinq-meeting-2026-10-03-0905.webm')
   })
 })
 

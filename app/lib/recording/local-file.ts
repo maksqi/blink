@@ -4,15 +4,37 @@
  */
 import { baseMimeType, containerOf } from './mime'
 
-/** `blinq-<room>-<YYYY-MM-DD-HHmm>.<webm|mp4>` in local time; the room part keeps only `[a-z0-9-]`. */
-export function localFileName(room: string, date: Date, mime: string): string {
-  const safeRoom =
-    room
-      .toLowerCase()
-      .replace(/[^a-z0-9-]+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '')
-      .slice(0, 60) || 'meeting'
+/** A name reduced to `[a-z0-9-]` for file names (accents dropped, other characters become dashes); may be empty. */
+export function fileNamePart(name: string): string {
+  return name
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+    .replace(/-$/, '')
+}
+
+/**
+ * `blinq-<room>-<YYYY-MM-DD-HHmm>.<webm|mp4>` in local time. The room part is the first of `names` (e.g. the room name,
+ * then the slug) that keeps any characters in `fileNamePart`, else `meeting`.
+ */
+export function localFileName(
+  names: string | ReadonlyArray<string | null | undefined>,
+  date: Date,
+  mime: string,
+): string {
+  const candidates = typeof names === 'string' ? [names] : names
+  let safeRoom = 'meeting'
+  for (const name of candidates) {
+    const part = name ? fileNamePart(name) : ''
+    if (part) {
+      safeRoom = part
+      break
+    }
+  }
   const pad = (value: number) => String(value).padStart(2, '0')
   const stamp = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`
   return `blinq-${safeRoom}-${stamp}.${containerOf(mime)}`

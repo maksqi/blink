@@ -6,6 +6,7 @@ import DeviceMenu from './DeviceMenu.vue'
 import { useCallSession } from '~/composables/call'
 import { callToast } from '~/lib/call/notify'
 import { CAPTURE_ERROR_TEXT } from '~/lib/call/devices'
+import { changeMedia } from '~/lib/call/media-toggles'
 
 const session = useCallSession()
 const store = session.store
@@ -18,12 +19,8 @@ const reason = computed(() => {
   return undefined
 })
 
-async function toggle() {
-  try {
-    await session.toggleCamera()
-  } catch {
-    if (store.media.cameraError) callToast.error(CAPTURE_ERROR_TEXT.camera[store.media.cameraError])
-  }
+function toggle() {
+  void changeMedia('camera', () => session.toggleCamera(), () => store.media, callToast.error)
 }
 </script>
 

@@ -83,6 +83,48 @@ describe('computeSubscriptions', () => {
     })
   })
 
+  describe('participants with one unencrypted publication (F-015)', () => {
+    // livekit-client keeps one decrypt flag per participant: a single NONE publication turns decryption off for the
+    // participant's encrypted tracks too, so none of them may stay subscribed.
+    const mixed = [pub('p_x', 'camera'), pub('p_x', 'microphone'), pub('p_x', 'screen_share', false)]
+
+    it('block every publication of that participant, encrypted ones included', () => {
+      const plan = computeSubscriptions(
+        input({
+          publications: [...mixed, pub('p_alice', 'camera'), pub('p_alice', 'microphone')],
+          tiles: [tile('p_x', 1280, 720, { priority: true }), tile('p_alice', 640, 360)],
+          demands: [{ identity: 'p_x', source: 'camera', width: 1280, height: 720 }],
+        }),
+      )
+      for (const source of ['camera', 'microphone', 'screen_share']) {
+        expect(decision(plan, 'p_x', source)).toMatchObject({ subscribed: false, enabled: false, blocked: true })
+      }
+      expect(decision(plan, 'p_alice', 'camera')).toMatchObject({ subscribed: true, enabled: true, blocked: false })
+      expect(decision(plan, 'p_alice', 'microphone')).toMatchObject({ subscribed: true, blocked: false })
+      expect(plan.blockedIdentities).toEqual(['p_x'])
+    })
+
+    it('stay blocked once the unencrypted publication is gone (untrusted)', () => {
+      const plan = computeSubscriptions(
+        input({
+          publications: [pub('p_x', 'camera'), pub('p_x', 'microphone'), pub('p_alice', 'microphone')],
+          tiles: [tile('p_x', 640, 360)],
+          untrusted: ['p_x'],
+        }),
+      )
+      expect(decision(plan, 'p_x', 'camera')).toMatchObject({ subscribed: false, blocked: true })
+      expect(decision(plan, 'p_x', 'microphone')).toMatchObject({ subscribed: false, blocked: true })
+      expect(decision(plan, 'p_alice', 'microphone')).toMatchObject({ subscribed: true, blocked: false })
+      expect(plan.blockedIdentities).toEqual(['p_x'])
+    })
+
+    it('report an untrusted participant without publications as blocked', () => {
+      const plan = computeSubscriptions(input({ publications: [pub('p_alice', 'camera')], untrusted: new Set(['p_x']) }))
+      expect(plan.blockedIdentities).toEqual(['p_x'])
+      expect(decision(plan, 'p_alice', 'camera').blocked).toBe(false)
+    })
+  })
+
   it('subscribes to nothing when this client does not encrypt', () => {
     const plan = computeSubscriptions(
       input({

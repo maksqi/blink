@@ -3,10 +3,12 @@
  * contain none of this.
  *
  * - `useFakeScreenSource(true)`: screen share captures a synthetic 1920×1080 canvas instead of `getDisplayMedia`.
- * - `publishUnencryptedTrack()`: publishes a canvas video track from a client joined with `e2ee=off`; peers must never
- *   subscribe to it (`call/unencrypted-blocked`).
+ * - `publishUnencryptedTrack()`: publishes a canvas video track announced as unencrypted. From a client joined with
+ *   `e2ee=off` it is plaintext (`call/unencrypted-blocked`). From an encrypting client it is what a compromised SFU
+ *   could claim about any participant: one publication marked NONE next to encrypted ones (`media/mixed-encryption`).
+ *   Peers must never subscribe to it, nor to anything else of that participant.
  */
-import { LocalVideoTrack, Track, type Room } from 'livekit-client'
+import { Encryption_Type, LocalVideoTrack, Track, type Room } from 'livekit-client'
 
 let fakeScreen = false
 
@@ -67,15 +69,36 @@ export function canvasSource(width: number, height: number, fps: number, label: 
   }
 }
 
-/** Publishes an unencrypted camera-source track (only meaningful from an `e2ee=off` harness client). */
+const UNENCRYPTED_TRACK_NAME = 'unencrypted-test'
+
+/**
+ * Publishes a track the SFU announces as unencrypted: a camera-source track from an `e2ee=off` client, or a
+ * screen-share-source track whose publish request says NONE from an encrypting client (its frames stay encrypted).
+ */
 export async function publishUnencryptedTrack(room: Room): Promise<void> {
-  if (room.isE2EEEnabled) throw new Error('publishUnencryptedTrack needs a client joined with e2ee=off')
   const source = canvasSource(640, 360, 15, 'unencrypted')
   const track = new LocalVideoTrack(source.track, undefined, true)
   track.on('ended', () => source.stop())
-  await room.localParticipant.publishTrack(track, {
-    source: Track.Source.Camera,
-    name: 'unencrypted-test',
-    simulcast: false,
-  })
+  const options = { name: UNENCRYPTED_TRACK_NAME, simulcast: false }
+  if (!room.isE2EEEnabled) {
+    await room.localParticipant.publishTrack(track, { ...options, source: Track.Source.Camera })
+    return
+  }
+  // The publish request copies `encryptionType` (internal to the SDK); every other track keeps GCM.
+  const local = room.localParticipant as unknown as { encryptionType: Encryption_Type }
+  const previous = local.encryptionType
+  local.encryptionType = Encryption_Type.NONE
+  try {
+    await room.localParticipant.publishTrack(track, { ...options, source: Track.Source.ScreenShare })
+  } finally {
+    local.encryptionType = previous
+  }
+}
+
+/** Unpublishes and stops the track `publishUnencryptedTrack` published. */
+export async function unpublishUnencryptedTrack(room: Room): Promise<void> {
+  for (const publication of room.localParticipant.trackPublications.values()) {
+    if (publication.trackName !== UNENCRYPTED_TRACK_NAME || !publication.track) continue
+    await room.localParticipant.unpublishTrack(publication.track, true)
+  }
 }

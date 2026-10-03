@@ -45,7 +45,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
 import { useCall } from '~/composables/call'
 import { participantMenu, type MenuItem, type MenuItemId } from '~/lib/call/features/host-actions/menu'
-import { afterRemoval } from '~/lib/call/features/host-actions/removal'
+import { afterRemoval, REMOVE_REJOIN_HINT } from '~/lib/call/features/host-actions/removal'
 import { callActions } from '~/lib/call/features/host-actions/state'
 import { participantInfoStore } from '~/lib/call/features/participants/useParticipantInfo'
 import type { ParticipantView } from '~/lib/contracts/call'
@@ -218,8 +218,8 @@ async function confirmRemove() {
             cn(
               'inline-flex shrink-0 items-center justify-center rounded-md focus-visible:outline-2 focus-visible:outline-ring',
               variant === 'tile'
-                ? 'size-7 bg-black/50 text-white transition-opacity hover:bg-black/70 focus-visible:opacity-100 data-[state=open]:opacity-100 sm:opacity-0 sm:group-focus-within/tile:opacity-100 sm:group-hover/tile:opacity-100'
-                : 'size-8 text-muted-foreground hover:bg-white/8 hover:text-foreground',
+                ? 'size-7 bg-black/50 text-white max-sm:size-11 pointer-coarse:size-11 transition-opacity hover:bg-black/70 focus-visible:opacity-100 data-[state=open]:opacity-100 sm:opacity-0 sm:group-focus-within/tile:opacity-100 sm:group-hover/tile:opacity-100'
+                : 'size-8 text-muted-foreground hover:bg-white/8 hover:text-foreground max-sm:size-11 pointer-coarse:size-11',
             )
           "
         >
@@ -280,7 +280,7 @@ async function confirmRemove() {
       <AlertDialogContent data-testid="remove-dialog">
         <AlertDialogHeader>
           <AlertDialogTitle>Remove {{ participant.name }}?</AlertDialogTitle>
-          <AlertDialogDescription>They cannot rejoin this meeting.</AlertDialogDescription>
+          <AlertDialogDescription>{{ REMOVE_REJOIN_HINT }}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel :disabled="removing">Cancel</AlertDialogCancel>

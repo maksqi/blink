@@ -144,6 +144,11 @@ if (__BLINQ_TEST_HOOKS__ && session) {
       leave: () => session.leave(),
       /** The MediaControl media-fx plugs into (processors, mic insert, mic processing). */
       media: session.context.media,
+      /** Removes the track `publishUnencryptedTrack()` published (peers must keep this participant blocked). */
+      unpublishUnencryptedTrack: async () => {
+        const support = await import('~/lib/call/test-support')
+        if (session.room) await support.unpublishUnencryptedTrack(session.room)
+      },
       /** Local publication sids by source: processors must never republish. */
       publications: () =>
         Object.fromEntries(

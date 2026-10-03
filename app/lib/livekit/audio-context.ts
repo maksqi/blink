@@ -92,6 +92,10 @@ export class MicChain implements TrackProcessor<Track.Kind.Audio, AudioProcessor
     await this.connectSource(options.track)
   }
 
+  /**
+   * Final: LiveKit calls it when the mic track stops, and LocalMedia when it is disposed. The output track is stopped
+   * too (LiveKit's `stop()` leaves a processor's output running).
+   */
   async destroy(): Promise<void> {
     this.source?.disconnect()
     this.insertOutput?.disconnect()
@@ -101,6 +105,7 @@ export class MicChain implements TrackProcessor<Track.Kind.Audio, AudioProcessor
     this.source = null
     this.gain.disconnect()
     this.analyser.disconnect()
+    this.processedTrack?.stop()
   }
 
   /** Own mic gain, 0..2 (clamped by the AudioEngine). */
