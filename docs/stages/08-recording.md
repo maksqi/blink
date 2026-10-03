@@ -1,6 +1,6 @@
 # Stage 08 — Recording
 
-Status: todo
+Status: done
 Owner(s): `recording-server` (Wave 1), `recording-client` (Wave 2)
 Depends on: `recording-server`: Stage 01 (server core: `requireUser`, `requireAdmin`, `resolveCaller`, settings, audit,
 `EventBus`, `Clock`, API test harness) and the `publishRoomState` stub that `rooms-backend` implements in parallel;

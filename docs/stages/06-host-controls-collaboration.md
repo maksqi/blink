@@ -1,6 +1,6 @@
 # Stage 06 — Host controls and collaboration
 
-Status: todo
+Status: done
 Owner(s): `collab-ui` (Wave 2)
 Depends on: Stage 04 backend (`rooms-backend`: every `/api/calls/:roomId/**` route except recording, `blinq.srv.v1`
 hints, `publishRoomState`), Stage 05 (`call-core`: `CallContext`, registries, `messaging`, `/dev/call` harness)
@@ -202,12 +202,14 @@ what `canPerform()` allows, and the server stays the only enforcement point.
       `pnpm test:e2e -- collab/host-actions`.
 - [x] [auto] Raise hand → allow to speak → the participant unmutes — evidence: `pnpm test:e2e -- collab/hands`.
 - [x] [auto] Volume for everyone is applied by receivers — evidence: `pnpm test:e2e -- collab/volume`.
-- [ ] [auto] Chat is ciphertext on the wire and an XSS payload renders as text — evidence:
+- [x] [auto] Chat is ciphertext on the wire and an XSS payload renders as text — evidence:
       `pnpm test:e2e -- collab/chat`, `app/lib/call/features/chat/linkify.test.ts`.
       Result (collab-ui): linkify and chat-store unit tests pass; "chat turned off" passes in Chromium and
       Firefox. The three specs that need a peer to receive a message fail (and so does collab/reactions):
       call-core drops every app message because livekit-client 2.22.3 never sets `EncryptedPacket.encryptionType`,
       so receivers see `NONE` (request in the collab-ui report). Not ticked until that fix lands.
+      Result (W2 wave gate, 2026-10-03): with the livekit-client patch all four chat specs and collab/reactions pass in
+      Chromium and Firefox.
 - [x] [auto] The hand queue is ordered by raise time — evidence: `app/lib/call/features/hands/queue.test.ts`,
       `pnpm test:e2e -- collab/hands`.
 - [x] [auto] A waiting person appears for moderators ≤ 1 s; admit, deny and admit all work — evidence:
@@ -216,10 +218,12 @@ what `canPerform()` allows, and the server stays the only enforcement point.
       `pnpm test:e2e -- collab/room-settings`.
 - [x] [auto] Removal shows the removed notice and the rotate-key prompt; end for all ends every client — evidence:
       `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] No horizontal overflow at 375/768/1440 px — evidence: `pnpm test:e2e -- collab/responsive`.
+- [x] [auto] No horizontal overflow at 375/768/1440 px — evidence: `pnpm test:e2e -- collab/responsive`.
       Result (collab-ui): no horizontal overflow at any width, and 375/1440 pass in Chromium, Firefox and
       mobile-chromium. At 768 px (desktop engines) the core control bar lets its end group overlap the center
       buttons once a host has all controls (request in the collab-ui report). Not ticked until that fix lands.
+      Result (W2 wave gate, 2026-10-03): with the single-row control bar below 1024 px, 375/768/1440 pass in Chromium,
+      Firefox and mobile-chromium.
 - [x] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- collab` (base fixture).
 - [x] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
 - [x] [agent-manual] Only owned paths changed and every feature appears without editing core files — evidence:

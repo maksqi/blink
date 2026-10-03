@@ -1,6 +1,6 @@
 # Stage 04 — Rooms, invites, join, E2EE keys
 
-Status: todo
+Status: done
 Owner(s): `rooms-backend` (Wave 1), `rooms-ui` (Wave 2)
 Depends on: Stage 01 (contracts, server core, UI shell); `rooms-ui` also needs Stage 02 (`auth`) and Stage 05
 (`call-core`) merged

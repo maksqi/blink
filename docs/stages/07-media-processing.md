@@ -1,6 +1,6 @@
 # Stage 07 — Media processing
 
-Status: todo
+Status: done
 Owner(s): `media-fx` (Wave 2)
 Depends on: Stage 05 (`call-core`: `MediaControl`, `AudioControl`, the shared 48 kHz AudioContext and mic `GainNode` in
 `app/lib/livekit/audio-context.ts`, the pre-join slot and settings-section registries, pre-join track reuse)

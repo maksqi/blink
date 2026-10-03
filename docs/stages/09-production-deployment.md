@@ -1,6 +1,6 @@
 # Stage 09 — Production deployment
 
-Status: todo
+Status: 9a done; 9b needs a real server (user)
 Owner(s): `infra` (9a, Wave 1); user (9b, final, on a real server)
 Depends on: 9a: Stage 01 (W0b merged: CLI, `/api/health`, `/api/ready`, env parsing, CI workflows). 9b: Stage 10
 (release candidate).

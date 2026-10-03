@@ -1,6 +1,6 @@
 # Stage 02 — Auth and accounts
 
-Status: todo
+Status: done
 Owner(s): `auth` (Wave 1)
 Depends on: Stage 01 (W0a contracts; `server-core` sessions, guards, CSRF, limiters, argon2, settings, audit;
 `ui-shell` layouts and fragment capture)

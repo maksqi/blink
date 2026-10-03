@@ -1,6 +1,6 @@
 # Stage 05 — Call core
 
-Status: todo
+Status: done
 Owner(s): `call-core` (Wave 1)
 Depends on: Stage 01 (`app/lib/contracts/{call,test-hooks}.ts`, `app/lib/e2ee/**`, `shared/schemas/livekit.ts`, UI shell)
 Blocks: Stage 04 frontend (`rooms-ui`), Stage 06 (`collab-ui`), Stage 07 (`media-fx`), Stage 08 (`recording-client`)

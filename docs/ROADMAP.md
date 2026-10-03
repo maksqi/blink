@@ -14,11 +14,11 @@ and verifying a stage.
 | [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | done |
 | [02](stages/02-auth-and-accounts.md) | Auth and accounts | auth | W1 | 01 | done |
 | [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | done |
-| [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | backend done; UI in progress (W2) |
+| [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | done |
 | [05](stages/05-call-core.md) | Call core | call-core | W1 | 01 | done |
-| [06](stages/06-host-controls-collaboration.md) | Host controls and collaboration | collab-ui | W2 | 04 (backend), 05 | in progress |
-| [07](stages/07-media-processing.md) | Media processing | media-fx | W2 | 05 | in progress |
-| [08](stages/08-recording.md) | Recording | recording-server (W1), recording-client (W2) | W1 / W2 | 01; client also 05 and 08 (server) | server done; client in progress (W2) |
+| [06](stages/06-host-controls-collaboration.md) | Host controls and collaboration | collab-ui | W2 | 04 (backend), 05 | done |
+| [07](stages/07-media-processing.md) | Media processing | media-fx | W2 | 05 | done |
+| [08](stages/08-recording.md) | Recording | recording-server (W1), recording-client (W2) | W1 / W2 | 01; client also 05 and 08 (server) | done |
 | [09](stages/09-production-deployment.md) | Production deployment | infra (9a, W1); user (9b) | W1 / final | 01 (9a); 10 (9b) | 9a done; 9b needs a real server (user) |
 | [10](stages/10-hardening-qa-release.md) | Hardening, QA and release | e2e, security-review, quality-review, fix agents, docs | W3 | all | in progress |
 
@@ -229,3 +229,8 @@ tracked as F-001 to F-011 in the Stage 10 Findings list):
   (macOS) behind `E2E_NIGHTLY_BROWSERS=1`, the `flows` fixture stub in `tests/e2e/fixtures/index.ts`, the W3 ownership
   split and the pre-seeded Findings F-001 to F-011. The W3 base SHA is this commit. The W2 wave gate (full E2E, docker
   build, smoke-prod) runs on it.
+- 2026-10-03 — W2 wave gate on main (ae66e84): lint, typecheck, 1433 unit tests, check:english, actionlint, 691 API
+  tests, full E2E (247 passed, 1 skipped, 1 failed: F-014, the "Room created" toast covers the pre-join Join button in
+  Firefox), smoke-prod with a fresh docker build (passed). Two CI blockers fixed on main (26b9e8c): F-012 (a JSDoc
+  comment put `__blinqTest` into the production SSR bundle) and F-013 (gitleaks false positives in tests). Stages 04,
+  06, 07 and 08 done; Stage 01 and 06 DoD ticked with the gate evidence.

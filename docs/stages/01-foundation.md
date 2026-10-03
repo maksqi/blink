@@ -188,23 +188,29 @@ their owned paths and never touch frozen files.
   `tests/e2e/shell/responsive.spec.ts` (`@responsive`, no horizontal overflow at 375/768/1440).
 
 ## Definition of Done
-- [ ] [auto] `docker compose -f docker-compose.dev.yml up -d --wait` exits 0 — evidence: `pnpm dev:deps` in e2e.yml.
-- [ ] [agent-manual] `pnpm dev` works — evidence: `curl -fsS http://localhost:3000/` returns 200 with a CSP header.
-- [ ] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
-- [ ] [auto] Install leaves no diff — evidence: ci.yml install step (`git diff --exit-code`).
-- [ ] [agent-manual] `pnpm root` is inside the repo — evidence: `pnpm root` output in the W0a report.
-- [ ] [auto] Migrate is idempotent and bootstrap is idempotent — evidence: `tests/api/core/cli.test.ts`.
-- [ ] [auto] `actionlint` and gitleaks pass — evidence: ci.yml jobs.
-- [ ] [auto] The home page has a CSP and no violations — evidence: `pnpm test:e2e -- shell/home`.
-- [ ] [auto] Env errors name the variable; placeholder secrets are refused — evidence: `server/utils/env.test.ts`.
-- [ ] [auto] Dark/light theme persists, follows the system by default, and SSR has no flash — evidence:
+- [x] [auto] `docker compose -f docker-compose.dev.yml up -d --wait` exits 0 — evidence: `pnpm dev:deps` in e2e.yml.
+- [x] [agent-manual] `pnpm dev` works — evidence: `curl -fsS http://localhost:3000/` returns 200 with a CSP header.
+- [x] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
+- [x] [auto] Install leaves no diff — evidence: ci.yml install step (`git diff --exit-code`).
+- [x] [agent-manual] `pnpm root` is inside the repo — evidence: `pnpm root` output in the W0a report.
+- [x] [auto] Migrate is idempotent and bootstrap is idempotent — evidence: `tests/api/core/cli.test.ts`.
+- [x] [auto] `actionlint` and gitleaks pass — evidence: ci.yml jobs.
+- [x] [auto] The home page has a CSP and no violations — evidence: `pnpm test:e2e -- shell/home`.
+- [x] [auto] Env errors name the variable; placeholder secrets are refused — evidence: `server/utils/env.test.ts`.
+- [x] [auto] Dark/light theme persists, follows the system by default, and SSR has no flash — evidence:
       `pnpm test:e2e -- shell/theme`.
-- [ ] [auto] Every route in `docs/API.md` exists (501 until implemented) — evidence: `tests/api/core/stubs.test.ts`.
-- [ ] [auto] Health, readiness, config and CSRF behave as documented — evidence: `tests/api/core/*.test.ts`.
-- [ ] [auto] The prod build has no `__blinqTest` and `/dev/call` returns 404 — evidence: ci.yml build job.
-- [ ] [auto] Fragments are stripped before any middleware runs — evidence: `pnpm test:e2e -- shell/fragment`.
-- [ ] [auto] No horizontal overflow at 375/768/1440 px — evidence: `pnpm test:e2e -- shell/responsive`.
-- [ ] [agent-manual] Wave base SHA recorded in `docs/ROADMAP.md` — evidence: ROADMAP "Wave base SHAs" table.
+- [x] [auto] Every route in `docs/API.md` exists (501 until implemented) — evidence: `tests/api/core/stubs.test.ts`.
+- [x] [auto] Health, readiness, config and CSRF behave as documented — evidence: `tests/api/core/*.test.ts`.
+- [x] [auto] The prod build has no `__blinqTest` and `/dev/call` returns 404 — evidence: ci.yml build job.
+- [x] [auto] Fragments are stripped before any middleware runs — evidence: `pnpm test:e2e -- shell/fragment`.
+- [x] [auto] No horizontal overflow at 375/768/1440 px — evidence: `pnpm test:e2e -- shell/responsive`.
+- [x] [agent-manual] Wave base SHA recorded in `docs/ROADMAP.md` — evidence: ROADMAP "Wave base SHAs" table.
+- Verified on main 2026-10-03 (W2 wave gate, ae66e84 + 26b9e8c): `pnpm root` → `<repo>/node_modules`; frozen install
+  leaves no diff; `pnpm dev` on :3000 answers 200 with a CSP header; lint, typecheck, 1433 unit tests, check:english,
+  `scripts/lint-workflows.sh` and `scripts/scan-secrets.sh` (after the F-013 allowlist) pass; 691 API tests incl.
+  `core/cli`, `core/stubs` and `core/*` pass; `pnpm build` + `node scripts/check-build.mjs production` pass (after
+  F-012); the full E2E run passes `shell/{home,theme,fragment,responsive}` in every project; the dev stack is up with
+  `--wait` (healthy). CI evidence follows on the first push ([user]).
 
 ## Notes and gotchas
 - A stray pnpm workspace in `$HOME` captures installs unless the repo has its own `pnpm-workspace.yaml`.

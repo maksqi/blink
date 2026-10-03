@@ -169,6 +169,9 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
 - [x] F-013 [medium] ci — gitleaks reports 15 `generic-api-key` false positives (fake passwords in tests, the temporary
       password alphabet), so the ci.yml gitleaks job fails — owner: orchestrator — status: fixed (`.gitleaks.toml`
       allowlist limited to that rule in test files)
+- [ ] F-014 [medium] ui — after creating a room the "Room created" toast (bottom right) covers the pre-join Join button
+      at 1280×720; hovering it to click Join pauses its dismissal (`rooms/create-and-join` fails in Firefox) — owner:
+      fix-ui — status: open
 
 ## Tests
 - API: `tests/api/security/{authz-matrix,idor,csrf,rate-limits,cookies,headers}.test.ts`.
