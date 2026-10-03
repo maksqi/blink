@@ -194,7 +194,7 @@ joinInfoSchema = { proof: B64u; inviteToken?: B64u }
 joinRequestSchema = { proof: B64u; inviteToken?: B64u; displayName?: string /* guests: required; ignored for users */
   password?: string /* ≤128 */; clientId: string /* 16..64 base64url chars, per tab */ }
 type JoinInfo = { roomId: Id; name: string; needsPassword: boolean; waitingRoom: boolean; recordingActive: boolean
-  yourRole: 'host' | 'cohost' | 'participant'; signedIn: boolean; guestsAllowed: boolean }
+  yourRole: 'host' | 'cohost' | 'participant'; signedIn: boolean; guestsAllowed: boolean; muteOnJoin: boolean }
 type JoinGrant = { status: 'admitted'; token: string; url: string; epoch: B64u /* 16 bytes */; identity: string
   role: 'host' | 'cohost' | 'participant'; roomId: Id }
 type JoinWaiting = { status: 'waiting'; requestId: Id }

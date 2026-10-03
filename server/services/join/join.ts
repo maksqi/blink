@@ -103,6 +103,7 @@ export async function getJoinInfo(event: H3Event, slug: string, input: JoinInfoI
     yourRole: role,
     signedIn: user !== null,
     guestsAllowed: settings['guests.allowed'] && room.allowGuests,
+    muteOnJoin: room.muteOnJoin,
   }
 }
 

@@ -189,7 +189,8 @@ app on the host. It also makes LiveKit webhooks reach the app in CI.
    starts the e2e Caddy (`docker/e2e/compose.yml`, project `blinq-e2e`), waits for health, runs Playwright with your
    arguments, and stops everything on exit.
    Variables: `E2E_SKIP_BUILD=1` reuses the last test build; `E2E_APP_PORT` overrides the app port;
-   `E2E_DB_NAME` overrides the database name.
+   `E2E_DB_NAME` overrides the database name; `E2E_HTTP_PORT` (default 8080) moves the e2e Caddy, and with it
+   `E2E_BASE_URL`, `PUBLIC_URL` and `LIVEKIT_PUBLIC_URL`, to another port when something else holds 8080.
 
 Artifacts: `test-results/` (trace, video and screenshot kept on failure), `playwright-report/`, and the logs in
 `logs/e2e/{app,caddy}.log` (`E2E_LOG_DIR` overrides the directory).
@@ -217,7 +218,7 @@ Artifacts: `test-results/` (trace, video and screenshot kept on failure), `playw
 ### 6.4 Fixtures (`tests/e2e/fixtures/`)
 
 Specs import `test` and `expect` from `tests/e2e/fixtures/index.ts`. It exports
-`test = mergeTests(base, livekit, media, recording)` (each file exports its own `test.extend(...)`) and re-exports
+`test = mergeTests(base, livekit, join, media, recording)` (each file exports its own `test.extend(...)`) and re-exports
 `expect`.
 
 | File | Owner | Provides |
@@ -226,22 +227,36 @@ Specs import `test` and `expect` from `tests/e2e/fixtures/index.ts`. It exports
 | `livekit.ts` | `call-core` | `joinAs(role, options)` |
 | `media.ts` | `media-fx` | processor helpers (blur, noise suppression) |
 | `recording.ts` | `recording-client` | ffprobe/volumedetect helpers, forced MIME, chunk-failure injection |
-| `join.ts` | `rooms-backend` | DB-backed join through the real join API (creates `call_participants` rows) |
+| `join.ts` | `rooms-backend` | the `rooms` fixture: DB-backed users, rooms, invites and joins through the real API (creates `call_participants` rows) |
 
 Call-core's fake-device helpers, first-frame waits and `getStats` polling live in `livekit.ts`. W0a commits
 `livekit.ts`, `media.ts` and `recording.ts` as stubs, so `index.ts` (frozen after W0b) does not change when `call-core`
 implements them (decision). Other areas add fixture files through a report request.
 
-**`joinAs(role, options)`**: `role` is `host`, `cohost` or `participant`; options are `name`, `kind` (`user` or
-`guest`), `room` (reuse a room from an earlier `joinAs` in the same test), `browser`, and `e2ee` (`off` only for the
-unencrypted-publisher negative test).
+**`joinAs(role, options)`** (`livekit.ts`): LiveKit-only peers for call-core behavior. `role` is `host`, `cohost` or
+`participant`. Options (`JoinOptions`): `name`, `kind` (`user` or `guest`), `room` (reuse a room from an earlier
+`joinAs`/`createRoom` in the same test), `browser` (launch another engine), `e2ee` (`off` only for the
+unencrypted-publisher negative test), `key` (another room key, for the wrong-key test), `page` (drive the test's own
+page), `join` (click Join and wait for the call, default true), `wait` (wait for pre-join, default true), `camera`,
+`microphone`, `viewport` and `params` (extra harness fragment parameters such as `maxShare`, `shareFps`, `title`, `rec`).
+It returns a `JoinedPeer`: `page`, `context`, `identity`, `name`, `role`, `room`, `token` and `url` (the harness URL;
+navigate there again to rejoin). The fixture also provides `createRoom()`.
 - Creates the LiveKit room with `RoomServiceClient.createRoom` under a unique name (the server runs with
   `auto_create: false`) and deletes it on teardown.
-- Mints the token with `livekit-server-sdk` from the grants table in `docs/API.md`. Once `rooms-backend` merges, it
-  switches to `buildParticipantToken` (`server/services/livekit/token.ts`), so grants and attributes (`role`, `kind`,
-  `hand`, `vol`) match production exactly.
+- Mints the token with `livekit-server-sdk` (every source allowed). These peers have **no** `call_participants` rows,
+  so every in-call API (`/api/calls/**`, recording start) answers `CALL_NOT_PARTICIPANT` for them: use the `rooms`
+  fixture for anything that calls the server.
 - Generates `K` and the epoch, then opens `/dev/call#url=…&token=…&k=…&epoch=…&slug=…&name=…&e2ee=…` in a new browser
-  context. It registers the key and token with `secrets.track` and returns the page, identity, room name, key and epoch.
+  context. It registers the key and token with `secrets.track`.
+
+**`rooms`** (`join.ts`): real users, rooms and joins (example in the file header).
+- `createUser({ displayName?, role? })` writes a verified user and a session straight to the E2E database;
+  `useIdentity(context, who)` puts that session (or a guest's cookie) into a browser context.
+- `createRoom(owner, settings?)` builds K, slug and proof in Node and calls `POST /api/rooms`. Also `addCohost`,
+  `createInvite`, `inviteLink`, `join` / `tryJoin` (`POST /api/join/:slug`, keeps the guest cookie), `admit`,
+  `waitForAdmission` (reads the waiting-room SSE) and `callApi`.
+- `harnessPath(room, grant, name)` only builds `/dev/call#…`; the spec calls `page.goto`, clicks `join-button` and waits
+  for the `inCall` phase itself (helpers such as `waitForPhase` live in `livekit.ts`).
 
 ### 6.5 Global guards (every test)
 
@@ -271,8 +286,12 @@ builds. ci.yml proves the production build has no `__blinqTest` and that `/dev/c
 | `metrics` | join timing: `performance.mark` timestamps for click, connected and first remote frame |
 | `useFakeScreenSource(enabled)` | screen share with a synthetic 1920×1080 canvas instead of `getDisplayMedia` |
 | `publishUnencryptedTrack()` | `call/unencrypted-blocked`, from a harness client joined with `e2ee=off`: peers must never subscribe to its track |
-| `forceRecordingMime(mime)` | recording format specs |
-| `state` | feature snapshots: `state.subscriptions` (policy output incl. requested sizes), `state.inboundVideo` (`getStats` frame size and `framesDecoded` per remote track) |
+| `forceRecordingMime(mime)` | recording format specs (implemented by `recording-client`) |
+| `measureNoiseSuppression()` | `media/rnnoise-offline`: input and output RMS in dBFS plus the output peak (implemented by `media-fx`) |
+| `state` | feature snapshots: `state.call` (phase and local media), `state.subscriptions` (policy output incl. requested sizes), `state.inboundVideo` / `state.inboundAudio` (`getStats` per remote track, every 500 ms), `state.audio`, `state.localScreen`, `state.harness` (harness only); Wave 2 adds `state.media` (`media-fx`) and `state.recording` (`recording-client`) |
+
+App code reaches the hooks only through `testHooks()` (`app/lib/contracts/test-hooks.ts`), which returns `undefined`
+outside dev and test builds.
 
 ### 6.7 Timing policy
 

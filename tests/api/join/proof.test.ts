@@ -43,7 +43,7 @@ describe('join proof', () => {
 
   it('returns JoinInfo for the right proof', async () => {
     const owner = await createUser()
-    const room = await createRoom(owner, { password: 'room-pass', waitingRoom: true })
+    const room = await createRoom(owner, { password: 'room-pass', waitingRoom: true, muteOnJoin: true })
     const guest = await createClient().post(`/api/join/${room.slug}/info`, { body: { proof: room.proof } })
     expect(guest.status, guest.text).toBe(200)
     expect(guest.body).toEqual({
@@ -55,6 +55,7 @@ describe('join proof', () => {
       yourRole: 'participant',
       signedIn: false,
       guestsAllowed: true,
+      muteOnJoin: true,
     })
     const host = await (await loginAs(owner)).post(`/api/join/${room.slug}/info`, { body: { proof: room.proof } })
     expect(host.body).toMatchObject({ yourRole: 'host', signedIn: true, needsPassword: false, waitingRoom: false })

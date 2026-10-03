@@ -13,8 +13,6 @@
  * `session.phase` / `session.store.phase` follow `CallPhase`; the host page may set its own phases with
  * `session.setPhase('waiting')`. A session connects once; create a new one to rejoin.
  */
-import './zod-jitless'
-
 export { createCallSession, CallSession, type CallSessionOptions } from './session'
 export { callRegistry } from './features'
 export { default as CallPrejoin } from '~/components/call/core/PreJoin.vue'

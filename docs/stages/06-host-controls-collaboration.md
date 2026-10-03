@@ -52,15 +52,15 @@ what `canPerform()` allows, and the server stays the only enforcement point.
   (`tests/api/_harness/`), `app/lib/e2ee/keys.ts`, `docs/API.md` §7 and §12
 
 ## Tasks
-### Requests to the orchestrator (report before building)
-- [ ] (decision) End notices: `CallFeature` has no slot for the `removed` and `ended` phases. Request an optional
-      `endScreens?: { phase: 'removed' | 'ended'; component: Component }[]` entry that the phase host (call-core harness,
-      rooms-ui `/m/[slug]`) renders. If declined, hand the copy below to call-core and only verify it in E2E.
-- [ ] (decision) Shared E2E fixture: Stage 05's `joinAs` mints LiveKit tokens without DB rows, so every in-call API
-      answers `CALL_NOT_PARTICIPANT`. Request a DB-backed `joinRoom` fixture in `tests/e2e/fixtures/`; until it exists,
-      use `tests/e2e/collab/fixtures/real-join.ts` (below) and let W3 `e2e` consolidate.
-- [ ] Check that call-core's mic/camera buttons follow `localParticipant.permissions.canPublishSources` (disabled with a
-      reason when revoked); if not, request it. collab-ui adds only the notices.
+### Requests to the orchestrator (resolved in Wave 1)
+- [x] End notices: `CallFeature.phaseScreens` (`PhaseScreen { id, phases, order, component }`,
+      `app/lib/contracts/call.ts`). `CallView` renders the highest-order screen for the phase; the core end screen has
+      order 0, so `EndNotice` registers for `removed` and `ended` with order ≥ 1. Side panels are `CallFeature.panels`.
+- [x] Shared E2E fixture: the DB-backed `rooms` fixture in `tests/e2e/fixtures/join.ts` (`docs/TESTING.md` §6.4)
+      replaces the planned `real-join.ts`. Local spec helpers go in `tests/e2e/collab/helpers.ts`.
+- [x] call-core's mic and camera buttons follow `canPublishSources` (disabled with "The host turned off your
+      microphone/camera"), and revoked sources are switched off locally. collab-ui adds only the other notices.
+- Feature `setup(ctx)` runs when the call session is created (pre-join), before the room connects.
 ### Shared plumbing
 - [ ] `app/lib/call/features/host-actions/actions.ts`: typed wrappers over `ctx.callApi` for every route in
       `docs/API.md` §7, bodies built with the shared schemas. Errors map through `errorMessage(data.code)` to a
@@ -112,7 +112,7 @@ what `canPerform()` allows, and the server stays the only enforcement point.
       microphone" (or camera, screen share). `ParticipantPermissionsChanged` → "The host turned off your microphone" /
       "You can unmute now".
 - [ ] End notices `app/components/call/host/EndNotice.vue`: `removed` → "You were removed from this meeting. You cannot
-      rejoin it."; `ended` → "The host ended the meeting for everyone." (through the requested slot).
+      rejoin it."; `ended` → "The host ended the meeting for everyone." (a `phaseScreens` entry, order ≥ 1).
 ### Room controls and live settings (`room-settings`)
 - [ ] ControlBarItem `host-controls` (placement `end`, `visible` for moderators) →
       `app/components/call/host/HostControlsMenu.vue`: Lock meeting (`call.lock`); Waiting room, Screen share (everyone
@@ -149,11 +149,9 @@ what `canPerform()` allows, and the server stays the only enforcement point.
       overlay slot.
 - [ ] Tile badge: the sender's latest reaction on their tile for 3 s.
 ### Test helpers
-- [ ] `tests/e2e/collab/fixtures/real-join.ts` (decision, until the shared fixture exists): users and sessions from the
-      server-core factories, the session cookie set on a fresh browser context; the host creates the room with
-      `POST /api/rooms` using slug, K and proof from `app/lib/e2ee/keys.ts` run in Node; guests and participants use a
-      room invite; each context calls `POST /api/join/:slug` (with `Origin` = base URL) and opens
-      `/dev/call#url=…&token=…&k=…&epoch=…&slug=…&name=…`; a waiting guest reads its SSE stream to get the token.
+- [ ] Specs use the shared `rooms` fixture (`tests/e2e/fixtures/join.ts`): users with sessions, `POST /api/rooms`,
+      invites, `POST /api/join/:slug`, `waitForAdmission` over the SSE, then `/dev/call#…` from `harnessPath()`.
+      Shared spec helpers (open the harness, click Join, wait for `inCall`) live in `tests/e2e/collab/helpers.ts`.
 - [ ] Wire capture for the chat spec, as a test-only `page.addInitScript` (never app code): wrap
       `RTCDataChannel.prototype.send` and the `message` events of every data channel to record payload bytes.
 

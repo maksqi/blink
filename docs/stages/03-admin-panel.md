@@ -39,6 +39,22 @@ rejects non-admins, the last admin cannot be removed, and every mutation is audi
 - `app/layouts/admin.vue`, `app/components/{ui,app}/**`, `app/composables/useApi.ts`
 
 ## Tasks
+### Already built in Wave 1 (consume, don't duplicate)
+- `server/services/users/admin.ts` (`auth`): `listUsers`, `getAdminUser`, `createUserByAdmin`, `updateUserByAdmin`
+  (disable revokes sessions, a role change rotates them, self and last-admin rules), `resetPasswordByAdmin`,
+  `revokeUserSessions`, `deleteUser(id, actor, { beforeDelete })`; `server/services/users/last-admin.ts` (row locks,
+  `assertKeepsAnAdmin`); `server/services/users/invites.ts` (`createAccountInvite`, `listAccountInvites`,
+  `revokeAccountInvite`). These services **write their own audit entries** (`admin.user_*`, `admin.invite_*`); the
+  handlers must not add a second one.
+- `server/services/settings` `updateSettings(rawPatch, actorUserId)` (re-validates, invalidates the cache; the handler
+  writes `admin.settings_updated` with old and new values); `server/services/mail` `isSmtpConfigured()`, `testMessage`,
+  `sendMailOr503`; `server/services/meetings` `endMeeting(roomId, { reason: 'admin' })`, `endMeetingsOfOwner`,
+  `listMeetings`; `server/services/rooms` `softDeleteRoom`; `roomService().listRooms()`;
+  `server/services/recordings/api.ts` `deleteRecordingsForUser`.
+- Missing and owned by `admin`: an admin-wide rooms query with live counts, the audit-log query, the SMTP status and
+  test email, and the delete-user orchestration (`beforeDelete`: end the user's live meetings, delete recording files).
+  `POST /api/admin/users/:id/revoke-sessions` answers 204 even though the service returns `{ revoked }`.
+
 ### Backend
 - [ ] Every handler starts with `requireAdmin(event)`; list endpoints parse `paginationQuerySchema` extensions and
       return `Paginated<T>`.
@@ -54,8 +70,9 @@ rejects non-admins, the last admin cannot be removed, and every mutation is audi
       recording files through the recording service, then deletes the row (rooms and recordings cascade); an admin
       cannot delete their own account (409 `CONFLICT`, `details.reason = 'self'`) (decision); audit
       `admin.user_deleted` (email kept in `details`).
-- [ ] Last-admin protection (`server/services/admin/users.ts`): demoting, disabling or deleting the only enabled admin →
-      409 `CONFLICT` with `details.reason = 'last_admin'`, checked in the same transaction with `SELECT … FOR UPDATE`.
+- [ ] Last-admin protection (already in `server/services/users/last-admin.ts`, used by the users service): demoting,
+      disabling or deleting the only enabled admin → 409 `CONFLICT` with `details.reason = 'last_admin'`, checked in the
+      same transaction with `SELECT … FOR UPDATE`. Verify it through the admin API.
 - [ ] `POST /api/admin/users/:id/reset-password` (`{ sendEmail?: boolean }`, schema to be added to
       `shared/schemas/admin.ts` (decision)): new temporary password returned once (or a reset link emailed), sets
       `must_change_password`, revokes sessions; audit `admin.user_password_reset`.
@@ -90,8 +107,8 @@ rejects non-admins, the last admin cannot be removed, and every mutation is audi
 - [ ] Destructive actions use an in-page confirmation dialog (no `confirm()`).
 
 ## Tests
-- Unit: `server/services/admin/users.test.ts` (last-admin rules: demote, disable, delete, self-demote with and without
-  another admin).
+- Unit: last-admin rules are covered by `tests/api/auth/last-admin.test.ts` (Wave 1); colocated unit tests for every new
+  module in `server/services/admin/` (rooms list with the LiveKit fallback, audit query building).
 - API: `tests/api/admin/authz.test.ts` (table-driven over every method + path under `server/api/admin/**`, the list
   generated from the file tree so new routes are covered automatically (decision): anonymous → 401
   `UNAUTHENTICATED`, user → 403 `FORBIDDEN`, guest cookie only → 401), `tests/api/admin/users.test.ts`,

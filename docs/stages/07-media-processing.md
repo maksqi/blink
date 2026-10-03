@@ -42,24 +42,25 @@ instead of broken controls, and heavy CPU use triggers a warning.
   script once it exists), `tests/e2e/fixtures/**`, `docs/TESTING.md` (rows added by request)
 
 ## Tasks
-### Requests to the orchestrator (ideally before Wave 1, so call-core implements them)
-- [ ] (decision) `MediaControl` exposes only raw `MediaStreamTrack`s and the AudioContext. That is not enough to attach a
-      LiveKit processor during pre-join or to put RNNoise in front of call-core's GainNode. Request:
+### Requests to the orchestrator (resolved in Wave 1 and the Wave 2 preparation)
+- [x] `MediaControl` (`app/lib/contracts/call.ts`, implemented in `app/lib/livekit/{local-media,audio-context}.ts`):
       ```ts
       /** Attach or replace the camera processor; call-core keeps it on the current and every later camera track. */
       setCameraProcessor(processor: TrackProcessor<Track.Kind.Video> | null): Promise<void>
-      /** One node between the mic source and the GainNode: source → node → GainNode → published track. */
-      setMicInsert(node: AudioNode | null): void
-      /** Re-acquire the mic with new processing constraints via restartTrack (replaceTrack, no republish). */
-      setMicProcessing(options: { noiseSuppression: boolean }): Promise<void>
+      /** source → insert → GainNode → published track. connect() runs again after every mic restart or device switch. */
+      setMicInsert(insert: MicInsert | null): Promise<void>   // MicInsert = { id; connect(context, input): Promise<AudioNode>; dispose() }
+      /** Re-acquire the mic with new processing constraints via restartTrack (no republish). */
+      setMicProcessing(constraints: { noiseSuppression: boolean; echoCancellation: boolean; autoGainControl: boolean }): Promise<void>
       ```
-      Fallback if declined: in-call only, through the local publications on `ctx.room`; pre-join controls then only
-      store the preference, applied on join.
-- [ ] `pnpm build` and `pnpm build:test` run `node scripts/vendor-assets.mjs` first (`package.json`, planned in Stage
-      09a); `ci.yml`, `e2e.yml` and the Dockerfile build stage get the files the same way.
-- [ ] (decision) Test hook `measureNoiseSuppression?(): Promise<{ inputDb: number; outputDb: number; peak: number }>` in
+      Replacing an insert disposes the previous one. On Firefox the AudioContext may run at the device's sample rate,
+      so check `sampleRate === 48000` before enabling RNNoise.
+- [x] `pnpm dev`, `pnpm build` and `pnpm build:test` run `node scripts/vendor-assets.mjs` first (`package.json`
+      `vendor` script), so ci.yml, e2e.yml (`scripts/e2e.sh`) and the Dockerfile (`pnpm build`) get the files too.
+      The script itself is still a stub: implementing it is a media-fx task below.
+- [x] Test hook `measureNoiseSuppression?(): Promise<{ inputDb: number; outputDb: number; peak: number }>` in
       `app/lib/contracts/test-hooks.ts`, used by the offline RNNoise spec.
-- [ ] Blur and noise-suppression rows in the manual browser matrix of `docs/TESTING.md`.
+- [x] Blur and noise-suppression rows exist in the manual browser matrix of `docs/TESTING.md`.
+- Feature `setup(ctx)` runs when the call session is created (pre-join), before the room connects.
 ### Vendored assets
 - [ ] `scripts/vendor-assets.mjs` (Node, no network, idempotent): copy
       `node_modules/@mediapipe/tasks-vision/wasm/{vision_wasm_internal,vision_wasm_nosimd_internal}.{js,wasm}` →
@@ -92,9 +93,10 @@ instead of broken controls, and heavy CPU use triggers a warning.
 - [ ] `app/lib/media/rnnoise.ts` on `ctx.media.audioContext()` (assert `sampleRate === 48000`, else RNNoise is
       unavailable): `audioWorklet.addModule('/vendor/rnnoise/workletProcessor.js')` once per context (a same-origin
       file, never a `blob:` URL); `loadRnnoise({ url, simdUrl })` cached; `new RnnoiseWorkletNode(ctx, { maxChannels: 1,
-      wasmBinary })`; inserted with `setMicInsert(node)`; `processorerror` → fall back to `browser` with a toast.
-- [ ] Switch order: constraints first (`setMicProcessing`), then insert or remove the node. The mic publication keeps its
-      `trackSid`.
+      wasmBinary })`; inserted through a `MicInsert` with `setMicInsert(insert)`; `processorerror` → fall back to
+      `browser` with a toast.
+- [ ] Switch order: constraints first (`setMicProcessing`), then insert or remove the `MicInsert` (`setMicInsert`). The
+      mic publication keeps its `trackSid`.
 - [ ] Mic gain slider 0–200 % (default 100 %) → `ctx.audio.setMicGain(gain)`; the pre-join meter (call-core) reflects it.
 ### Preferences, UI and warnings
 - [ ] `app/lib/media/preferences.ts`: localStorage `blinq:media:v1`, zod-validated on read (garbage ignored), every

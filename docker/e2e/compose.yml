@@ -1,6 +1,6 @@
 # E2E reverse proxy for Playwright (docs/TESTING.md §6.1). scripts/e2e.sh starts it for one run and stops it again;
 # don't run it by hand. It joins the shared dev stack's network to reach LiveKit and reaches the app on the host through
-# host.docker.internal. It only ever publishes 127.0.0.1:8080.
+# host.docker.internal. It only ever publishes 127.0.0.1:${E2E_HTTP_PORT:-8080} (container port 8080).
 name: blinq-e2e
 
 services:
@@ -13,7 +13,7 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     ports:
-      - '127.0.0.1:8080:8080'
+      - '127.0.0.1:${E2E_HTTP_PORT:-8080}:8080'
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     networks:

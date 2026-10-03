@@ -13,12 +13,12 @@ and verifying a stage.
 | [00](stages/00-docs-and-planning.md) | Docs and planning | orchestrator + doc agents | W0-docs | — | done |
 | [01](stages/01-foundation.md) | Foundation | orchestrator (W0a); server-core, ui-shell, devops-ci (W0b) | W0 | 00 | done |
 | [02](stages/02-auth-and-accounts.md) | Auth and accounts | auth | W1 | 01 | done |
-| [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | todo |
-| [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | backend done; UI todo (W2) |
+| [03](stages/03-admin-panel.md) | Admin panel | admin | W2 | 02, 04 (backend) | in progress |
+| [04](stages/04-rooms-invites-join.md) | Rooms, invites, join, E2EE keys | rooms-backend (W1), rooms-ui (W2) | W1 / W2 | 01; UI also 05 | backend done; UI in progress (W2) |
 | [05](stages/05-call-core.md) | Call core | call-core | W1 | 01 | done |
-| [06](stages/06-host-controls-collaboration.md) | Host controls and collaboration | collab-ui | W2 | 04 (backend), 05 | todo |
-| [07](stages/07-media-processing.md) | Media processing | media-fx | W2 | 05 | todo |
-| [08](stages/08-recording.md) | Recording | recording-server (W1), recording-client (W2) | W1 / W2 | 01; client also 05 and 08 (server) | server done; client todo (W2) |
+| [06](stages/06-host-controls-collaboration.md) | Host controls and collaboration | collab-ui | W2 | 04 (backend), 05 | in progress |
+| [07](stages/07-media-processing.md) | Media processing | media-fx | W2 | 05 | in progress |
+| [08](stages/08-recording.md) | Recording | recording-server (W1), recording-client (W2) | W1 / W2 | 01; client also 05 and 08 (server) | server done; client in progress (W2) |
 | [09](stages/09-production-deployment.md) | Production deployment | infra (9a, W1); user (9b) | W1 / final | 01 (9a); 10 (9b) | 9a done; 9b needs a real server (user) |
 | [10](stages/10-hardening-qa-release.md) | Hardening, QA and release | e2e, security-review, quality-review, fix agents, docs | W3 | all | todo |
 
@@ -67,9 +67,15 @@ merges, runs the full gate, and commits locally. **Nothing is pushed** until the
 
 **Merge gate** (after every merge):
 - `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:api`, `pnpm build` and `pnpm check:english` pass.
-- A clean `docker build` succeeds; `sh scripts/smoke-prod.sh` passes (4–6 min with cached images).
-- The E2E smoke passes.
+- The merged agent's E2E area passes.
 - This table is updated, the result is committed, and the worktree is removed.
+
+**Wave gate** (once, after the last merge of a wave): the full E2E suite (every project), a clean `docker build` and
+`sh scripts/smoke-prod.sh` (4–6 min with cached images).
+
+Agent ports (W2): `rooms-ui` 3002, `collab-ui` 3003, `media-fx` 3004, `recording-client` 3005, `admin` 3006 (no LiveKit
+webhooks needed). 3000 and 3001 stay free for the maintainer's own dev server. On this machine another project holds
+port 8080, so E2E runs use `E2E_HTTP_PORT=8090`.
 
 Wave base SHAs (filled in by the orchestrator):
 
@@ -77,13 +83,13 @@ Wave base SHAs (filled in by the orchestrator):
 |---|---|
 | W0b | a24cccf |
 | W1 | 2f8fe39 (call-core, infra); see change log for auth, rooms-backend, recording-server |
-| W2 | 1ab2ce3 or later (start from current main) |
+| W2 | see change log (2026-10-03) |
 | W3 | — |
 
 ## Ownership map
 
 Every path in the repository has exactly one owner at a time. Paths not listed under an agent belong to the
-orchestrator. "Frozen" paths change only through the orchestrator, after an agent requests the change in its report.
+orchestrator. Paths of finished waves (W0b, W1) belong to the orchestrator again; later agents request changes there. "Frozen" paths change only through the orchestrator, after an agent requests the change in its report.
 
 ### Orchestrator (frozen for everyone else)
 

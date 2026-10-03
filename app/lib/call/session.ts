@@ -7,7 +7,6 @@
  * → `dispose()` on unmount. Creating the session loads the SDK and the E2EE worker and, when the epoch is already
  * known, derives the meeting keys, so the Join click only has to connect (fast join).
  */
-import './zod-jitless'
 import {
   ConnectionState,
   createLocalScreenTracks,

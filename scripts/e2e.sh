@@ -7,12 +7,13 @@
 # 1. the shared dev stack is up (pnpm dev:deps; a running stack is left untouched)
 # 2. pnpm build:test (skipped with E2E_SKIP_BUILD=1 when .output already is a test build)
 # 3. a fresh e2e database (E2E_DB_NAME, default blinq_e2e) on the shared Postgres, migrated with the bundled CLI
-# 4. node .output/server/index.mjs on 127.0.0.1:<port> with PUBLIC_URL=http://localhost:8080 (production mode)
-# 5. the e2e Caddy (docker/e2e/compose.yml) on http://localhost:8080: /rtc* to LiveKit, everything else to the app
+# 4. node .output/server/index.mjs on 127.0.0.1:<port> with PUBLIC_URL=http://localhost:<http port> (production mode)
+# 5. the e2e Caddy (docker/e2e/compose.yml) on http://localhost:<http port>: /rtc* to LiveKit, everything else to the app
 # 6. pnpm exec playwright test "$@", then the server and Caddy are stopped again
 #
 # The whole run holds the machine-wide heavy lock (scripts/with-lock.sh): one E2E run at a time.
 # The app port is E2E_APP_PORT, else PORT from .env, else 3000. The dev LiveKit sends webhooks to 3000-3005 only.
+# The public port of the e2e Caddy is E2E_HTTP_PORT, default 8080 (set it when another program holds 8080).
 # Logs: logs/e2e/app.log and logs/e2e/caddy.log. tests/e2e/fixtures/base.ts scans them for secrets.
 set -eu
 
@@ -39,12 +40,14 @@ dotenv_value() {
 
 e2e_compose() { docker compose -f "$ROOT/docker/e2e/compose.yml" "$@"; }
 
-BASE_URL=http://localhost:8080
+HTTP_PORT=${E2E_HTTP_PORT:-8080}
+BASE_URL=http://localhost:$HTTP_PORT
 LOG_DIR="$ROOT/logs/e2e"
 APP_PORT=${E2E_APP_PORT:-$(dotenv_value .env PORT)}
 APP_PORT=${APP_PORT:-3000}
 DB_NAME=${E2E_DB_NAME:-blinq_e2e}
 case "$APP_PORT" in *[!0-9]* | '') fail "invalid app port: $APP_PORT" ;; esac
+case "$HTTP_PORT" in *[!0-9]* | '') fail "invalid e2e http port: $HTTP_PORT" ;; esac
 case "$DB_NAME" in *[!a-z0-9_]* | '') fail "invalid database name: $DB_NAME" ;; esac
 
 server_pid=
@@ -129,7 +132,7 @@ set -a
 set +a
 export NODE_ENV=production
 export NITRO_HOST=127.0.0.1 NITRO_PORT="$APP_PORT" PORT="$APP_PORT"
-export PUBLIC_URL="$BASE_URL" LIVEKIT_PUBLIC_URL=ws://localhost:8080 LIVEKIT_URL=http://127.0.0.1:7880
+export PUBLIC_URL="$BASE_URL" LIVEKIT_PUBLIC_URL="ws://localhost:$HTTP_PORT" LIVEKIT_URL=http://127.0.0.1:7880
 export DATABASE_URL="${DATABASE_URL%/*}/$DB_NAME"
 export RECORDINGS_DIR="$ROOT/.data/e2e/recordings" RECORDING_WORK_DIR="$ROOT/.data/e2e/work"
 export LOG_LEVEL=debug LOG_FORMAT=json
@@ -162,7 +165,7 @@ wait_http app "http://127.0.0.1:$APP_PORT/api/health" 60
 if grep -q EADDRINUSE "$LOG_DIR/app.log"; then fail "the app could not bind 127.0.0.1:$APP_PORT"; fi
 
 # 5. e2e Caddy. On a native Linux engine, host.docker.internal needs the host-gateway forwarder (compose profile).
-export E2E_APP_PORT="$APP_PORT"
+export E2E_APP_PORT="$APP_PORT" E2E_HTTP_PORT="$HTTP_PORT"
 if [ "$(uname -s)" = Linux ] && ! docker info --format '{{.OperatingSystem}}' | grep -qi 'docker desktop'; then
   caddy_image=$(e2e_compose config --images | head -n 1)
   E2E_GATEWAY_IP=$(docker run --rm --add-host=gateway:host-gateway "$caddy_image" grep -w gateway /etc/hosts | awk 'NR == 1 { print $1 }')

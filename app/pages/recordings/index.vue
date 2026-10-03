@@ -7,6 +7,7 @@
 import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import RecordingsList from '@/components/recordings/RecordingsList.vue'
 
+definePageMeta({ middleware: 'auth' })
 useHead({ title: 'Recordings' })
 </script>
 

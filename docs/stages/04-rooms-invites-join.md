@@ -231,4 +231,5 @@ Decisions taken while implementing the backend (each also listed in the rooms-ba
 - **Participants list** includes admitted rows that have not connected yet (`joinedAt: null`).
 - In-call requests from a user with two tabs resolve to the most recently joined row (in-call requests carry no
   `clientId`).
-- `muteOnJoin` is stored and returned in `RoomDetails` but not exposed to joiners yet (requested for `JoinInfo`).
+- `muteOnJoin` is stored, returned in `RoomDetails` and, since the Wave 2 preparation, in `JoinInfo` (pre-join
+  defaults for joiners).

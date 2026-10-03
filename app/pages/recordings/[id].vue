@@ -36,6 +36,7 @@ const errorMessage = ref<string>()
 let timer: ReturnType<typeof setTimeout> | undefined
 let generation = 0
 
+definePageMeta({ middleware: 'auth' })
 useHead(() => ({ title: recording.value ? `Recording of ${recording.value.roomName}` : 'Recording' }))
 
 async function load(options: { quiet?: boolean } = {}) {

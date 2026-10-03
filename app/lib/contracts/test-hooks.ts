@@ -13,9 +13,9 @@ export interface BlinqTestHooks {
   forceRecordingMime?: (mime: string | null) => void
   /**
    * Runs the RNNoise chain over seeded synthetic noise in an OfflineAudioContext and returns input/output RMS in dBFS
-   * (media-fx). Used by the >= 10 dB reduction test.
+   * plus the output's absolute peak (media-fx). Used by the >= 10 dB reduction test.
    */
-  measureNoiseSuppression?: () => Promise<{ inputDb: number; outputDb: number }>
+  measureNoiseSuppression?: () => Promise<{ inputDb: number; outputDb: number; peak: number }>
   /** Arbitrary state snapshots features choose to expose. */
   state: Record<string, unknown>
 }

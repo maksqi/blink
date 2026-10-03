@@ -8,7 +8,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/in
 import AppPageHeader from '@/components/app/AppPageHeader.vue'
 import RecordingsList from '@/components/recordings/RecordingsList.vue'
 
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'admin', middleware: 'admin' })
 useHead({ title: 'Recordings · Admin' })
 
 const input = ref('')

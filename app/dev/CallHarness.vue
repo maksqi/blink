@@ -10,7 +10,6 @@
  * The fragment is read once and stripped from the address bar right away (like the shell's fragment plugin).
  * `e2ee=off` connects without encryption and exists only for the unencrypted-publisher negative test.
  */
-import '~/lib/call/zod-jitless'
 import { onBeforeUnmount } from 'vue'
 import CallView from '~/components/call/core/CallView.vue'
 import PreJoin from '~/components/call/core/PreJoin.vue'
