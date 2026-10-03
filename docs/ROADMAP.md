@@ -145,6 +145,19 @@ orchestrator. Paths of finished waves (W0b, W1) belong to the orchestrator again
 
 Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
 
+## Wave 3 inputs
+
+Findings and deferred requests from Wave 2 that W3 (`quality-review`, `security-review`, fix agents) must handle:
+
+- `admin`: `deleteUser` (`server/services/users/admin.ts`) publishes `user.revoked` only after the row is deleted, when
+  `call_participants.user_id` is already null; the admin service works around it in `beforeDelete`
+  (`removeUserFromLiveCalls`). Move the removal into the users service.
+- `admin`: 404 error responses carry `cache-control: no-cache` (Nitro's error handler), not the documented `no-store`
+  (server-core).
+- `admin` (optional): a counts endpoint or a `live` filter on `GET /api/admin/rooms`; the overview counts live
+  meetings from the first 100 rooms and shows "100+" beyond that.
+- `nightly.yml` runs `--project=msedge`, which `playwright.config.ts` does not define yet (devops).
+
 ## Backlog (not in v1)
 
 - Mid-call key rotation (distribute a new key to remaining participants, for example after a removal)
@@ -175,3 +188,6 @@ Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
   `publishRoomState` needs the fake LiveKit room), the REC metadata check is enabled, and API test files restore
   `guests.allowed` before the server's settings cache expires. Gate on main: lint, typecheck, check:english, 578 API
   tests (4 LiveKit-only skips).
+- 2026-10-03 — W2 `admin` merged (Stage 03): admin API, services in `server/services/admin/`, six admin pages, 8 API
+  and 4 E2E spec files (incl. disabling a user removes them from a live call). API.md lists the admin audit actions
+  and `CONFLICT` `not_live`.

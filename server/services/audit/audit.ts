@@ -3,8 +3,8 @@
  *
  *   await audit(event, { action: 'admin.disable_user', targetType: 'user', targetId: id, details: { reason } })
  *
- * - Actions are `<domain>.<verb>` (lowercase, underscores inside parts), e.g. `auth.login_failed`, `admin.update_settings`.
- *   Invalid names throw (a programming error that tests catch).
+ * - Actions are `<domain>.<verb>` (lowercase, underscores inside parts), e.g. `auth.login_failed`,
+ *   `admin.settings_updated`. Invalid names throw (a programming error that tests catch).
  * - The IP comes from `getClientIp(event)`; pass `null` as the event outside requests (CLI, tasks).
  * - `actorUserId` defaults to the signed-in user of the request; pass `null` explicitly for "no actor".
  * - `details` are redacted (sensitive keys and token-like strings) and capped at 8 KiB: never pass secrets anyway.

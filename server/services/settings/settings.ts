@@ -8,7 +8,7 @@
  *   changed keys and returns the new settings. Throws 400 `VALIDATION_FAILED` with `details.issues` (and
  *   `details.field` for cross-field rules). Pass the raw request body: zod 4 fills defaults into
  *   `settingsUpdateSchema.parse()` output, which would reset every key that was not sent (decision). The handler
- *   writes the audit entry (`admin.update_settings`).
+ *   writes the audit entry (`admin.settings_updated`).
  * - `getSystemFlag(key)` / `setSystemFlag(key, value)`: internal `system.*` keys, never part of `getSettings()`.
  * - `invalidateSettingsCache()`.
  */
