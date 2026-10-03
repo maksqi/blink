@@ -193,6 +193,7 @@
             [data-slot='toggle'],
             [data-slot='toggle-group-item'],
             [data-slot$='-trigger'],
+            [data-slot$='-close'],
             [data-slot^='pagination-'],
             [data-slot='breadcrumb-link']
         ):not([data-slot='pagination-content'], [data-slot='pagination-item'], [data-slot='pagination-ellipsis']) {

@@ -42,7 +42,7 @@ function canDelete(recording: RecordingSummary): boolean {
           <TableCell class="max-w-56 min-w-0">
             <NuxtLink
               :to="`/recordings/${recording.id}`"
-              class="block truncate font-medium underline-offset-4 hover:underline focus-visible:underline"
+              class="block truncate font-medium underline-offset-4 hover:underline focus-visible:underline pointer-coarse:leading-11"
             >
               {{ recording.roomName }}
             </NuxtLink>
