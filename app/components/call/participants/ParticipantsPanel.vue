@@ -56,7 +56,12 @@ const groups = computed(() =>
 
     <HandQueue v-if="sections.hands.length > 0" :entries="sections.hands" />
 
-    <section v-for="group in groups" :key="group.id" :aria-labelledby="`people-${group.id}`" class="flex flex-col gap-1">
+    <section
+      v-for="group in groups"
+      :key="group.id"
+      :aria-labelledby="`people-${group.id}`"
+      class="flex flex-col gap-1"
+    >
       <h3 :id="`people-${group.id}`" class="px-2 text-xs font-semibold text-muted-foreground">
         {{ group.title }} ({{ group.people.length }})
       </h3>
@@ -65,7 +70,11 @@ const groups = computed(() =>
       </ul>
     </section>
 
-    <p v-if="query && filtered.length === 0" class="px-2 text-sm text-muted-foreground" data-testid="participants-empty">
+    <p
+      v-if="query && filtered.length === 0"
+      class="px-2 text-sm text-muted-foreground"
+      data-testid="participants-empty"
+    >
       Nobody matches "{{ query.trim() }}".
     </p>
   </div>

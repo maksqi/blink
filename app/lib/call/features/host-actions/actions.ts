@@ -95,7 +95,8 @@ export function createCallActions(callApi: CallApi, options: CallActionsOptions)
     }
   }
 
-  const post = <T = void>(url: string, body?: unknown) => callApi<T>(url, { method: 'POST', ...(body === undefined ? {} : { body }) })
+  const post = <T = void>(url: string, body?: unknown) =>
+    callApi<T>(url, { method: 'POST', ...(body === undefined ? {} : { body }) })
 
   return {
     // ---- Self --------------------------------------------------------------------------------------------------------
@@ -104,11 +105,12 @@ export function createCallActions(callApi: CallApi, options: CallActionsOptions)
 
     // ---- Reads (quiet: callers keep the last good state) -------------------------------------------------------------
     participants: () =>
-      run(
-        async () => (await callApi<{ items: CallParticipantInfo[] }>('/participants')).items,
-        { quiet: true, changes: false },
-      ),
-    lobby: () => run(async () => (await callApi<{ items: LobbyEntry[] }>('/lobby')).items, { quiet: true, changes: false }),
+      run(async () => (await callApi<{ items: CallParticipantInfo[] }>('/participants')).items, {
+        quiet: true,
+        changes: false,
+      }),
+    lobby: () =>
+      run(async () => (await callApi<{ items: LobbyEntry[] }>('/lobby')).items, { quiet: true, changes: false }),
 
     // ---- Waiting room -----------------------------------------------------------------------------------------------
     admit: (requestId: string) =>
@@ -122,7 +124,8 @@ export function createCallActions(callApi: CallApi, options: CallActionsOptions)
       run(() => post(path(target.identity, 'mute'), muteSchema.parse({ source })), { target }),
     setPermissions: (target: ActionTarget, change: { microphone?: boolean; camera?: boolean }) =>
       run(() => post(path(target.identity, 'permissions'), permissionsSchema.parse(change)), { target }),
-    askUnmute: (target: ActionTarget) => run(() => post(path(target.identity, 'ask-unmute')), { target, changes: false }),
+    askUnmute: (target: ActionTarget) =>
+      run(() => post(path(target.identity, 'ask-unmute')), { target, changes: false }),
     setVolume: (target: ActionTarget, level: number) =>
       run(() => post(path(target.identity, 'volume'), volumeSchema.parse({ level: Math.round(level) })), { target }),
     remove: (target: ActionTarget) => run(() => post(path(target.identity, 'remove')), { target }),
@@ -158,8 +161,12 @@ export function createCallActions(callApi: CallApi, options: CallActionsOptions)
     updateSettings: (patch: LiveSettingsPatch) =>
       run(
         async () =>
-          (await callApi<{ state: RoomMetadata }>('/settings', { method: 'PATCH', body: liveSettingsSchema.parse(patch) }))
-            .state,
+          (
+            await callApi<{ state: RoomMetadata }>('/settings', {
+              method: 'PATCH',
+              body: liveSettingsSchema.parse(patch),
+            })
+          ).state,
         { changes: false },
       ),
     end: () => run(() => post('/end'), { changes: false }),

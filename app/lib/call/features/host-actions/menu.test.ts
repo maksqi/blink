@@ -15,10 +15,38 @@ interface TargetState {
 }
 
 const STATES: TargetState[] = [
-  { name: 'all on', micEnabled: true, cameraEnabled: true, screenSharing: true, handRaisedAt: 1, info: { micAllowed: true, cameraAllowed: true } },
-  { name: 'all off', micEnabled: false, cameraEnabled: false, screenSharing: false, handRaisedAt: null, info: { micAllowed: true, cameraAllowed: true } },
-  { name: 'revoked', micEnabled: false, cameraEnabled: false, screenSharing: false, handRaisedAt: 5, info: { micAllowed: false, cameraAllowed: false } },
-  { name: 'unknown allowances', micEnabled: false, cameraEnabled: true, screenSharing: false, handRaisedAt: null, info: null },
+  {
+    name: 'all on',
+    micEnabled: true,
+    cameraEnabled: true,
+    screenSharing: true,
+    handRaisedAt: 1,
+    info: { micAllowed: true, cameraAllowed: true },
+  },
+  {
+    name: 'all off',
+    micEnabled: false,
+    cameraEnabled: false,
+    screenSharing: false,
+    handRaisedAt: null,
+    info: { micAllowed: true, cameraAllowed: true },
+  },
+  {
+    name: 'revoked',
+    micEnabled: false,
+    cameraEnabled: false,
+    screenSharing: false,
+    handRaisedAt: 5,
+    info: { micAllowed: false, cameraAllowed: false },
+  },
+  {
+    name: 'unknown allowances',
+    micEnabled: false,
+    cameraEnabled: true,
+    screenSharing: false,
+    handRaisedAt: null,
+    info: null,
+  },
 ]
 
 const actorOf = (role: CallRole, kind: CallKind): CallActor => ({ identity: 'p_Actor00000000000', role, kind })
@@ -82,7 +110,8 @@ describe('participantMenu', () => {
 
   it('offers nothing on the host', () => {
     for (const role of ROLES) {
-      for (const state of STATES) expect(participantMenu(actorOf(role, 'user'), targetOf('host', state), state.info)).toEqual([])
+      for (const state of STATES)
+        expect(participantMenu(actorOf(role, 'user'), targetOf('host', state), state.info)).toEqual([])
     }
   })
 
@@ -135,7 +164,9 @@ describe('publishAllowed', () => {
   it('is always true for hosts and co-hosts and the allowance for participants', () => {
     expect(publishAllowed({ role: 'cohost' }, null, 'microphone')).toBe(true)
     expect(publishAllowed({ role: 'participant' }, null, 'microphone')).toBeUndefined()
-    expect(publishAllowed({ role: 'participant' }, { micAllowed: false, cameraAllowed: true }, 'microphone')).toBe(false)
+    expect(publishAllowed({ role: 'participant' }, { micAllowed: false, cameraAllowed: true }, 'microphone')).toBe(
+      false,
+    )
     expect(publishAllowed({ role: 'participant' }, { micAllowed: false, cameraAllowed: true }, 'camera')).toBe(true)
   })
 })

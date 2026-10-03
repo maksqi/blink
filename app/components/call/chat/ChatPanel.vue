@@ -49,7 +49,7 @@ function onScroll() {
 }
 
 watch(
-  () => messages.value.length > 0 ? messages.value[messages.value.length - 1]!.id : null,
+  () => (messages.value.length > 0 ? messages.value[messages.value.length - 1]!.id : null),
   async () => {
     const last = messages.value.at(-1)
     const follow = following.value || last?.own === true

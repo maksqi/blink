@@ -19,7 +19,11 @@ class FakeApiError extends Error {
 function setup(respond: (call: Call) => unknown = () => undefined) {
   const calls: Call[] = []
   const callApi = (async (path: string, options?: { method?: string; body?: unknown }) => {
-    const call = { path, method: options?.method ?? 'GET', ...(options?.body === undefined ? {} : { body: options.body }) }
+    const call = {
+      path,
+      method: options?.method ?? 'GET',
+      ...(options?.body === undefined ? {} : { body: options.body }),
+    }
     calls.push(call)
     const result = respond(call)
     if (result instanceof Error) throw result
@@ -149,7 +153,9 @@ describe('createCallActions', () => {
   })
 
   it('stops allowing to speak at the first failure', async () => {
-    const { actions, calls } = setup((call) => (call.path.endsWith('/lower-hand') ? new FakeApiError(404, 'NOT_FOUND') : undefined))
+    const { actions, calls } = setup((call) =>
+      call.path.endsWith('/lower-hand') ? new FakeApiError(404, 'NOT_FOUND') : undefined,
+    )
     expect((await actions.allowToSpeak(tara)).ok).toBe(false)
     expect(calls).toHaveLength(2)
   })

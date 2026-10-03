@@ -46,7 +46,10 @@ const MUTED: Record<NoticeSource, string> = {
   screen_share: 'The host stopped your screen share',
 }
 
-export function permissionNotices(previous: ReadonlySet<NoticeSource>, next: ReadonlySet<NoticeSource>): PermissionNotice[] {
+export function permissionNotices(
+  previous: ReadonlySet<NoticeSource>,
+  next: ReadonlySet<NoticeSource>,
+): PermissionNotice[] {
   const notices: PermissionNotice[] = []
   for (const source of SOURCES) {
     if (previous.has(source) && !next.has(source)) notices.push({ source, change: 'revoked', message: REVOKED[source] })

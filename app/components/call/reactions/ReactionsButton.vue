@@ -46,7 +46,13 @@ async function react(reaction: Reaction) {
         <SmilePlusIcon class="size-5" aria-hidden="true" />
       </button>
     </PopoverTrigger>
-    <PopoverContent side="top" :side-offset="10" :collision-padding="12" class="w-auto p-1.5" data-testid="reactions-menu">
+    <PopoverContent
+      side="top"
+      :side-offset="10"
+      :collision-padding="12"
+      class="w-auto p-1.5"
+      data-testid="reactions-menu"
+    >
       <div class="flex items-center gap-1" role="group" aria-label="Send a reaction">
         <button
           v-for="reaction in REACTION_LIST"

@@ -62,7 +62,12 @@ const time = computed(() =>
     >
       <CircleAlertIcon class="size-3.5" aria-hidden="true" />
       Not sent.
-      <button type="button" class="font-medium underline underline-offset-2" data-testid="chat-retry" @click="$emit('retry')">
+      <button
+        type="button"
+        class="font-medium underline underline-offset-2"
+        data-testid="chat-retry"
+        @click="$emit('retry')"
+      >
         Retry
       </button>
       <button type="button" class="text-muted-foreground underline underline-offset-2" @click="$emit('dismiss')">

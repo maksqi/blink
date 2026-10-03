@@ -47,7 +47,15 @@ describe('visibleControls', () => {
   })
 
   it('shows a control exactly when canPerform allows its action', () => {
-    const all: RoomControl[] = ['locked', 'waitingRoom', 'screenSharePolicy', 'allowSelfUnmute', 'chatEnabled', 'muteAll', 'end']
+    const all: RoomControl[] = [
+      'locked',
+      'waitingRoom',
+      'screenSharePolicy',
+      'allowSelfUnmute',
+      'chatEnabled',
+      'muteAll',
+      'end',
+    ]
     for (const role of ['host', 'cohost', 'participant'] as const)
       for (const kind of ['user', 'guest'] as const)
         for (const control of all)

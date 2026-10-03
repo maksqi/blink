@@ -98,7 +98,12 @@ const removing = shallowRef(false)
 
 const serverVolume = computed(() => targetInfo.value?.volumeLevel ?? props.participant.volumeForEveryone)
 const volume = shallowRef(serverVolume.value)
-watch(serverVolume, (value) => (volume.value = value))
+/** The last level this menu sent (the server list may not show it yet). */
+let sentVolume: number | null = null
+watch(serverVolume, (value) => {
+  volume.value = value
+  sentVolume = null
+})
 
 const target = computed(() => ({ identity: props.participant.identity, name: props.participant.name }))
 
@@ -158,11 +163,29 @@ function onVolumeInput(value: number[] | undefined) {
   if (typeof value?.[0] === 'number') volume.value = value[0]
 }
 
+// Commits (pointer release, each arrow key) are sent one at a time, and only the latest waiting level is sent next,
+// so the last level the host chose is the one that sticks.
+let wantedVolume: number | null = null
+let sendingVolume = false
+
 async function commitVolume(value: number[] | undefined) {
   const level = value?.[0]
-  if (typeof level !== 'number' || level === serverVolume.value) return
-  const result = await actions.setVolume(target.value, level)
-  if (!result.ok) volume.value = serverVolume.value
+  if (typeof level !== 'number') return
+  wantedVolume = level
+  if (sendingVolume) return
+  sendingVolume = true
+  try {
+    while (wantedVolume !== null) {
+      const next = wantedVolume
+      wantedVolume = null
+      if (next === (sentVolume ?? serverVolume.value)) continue
+      const result = await actions.setVolume(target.value, next)
+      if (result.ok) sentVolume = next
+      else if (wantedVolume === null) volume.value = serverVolume.value
+    }
+  } finally {
+    sendingVolume = false
+  }
 }
 
 async function rename(displayName: string): Promise<boolean> {

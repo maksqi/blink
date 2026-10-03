@@ -56,12 +56,17 @@ describe('ReactionFeed', () => {
     const accepted = Array.from({ length: 10 }, () => feed.add({ reaction: 'clap' }, ana) !== null)
     expect(accepted.filter(Boolean)).toHaveLength(6)
     const me = { identity: 'p_Me00000000000000', name: 'Me' }
-    expect(Array.from({ length: 10 }, () => feed.add({ reaction: 'clap' }, me, true) !== null).every(Boolean)).toBe(true)
+    expect(Array.from({ length: 10 }, () => feed.add({ reaction: 'clap' }, me, true) !== null).every(Boolean)).toBe(
+      true,
+    )
   })
 
   it('spreads consecutive items over different lanes', () => {
     const { feed } = feedAt()
-    const lanes = Array.from({ length: 5 }, (_, i) => feed.add({ reaction: 'heart' }, { identity: `p_${i}`, name: 'x' })!.lane)
+    const lanes = Array.from(
+      { length: 5 },
+      (_, i) => feed.add({ reaction: 'heart' }, { identity: `p_${i}`, name: 'x' })!.lane,
+    )
     expect(new Set(lanes.map((lane) => lane.toFixed(2))).size).toBe(5)
     for (const lane of lanes) expect(lane).toBeGreaterThanOrEqual(0)
   })

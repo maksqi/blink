@@ -5,7 +5,10 @@ const p = (
   name: string,
   role: ListParticipant['role'] = 'participant',
   handRaisedAt: number | null = null,
-  identity = `p_${name.replace(/[^A-Za-z]/g, '').padEnd(16, '0').slice(0, 16)}`,
+  identity = `p_${name
+    .replace(/[^A-Za-z]/g, '')
+    .padEnd(16, '0')
+    .slice(0, 16)}`,
 ): ListParticipant => ({ identity, name, role, isLocal: false, handRaisedAt })
 
 describe('sortParticipants', () => {
@@ -25,7 +28,11 @@ describe('sortParticipants', () => {
   })
 
   it('puts raised hands first in queue order and keeps them in their role section', () => {
-    const sections = sortParticipants([p('Cleo', 'participant', 30), p('Ben', 'cohost', 10), p('Ana', 'participant', 20)])
+    const sections = sortParticipants([
+      p('Cleo', 'participant', 30),
+      p('Ben', 'cohost', 10),
+      p('Ana', 'participant', 20),
+    ])
     expect(sections.hands.map((e) => [e.position, e.participant.name])).toEqual([
       [1, 'Ben'],
       [2, 'Ana'],
@@ -37,7 +44,12 @@ describe('sortParticipants', () => {
 
   it('sorts non-ASCII names with localeCompare', () => {
     // Emile, Zoe and Asa with diacritics: accents sort with their base letter.
-    const sections = sortParticipants([p('Zo\u00eb', 'participant', null, 'p_1'), p('\u00c9mile', 'participant', null, 'p_2'), p('eve', 'participant', null, 'p_3'), p('\u00c5sa', 'participant', null, 'p_4')])
+    const sections = sortParticipants([
+      p('Zo\u00eb', 'participant', null, 'p_1'),
+      p('\u00c9mile', 'participant', null, 'p_2'),
+      p('eve', 'participant', null, 'p_3'),
+      p('\u00c5sa', 'participant', null, 'p_4'),
+    ])
     expect(sections.others.map((x) => x.name)).toEqual(['\u00c5sa', '\u00c9mile', 'eve', 'Zo\u00eb'])
   })
 

@@ -14,7 +14,12 @@ export function compareEntries(a: LobbyEntry, b: LobbyEntry): number {
 }
 
 function sameEntry(a: LobbyEntry, b: LobbyEntry): boolean {
-  return a.requestId === b.requestId && a.displayName === b.displayName && a.kind === b.kind && a.requestedAt === b.requestedAt
+  return (
+    a.requestId === b.requestId &&
+    a.displayName === b.displayName &&
+    a.kind === b.kind &&
+    a.requestedAt === b.requestedAt
+  )
 }
 
 /**
@@ -51,9 +56,7 @@ export function withoutEntry(list: readonly LobbyEntry[], requestId: string): Lo
 export const LOBBY_TOAST_LIMIT = 3
 
 export type LobbyToastPlan =
-  | { kind: 'none' }
-  | { kind: 'each'; entries: LobbyEntry[] }
-  | { kind: 'summary'; count: number }
+  { kind: 'none' } | { kind: 'each'; entries: LobbyEntry[] } | { kind: 'summary'; count: number }
 
 /**
  * Toasts for new arrivals: one toast with an "Admit" action per new person while at most three people wait, otherwise

@@ -11,8 +11,10 @@ const props = withDefaults(
 
 const badges = computed(() => {
   const out: Array<{ id: string; label: string; tone: string }> = []
-  if (props.participant.role === 'host') out.push({ id: 'host', label: 'Host', tone: 'bg-primary/90 text-primary-foreground' })
-  if (props.participant.role === 'cohost') out.push({ id: 'cohost', label: 'Co-host', tone: 'bg-sky-500/85 text-white' })
+  if (props.participant.role === 'host')
+    out.push({ id: 'host', label: 'Host', tone: 'bg-primary/90 text-primary-foreground' })
+  if (props.participant.role === 'cohost')
+    out.push({ id: 'cohost', label: 'Co-host', tone: 'bg-sky-500/85 text-white' })
   if (props.participant.kind === 'guest') out.push({ id: 'guest', label: 'Guest', tone: 'bg-white/15 text-white/90' })
   return out
 })

@@ -78,11 +78,7 @@ export function publishAllowed(
  * only the host manages co-hosts. Permission items ("give voice") exist for participants only, once their allowances
  * are known; hosts and co-hosts can always publish.
  */
-export function participantMenu(
-  actor: CallActor,
-  target: MenuTarget,
-  info?: MenuInfo | null,
-): MenuItem[] {
+export function participantMenu(actor: CallActor, target: MenuTarget, info?: MenuInfo | null): MenuItem[] {
   const items: MenuItem[] = []
   const allowed = (action: CallAction) => canPerform(actor, action, { identity: target.identity, role: target.role })
   const add = (id: MenuItemId, action: CallAction, group: MenuGroup, destructive = false) => {

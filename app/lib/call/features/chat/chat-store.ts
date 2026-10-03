@@ -36,8 +36,7 @@ export interface ChatLogOptions {
 }
 
 export type ReceiveResult =
-  | { accepted: true; message: ChatMessage }
-  | { accepted: false; reason: 'invalid' | 'disabled' | 'rate-limited' }
+  { accepted: true; message: ChatMessage } | { accepted: false; reason: 'invalid' | 'disabled' | 'rate-limited' }
 
 export type DraftResult = { ok: true; text: string } | { ok: false; error: string }
 
@@ -52,7 +51,8 @@ export const CHAT_LIMITS = {
 export function validateDraft(draft: string): DraftResult {
   const text = draft.trim()
   if (!text) return { ok: false, error: 'Type a message first.' }
-  if (text.length > CHAT_MAX_LENGTH) return { ok: false, error: `Messages can have up to ${CHAT_MAX_LENGTH} characters.` }
+  if (text.length > CHAT_MAX_LENGTH)
+    return { ok: false, error: `Messages can have up to ${CHAT_MAX_LENGTH} characters.` }
   const parsed = chatBodySchema.safeParse({ text })
   return parsed.success ? { ok: true, text: parsed.data.text } : { ok: false, error: 'This message cannot be sent.' }
 }

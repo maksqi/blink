@@ -131,9 +131,7 @@ async function endForAll() {
   }
 }
 
-const reminder = computed(() =>
-  hostState.removedCount.value > 0 ? rotateReminderText(ctx.self.value?.role) : null,
-)
+const reminder = computed(() => (hostState.removedCount.value > 0 ? rotateReminderText(ctx.self.value?.role) : null))
 </script>
 
 <template>
@@ -256,7 +254,9 @@ const reminder = computed(() =>
     <DialogContent class="sm:max-w-md" data-testid="mute-all-dialog">
       <DialogHeader>
         <DialogTitle>Mute everyone?</DialogTitle>
-        <DialogDescription>Mutes every participant's microphone. Hosts and co-hosts stay as they are.</DialogDescription>
+        <DialogDescription
+          >Mutes every participant's microphone. Hosts and co-hosts stay as they are.</DialogDescription
+        >
       </DialogHeader>
       <div class="flex items-start gap-3">
         <Checkbox id="mute-all-prevent" v-model="preventSelfUnmute" data-testid="mute-all-prevent" />
