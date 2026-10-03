@@ -1,4 +1,7 @@
-// Stub (W0a). Owner: admin (Stage 03). Replace with the real handler; keep path and method.
-export default defineEventHandler(() => {
-  throw notImplemented('admin')
+// GET /api/admin/settings (admin): every setting plus the SMTP status (host and sender only).
+import { getAdminSettings } from '../../../services/admin'
+
+export default defineEventHandler(async (event) => {
+  await requireAdmin(event)
+  return getAdminSettings()
 })
