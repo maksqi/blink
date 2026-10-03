@@ -187,6 +187,9 @@ export const test = base.extend<LiveKitFixtures>({
       return other
     }
 
+    // joinAs peers have no call_participants rows, so in-call API requests made by Wave 2 features (people and
+    // waiting-room lists for moderators) answer 403 CALL_NOT_PARTICIPANT. Specs that need the server use `rooms`.
+    guards.allowConsoleError(/status of 403 \(Forbidden\)[\s\S]*\/api\/calls\//)
     await use(async (role, options = {}) => {
       const room = options.room ?? (await createRoom())
       const identity = randomIdentity()

@@ -59,21 +59,25 @@ function togglePanel(id: string) {
       <component :is="item.component" v-for="item in start" :key="item.id" />
     </div>
 
-    <div
-      :class="
-        cn(
-          'flex min-w-0 items-center gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-          wide ? 'flex-none justify-center' : 'flex-1 overflow-x-auto',
-        )
-      "
-    >
-      <template v-if="!wide">
-        <component :is="item.component" v-for="item in start" :key="item.id" />
-      </template>
-      <component :is="item.component" v-for="item in center" :key="item.id" />
-      <template v-if="!wide">
-        <component :is="item.component" v-for="item in end" :key="item.id" />
-      </template>
+    <div :class="cn('flex min-w-0 items-center gap-2', wide ? 'flex-none justify-center' : 'flex-1')">
+      <!-- On narrow screens only the feature controls scroll; More options and Leave stay in view. -->
+      <div
+        :class="
+          cn(
+            'flex min-w-0 items-center gap-2',
+            !wide && 'flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+          )
+        "
+        data-testid="control-bar-scroll"
+      >
+        <template v-if="!wide">
+          <component :is="item.component" v-for="item in start" :key="item.id" />
+        </template>
+        <component :is="item.component" v-for="item in center" :key="item.id" />
+        <template v-if="!wide">
+          <component :is="item.component" v-for="item in end" :key="item.id" />
+        </template>
+      </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
