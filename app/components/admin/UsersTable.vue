@@ -25,9 +25,9 @@ const emit = defineEmits<{ select: [user: AdminUser] }>()
     </TableHeader>
     <TableBody>
       <TableRow v-for="user in items" :key="user.id" :data-user-id="user.id" data-testid="user-row">
-        <TableCell class="max-w-64 min-w-0">
+        <TableCell class="w-full max-w-0">
           <span class="flex items-center gap-2">
-            <span class="truncate font-medium">{{ user.displayName }}</span>
+            <span class="min-w-0 truncate font-medium">{{ user.displayName }}</span>
             <Badge v-if="user.id === currentUserId" variant="outline">You</Badge>
           </span>
           <span class="block truncate text-xs text-muted-foreground">{{ user.email }}</span>
@@ -58,7 +58,7 @@ const emit = defineEmits<{ select: [user: AdminUser] }>()
             data-testid="manage-user"
             @click="emit('select', user)"
           >
-            Manage
+            <span class="hidden sm:inline">Manage</span>
             <ChevronRightIcon data-icon="inline-end" aria-hidden="true" />
           </Button>
         </TableCell>

@@ -28,7 +28,7 @@ const LABEL: Record<InviteState, string> = { pending: 'Pending', used: 'Used', e
       <TableRow>
         <TableHead>For</TableHead>
         <TableHead class="hidden sm:table-cell">Role</TableHead>
-        <TableHead>State</TableHead>
+        <TableHead class="hidden sm:table-cell">State</TableHead>
         <TableHead class="hidden md:table-cell">Expires</TableHead>
         <TableHead class="hidden lg:table-cell">Created</TableHead>
         <TableHead class="text-right"><span class="sr-only">Actions</span></TableHead>
@@ -36,16 +36,21 @@ const LABEL: Record<InviteState, string> = { pending: 'Pending', used: 'Used', e
     </TableHeader>
     <TableBody>
       <TableRow v-for="invite in items" :key="invite.id" :data-invite-id="invite.id" data-testid="invite-row">
-        <TableCell class="max-w-56 min-w-0">
+        <TableCell class="w-full max-w-0">
           <span class="block truncate font-medium">{{ invite.email ?? 'Anyone with the link' }}</span>
-          <span v-if="invite.role === 'admin'" class="text-xs text-muted-foreground sm:hidden">Admin</span>
+          <span class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground sm:hidden">
+            <Badge :variant="stateOf(invite, now) === 'pending' ? 'default' : 'outline'">
+              {{ LABEL[stateOf(invite, now)] }}
+            </Badge>
+            <span v-if="invite.role === 'admin'">Admin</span>
+          </span>
         </TableCell>
         <TableCell class="hidden sm:table-cell">
           <Badge :variant="invite.role === 'admin' ? 'secondary' : 'outline'">
             {{ invite.role === 'admin' ? 'Admin' : 'User' }}
           </Badge>
         </TableCell>
-        <TableCell>
+        <TableCell class="hidden sm:table-cell">
           <Badge
             :variant="stateOf(invite, now) === 'pending' ? 'default' : 'outline'"
             :data-state="stateOf(invite, now)"
@@ -66,7 +71,7 @@ const LABEL: Record<InviteState, string> = { pending: 'Pending', used: 'Used', e
             @click="emit('revoke', invite)"
           >
             <BanIcon data-icon="inline-start" aria-hidden="true" />
-            Revoke
+            <span class="hidden sm:inline">Revoke</span>
           </Button>
         </TableCell>
       </TableRow>

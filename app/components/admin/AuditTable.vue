@@ -30,7 +30,7 @@ function actorLabel(entry: AuditEntry): string {
   <Table data-testid="audit-table">
     <TableHeader>
       <TableRow>
-        <TableHead class="w-44">Time</TableHead>
+        <TableHead class="hidden w-44 sm:table-cell">Time</TableHead>
         <TableHead>Action</TableHead>
         <TableHead class="hidden md:table-cell">Actor</TableHead>
         <TableHead class="hidden lg:table-cell">Target</TableHead>
@@ -39,8 +39,9 @@ function actorLabel(entry: AuditEntry): string {
     </TableHeader>
     <TableBody>
       <TableRow v-for="entry in items" :key="entry.id" :data-action="entry.action" data-testid="audit-row">
-        <TableCell class="align-top"><AdminTime :iso="entry.at" /></TableCell>
-        <TableCell class="max-w-64 min-w-0 align-top">
+        <TableCell class="hidden align-top sm:table-cell"><AdminTime :iso="entry.at" /></TableCell>
+        <TableCell class="w-full max-w-0 align-top">
+          <span class="block text-xs text-muted-foreground sm:hidden"><AdminTime :iso="entry.at" /></span>
           <code class="block truncate font-mono text-xs">{{ entry.action }}</code>
           <span class="block truncate text-xs text-muted-foreground md:hidden">{{ actorLabel(entry) }}</span>
           <ul v-if="entry.details" class="mt-1 space-y-0.5 text-xs text-muted-foreground xl:hidden">

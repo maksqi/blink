@@ -32,7 +32,7 @@ function toggle(id: string) {
         <TableRow>
           <TableHead>Room</TableHead>
           <TableHead class="hidden md:table-cell">Owner</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead class="hidden sm:table-cell">Status</TableHead>
           <TableHead class="hidden lg:table-cell">Last active</TableHead>
           <TableHead class="text-right"><span class="sr-only">Actions</span></TableHead>
         </TableRow>
@@ -40,7 +40,7 @@ function toggle(id: string) {
       <TableBody>
         <template v-for="room in items" :key="room.id">
           <TableRow :data-room-id="room.id" data-testid="room-row">
-            <TableCell class="max-w-56 min-w-0">
+            <TableCell class="w-full max-w-0">
               <button
                 type="button"
                 class="flex max-w-full items-center gap-1.5 rounded-sm text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -59,12 +59,16 @@ function toggle(id: string) {
               </button>
               <span class="block truncate pl-5.5 font-mono text-xs text-muted-foreground">{{ room.slug }}</span>
               <span class="block truncate pl-5.5 text-xs text-muted-foreground md:hidden">{{ room.owner.displayName }}</span>
+              <span class="mt-1 flex flex-wrap gap-1 pl-5.5 sm:hidden">
+                <Badge v-if="room.live" variant="default">Live · {{ room.participantCount }}</Badge>
+                <Badge v-else variant="outline">Idle</Badge>
+              </span>
             </TableCell>
             <TableCell class="hidden max-w-56 min-w-0 md:table-cell">
               <span class="block truncate">{{ room.owner.displayName }}</span>
               <span class="block truncate text-xs text-muted-foreground">{{ room.owner.email }}</span>
             </TableCell>
-            <TableCell>
+            <TableCell class="hidden sm:table-cell">
               <span class="flex flex-wrap gap-1">
                 <Badge v-if="room.live" variant="default" data-testid="room-live">
                   Live · {{ room.participantCount }}
