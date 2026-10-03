@@ -154,53 +154,63 @@ saves the file on the recorder's device, uploads nothing and stays end-to-end en
       Components in `app/components/recordings/`. Until the Stage 02 middleware is merged, pages handle 401/403 from
       the API themselves; request nav entries if missing (navigation is frozen).
 ### recording-client — capture pipeline (`app/lib/recording/`)
-- [ ] `mime.ts` (pure) `pickRecordingMime(isTypeSupported, forcedPrefix)`: `video/mp4;codecs=avc1.64001F,mp4a.40.2` →
+- [x] `mime.ts` (pure) `pickRecordingMime(isTypeSupported, forcedPrefix)`: `video/mp4;codecs=avc1.64001F,mp4a.40.2` →
       `video/mp4;codecs=avc1.42E01F,mp4a.40.2` → `video/mp4;codecs=avc1.64001F,opus` → `video/mp4;codecs=avc1,opus` →
       `video/webm;codecs=vp9,opus` → `video/webm;codecs=vp8,opus` → `video/webm` (Firefox lands on webm).
       `forceRecordingMime('video/mp4' | 'video/webm')` keeps only that family; none supported → a visible error
       (decision).
-- [ ] `clock.worker.ts` (`import ClockWorker from './clock.worker?worker'`, same-origin): ticks every 1000/30 ms and keeps
-      drawing in background tabs, where rAF stops and main-thread timers throttle.
-- [ ] `layout.ts` (pure): grid from `computeGrid` (`app/lib/layout/`) for 1..25 tiles; presenter layout while someone
+- [x] `clock.worker.ts` (`import ClockWorker from './clock.worker?worker'`, same-origin): ticks every 1000/30 ms and keeps
+      drawing in background tabs, where rAF stops and main-thread timers throttle (`clock.ts` falls back to a
+      main-thread interval only where workers are unavailable).
+- [x] `layout.ts` (pure): grid from `computeGrid` (`app/lib/layout/`) for 1..25 tiles; presenter layout while someone
       shares (share ≈ 80 % width plus a filmstrip); 16:9 canvas sized from `GET /api/config` `recording.maxResolution`.
-- [ ] `compositor.ts`: canvas `captureStream(0)`; each tick draws tiles (cover fit), names, muted-mic icon, initials when
+- [x] `compositor.ts`: canvas `captureStream(0)`; each tick draws tiles (cover fit), names, muted-mic icon, initials when
       the camera is off, then calls `requestFrame()` on the canvas track (Chrome, Safari) or on the stream (Firefox).
       Sources (`sources.ts`, pure filter): local camera `ctx.media.cameraTrack()` (processed), own screen share, and
       remote camera/screen tracks from `ctx.room` publications that are `isEncrypted` and subscribed; `<video muted
-      playsinline>` elements in a hidden 1 px container inside the DOM.
-- [ ] Demand: `ctx.subscriptions.setDemand('recording', …)` for every remote camera at its tile size and screen shares at
+      playsinline>` elements in a hidden 1 px container inside the DOM. (decision) Screen shares are drawn with
+      `contain`, never cropped; drawing lives in `draw.ts`, the scene, demand and mix wiring in `pipeline.ts`.
+- [x] Demand: `ctx.subscriptions.setDemand('recording', …)` for every remote camera at its tile size and screen shares at
       canvas size; remove it on stop.
-- [ ] `mixer.ts`: its own 48 kHz AudioContext → `MediaStreamAudioDestinationNode`. Sources:
+- [x] `mixer.ts`: its own 48 kHz AudioContext → `MediaStreamAudioDestinationNode`. Sources:
       `ctx.audio.remoteAudioTracks()` (encrypted-verified; identity matched via `ctx.room` publications by
       `mediaStreamTrack.id`), each through a
       GainNode at host `vol` / 100 (the recorder's own `setLocalVolume` is ignored), plus the processed mic
       `ctx.media.micTrack()`; re-synced on subscription changes. Never detach or add `<audio>` elements.
-- [ ] `recorder.ts`: `new MediaRecorder(new MediaStream([canvasTrack, mixTrack]), { mimeType, videoBitsPerSecond:
+- [x] `recorder.ts`: `new MediaRecorder(new MediaStream([canvasTrack, mixTrack]), { mimeType, videoBitsPerSecond:
       2_500_000 (1080p) or 1_500_000 (720p), audioBitsPerSecond: 128_000 })` (decision), `start(4000)`; empty blobs
       consume no seq; `onerror` → stop and complete.
-- [ ] `uploader.ts`: ordered queue, one `PUT /api/recordings/:id/chunks/:seq` in flight; retry with exponential backoff
+- [x] `uploader.ts`: ordered queue, one `PUT /api/recordings/:id/chunks/:seq` in flight; retry with exponential backoff
       and jitter (0.5 s → 30 s) on network errors, 5xx, 408 and 429 (`Retry-After` honored); 409 `not_recording` →
       stop locally; other 4xx stop with an error; backlog over 256 MB → "Uploading is falling behind"; after the last
       ack `POST /api/recordings/:id/complete { chunkCount, durationMs }`.
-- [ ] Local-only mode: same pipeline, blobs kept in memory, never uploaded; on stop, download `new Blob(parts, { type })`
+- [x] Local-only mode: same pipeline, blobs kept in memory, never uploaded; on stop, download `new Blob(parts, { type })`
       as `blinq-<room>-<date>.<webm|mp4>` (raw MediaRecorder output) and revoke the object URL afterwards.
+      (decision) `<room>` is the slug (the call context has no room name); the URL is revoked 60 s later.
 ### recording-client — feature and UI
-- [ ] `app/lib/call/features/recording/index.ts`: `defineCallFeature({ id: 'recording', controlBar, setup })`.
-- [ ] `app/components/call/recording/RecordButton.vue` (`visible` when `canPerform(self, 'recording.start')` and
-      `config.recording.enabled`) with a timer, a warning 5 min before `maxDurationMs` and auto-stop at the limit.
-- [ ] `StartRecordingDialog.vue`: "Record to the server" — "The recording is uploaded and stored encrypted on the server;
+- [x] `app/lib/call/features/recording/index.ts`: `defineCallFeature({ id: 'recording', controlBar, setup })`.
+- [x] `app/components/call/recording/RecordButton.vue` (`visible` when `canPerform(self, 'recording.start')` and
+      `config.recording.enabled`) with a timer, a warning 5 min before `maxDurationMs` and auto-stop at the limit. (decision) The warning and the
+      auto-stop run on the controller's frame clock (`controller.ts`), so they also fire in background tabs; while
+      someone else records, the button stops that recording (`recording.stop`).
+- [x] `StartRecordingDialog.vue`: "Record to the server" — "The recording is uploaded and stored encrypted on the server;
       the server and its admins can decrypt it." — or "Save to this device only" — "The file stays on this device and
       is never uploaded." Both add "Everyone in the meeting will see that you are recording."
-- [ ] Start: `ctx.callApi('/recording/start', { method: 'POST', body: { mode, mimeType, width, height } })`, and only
+- [x] Start: `ctx.callApi('/recording/start', { method: 'POST', body: { mode, mimeType, width, height } })`, and only
       after the 201 start MediaRecorder, so nothing is captured before the indicator is published.
-- [ ] `RecordingIndicator.vue` for everyone (ControlBarItem, placement `start`) from `ctx.roomState.recording`: red dot
+- [x] `RecordingIndicator.vue` for everyone (ControlBarItem, placement `start`) from `ctx.roomState.recording`: red dot
       "REC", time since `startedAt`, tooltip per mode (server: the disclosure above; local: "Recording on <by>'s
-      device"); `aria-live` announcement and a toast on start and stop.
-- [ ] `RecordingStatus.vue` (recorder only): backlog and retries. When `roomState.recording` turns null or changes, or the
-      phase leaves `inCall`, stop, flush and complete (best effort); `beforeunload` warns while recording.
-- [ ] Test hooks: honor `forceRecordingMime`; publish `testHooks()?.state.recording = { recordingId, mime,
+      device"); `aria-live` announcement and a toast on start and stop (the toast comes from the feature's `setup`,
+      once per call; a late joiner gets "This meeting is being recorded.").
+- [x] `RecordingStatus.vue` (recorder only): backlog and retries. When `roomState.recording` turns null or changes, or the
+      phase leaves `inCall`, stop, flush and complete (best effort); `beforeunload` warns while recording. (decision) A
+      reconnect (`reconnecting`) keeps recording; an indicator still missing 10 s after the 201 stops the recording
+      with an error; an upload that fails for good (quota, 4xx) or answers `not_recording` stops capturing too.
+- [x] Test hooks: honor `forceRecordingMime`; publish `testHooks()?.state.recording = { recordingId, mime,
       chunksProduced, chunksAcked, retries }`. E2E joins are DB-backed (Stage 06 fixture or a local copy in
-      `tests/e2e/recording/fixtures/`).
+      `tests/e2e/recording/fixtures/`). The state also carries `phase`, `mode`, `error`, `backlogBytes`, `startedAt`
+      and `framesDrawn`; the E2E helpers (`recordingCall`, ffprobe/volumedetect/freezedetect, chunk-failure injection,
+      background-tab emulation) live in `tests/e2e/fixtures/recording.ts` on top of the `rooms` fixture.
 
 ## Tests
 - Unit, server (`server/services/recordings/`): `blq1.test.ts` (round trip for 0, 1, seg−1, seg, seg+1 and many
