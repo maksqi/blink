@@ -23,7 +23,7 @@ const props = withDefaults(
     :to="props.to || undefined"
     :prefetch-on="props.to ? 'interaction' : undefined"
     :aria-label="props.to ? 'blinq home' : undefined"
-    :class="cn('inline-flex shrink-0 items-center gap-2 rounded-lg text-foreground', props.class)"
+    :class="cn('inline-flex shrink-0 items-center gap-2 rounded-lg text-foreground pointer-coarse:min-h-11', props.class)"
   >
     <!-- The mark is a lowercase "q" that doubles as a camera lens. -->
     <svg viewBox="0 0 32 32" :class="cn('size-7 shrink-0', props.markClass)" aria-hidden="true" focusable="false">

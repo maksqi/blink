@@ -94,7 +94,7 @@ const submitting = form.useStore((state) => state.isSubmitting)
                     v-if="smtpEnabled"
                     to="/forgot-password"
                     prefetch-on="interaction"
-                    class="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                    class="inline-flex items-center text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline pointer-coarse:min-h-11"
                   >
                     Forgot password?
                   </NuxtLink>
