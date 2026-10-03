@@ -1,8 +1,106 @@
+diff --git a/dist/livekit-client.e2ee.worker.mjs b/dist/livekit-client.e2ee.worker.mjs
+index ad55a83819c0e24fde8a65784395b2f797bab99f..47533b6d0a01ae013485fc6ba6a262a7141f5768 100644
+--- a/dist/livekit-client.e2ee.worker.mjs
++++ b/dist/livekit-client.e2ee.worker.mjs
+@@ -7046,8 +7046,9 @@ class FrameCryptor extends BaseFrameCryptor {
+         return controller.enqueue(encodedFrame);
+       }
+       if (!this.isEnabled()) {
+-        this.appendFrameMetadata(encodedFrame);
+-        return controller.enqueue(encodedFrame);
++        // blinq patch: this worker only runs in rooms that use encryption, so a frame is never sent without it. 2.22.3
++        // forwarded it unencrypted while the participant's flag was off or not known yet.
++        return;
+       }
+       const keySet = this.keys.getKeySet();
+       if (!keySet) {
+@@ -7160,8 +7161,10 @@ class FrameCryptor extends BaseFrameCryptor {
+         return;
+       }
+       if (!encryptionEnabled) {
+-        // participant is known to publish unencrypted media
+-        return controller.enqueue(encodedFrame);
++        // blinq patch: drop instead of passing the frame to the decoder undecrypted. The flag is per participant and
++        // every TrackPublished overwrites it, so one publication announced as unencrypted (by a compromised SFU) would
++        // otherwise make the participant's encrypted tracks accept injected plaintext.
++        return;
+       }
+       if (isFrameServerInjected(encodedFrame.data, this.sifTrailer)) {
+         encodedFrame.data = encodedFrame.data.slice(0, encodedFrame.data.byteLength - this.sifTrailer.byteLength);
 diff --git a/dist/livekit-client.esm.mjs b/dist/livekit-client.esm.mjs
-index 0bdf98540d93d7deb581737dca7afb299308d307..97b8d014b902ff9cdfce2cc140029aec5e97eb9e 100644
+index 0bdf98540d93d7deb581737dca7afb299308d307..ed6f252de2779f175e598c085226d656a810d277 100644
 --- a/dist/livekit-client.esm.mjs
 +++ b/dist/livekit-client.esm.mjs
-@@ -25600,7 +25600,10 @@ class RTCEngine extends eventsExports.EventEmitter {
+@@ -24303,6 +24303,8 @@ function videoLayersFromEncodings(width, height, encodings, svc) {
+   });
+ }const minReconnectWait = 2 * 1000;
+ const leaveReconnect = 'leave-reconnect';
++/** blinq patch: how long a data channel error waits for the server's leave message before it is reported. */
++const BLINQ_SERVER_CLOSE_GRACE_MS = 2000;
+ /**
+  * How long local connection quality must stay `LOST` while connected and publishing before we
+  * force a full reconnect — `LOST` is the server's verdict that it isn't receiving our media.
+@@ -24464,27 +24466,44 @@ class RTCEngine extends eventsExports.EventEmitter {
+       }
+       const channel = event.currentTarget;
+       const channelKind = channel.maxRetransmits === 0 ? 'lossy' : 'reliable';
+-      if (typeof RTCErrorEvent !== 'undefined' && event instanceof RTCErrorEvent && event.error) {
+-        const error = event.error;
+-        this.log.error("DataChannel error on ".concat(channelKind, ": ").concat(error.message), {
+-          error,
+-          errorDetail: error.errorDetail,
+-          sctpCauseCode: error.sctpCauseCode
+-        });
+-      } else {
+-        this.log.error("Unknown DataChannel error on ".concat(channelKind), {
+-          event
+-        });
+-      }
++      // blinq patch: when the server ends the session (room deleted, participant removed) the SCTP abort can arrive
++      // before the signal's leave message closes the engine. Report the error only if the engine is still open a
++      // moment later, so the expected end of a session logs nothing.
++      setTimeout(() => {
++        if (this._isClosed) {
++          return;
++        }
++        if (typeof RTCErrorEvent !== 'undefined' && event instanceof RTCErrorEvent && event.error) {
++          const error = event.error;
++          this.log.error("DataChannel error on ".concat(channelKind, ": ").concat(error.message), {
++            error,
++            errorDetail: error.errorDetail,
++            sctpCauseCode: error.sctpCauseCode
++          });
++        } else {
++          this.log.error("Unknown DataChannel error on ".concat(channelKind), {
++            event
++          });
++        }
++      }, BLINQ_SERVER_CLOSE_GRACE_MS);
+     };
+     this.handleDataChannelClose = kind => () => {
+-      var _a;
+       // A publisher DC closing while the session is up and the publisher PC is still
+       // connected is the signature of an oversized message having aborted the channel
+       // (see livekit/rust-sdks#1137). Surface it; do not attempt renegotiation.
+-      if (!this._isClosed && ((_a = this.pcManager) === null || _a === void 0 ? void 0 : _a.publisher.getConnectionState()) === 'connected') {
+-        this.log.error("publisher data channel '".concat(DataChannelKind[kind], "' closed unexpectedly"), this.logContext);
++      // blinq patch: checked again after a moment, like handleDataError (a server-side close races the leave).
++      const unexpected = () => {
++        var _a;
++        return !this._isClosed && ((_a = this.pcManager) === null || _a === void 0 ? void 0 : _a.publisher.getConnectionState()) === 'connected';
++      };
++      if (!unexpected()) {
++        return;
+       }
++      setTimeout(() => {
++        if (unexpected()) {
++          this.log.error("publisher data channel '".concat(DataChannelKind[kind], "' closed unexpectedly"), this.logContext);
++        }
++      }, BLINQ_SERVER_CLOSE_GRACE_MS);
+     };
+     // websocket reconnect behavior. if websocket is interrupted, and the PeerConnection
+     // continues to work, we can reconnect to websocket to continue the session
+@@ -25600,7 +25619,10 @@ class RTCEngine extends eventsExports.EventEmitter {
              value: new EncryptedPacket({
                encryptedValue: encryptedData.payload,
                iv: encryptedData.iv,
@@ -14,3 +112,116 @@ index 0bdf98540d93d7deb581737dca7afb299308d307..97b8d014b902ff9cdfce2cc140029aec
              })
            };
          }
+@@ -33631,6 +33653,54 @@ class DeferrableMap extends Map {
+ })(ConnectionState || (ConnectionState = {}));
+ const CONNECTION_RECONCILE_FREQUENCY_MS = 4 * 1000;
+ const STATS_LOG_FREQUENCY_MS = 30 * 1000;
++/**
++ * blinq patch: registers the Room's devicechange listener from a function that has no `this` in scope. In 2.22.3 the
++ * WeakRef listener and the FinalizationRegistry callback were created inside the Room constructor and shared its
++ * closure context, which holds the Room, so navigator.mediaDevices kept every Room alive (disconnect() removes
++ * `handleDeviceChange`, not this listener). Neither closure below captures `room`.
++ */
++function blinqWatchDeviceChanges(room) {
++  var _a, _b;
++  const cleanupController = new AbortController();
++  let onDeviceChange;
++  if (Room.cleanupRegistry) {
++    const roomRef = new WeakRef(room);
++    onDeviceChange = () => {
++      const self = roomRef.deref();
++      if (!self) {
++        return;
++      }
++      self.handleDeviceChange();
++    };
++    Room.cleanupRegistry.register(room, () => {
++      cleanupController.abort();
++    });
++  } else {
++    // Legacy browsers without WeakRef/FinalizationRegistry: a direct listener, as upstream.
++    onDeviceChange = room.handleDeviceChange;
++  }
++  (_b = (_a = navigator.mediaDevices) === null || _a === void 0 ? void 0 : _a.addEventListener) === null || _b === void 0 ? void 0 : _b.call(_a, 'devicechange', onDeviceChange, {
++    signal: cleanupController.signal
++  });
++}
++/**
++ * blinq patch: the iOS silent-audio element's visibilitychange listener. 2.22.3 created it inside startAudio() and
++ * never removed it, so `document` kept the Room alive. This one holds the Room weakly and is removed on disconnect.
++ */
++function blinqDummyAudioVisibilityListener(room, element, stream) {
++  const roomRef = typeof WeakRef === 'undefined' ? {
++    deref: () => room
++  } : new WeakRef(room);
++  return () => {
++    // set the srcObject to null on page hide in order to prevent lock screen controls to show up for it
++    element.srcObject = document.hidden ? null : stream;
++    const self = roomRef.deref();
++    if (!document.hidden && self) {
++      self.log.debug('page visible again, triggering startAudio to resume playback and update playback status');
++      self.startAudio();
++    }
++  };
++}
+ /**
+  * In LiveKit, a room is the logical grouping for a list of participants.
+  * Participants in a room can publish tracks, and subscribe to others' tracks.
+@@ -33970,19 +34040,12 @@ class Room extends eventsExports.EventEmitter {
+           track.enabled = true;
+           const stream = new MediaStream([track]);
+           dummyAudioEl.srcObject = stream;
+-          document.addEventListener('visibilitychange', () => {
+-            if (!dummyAudioEl) {
+-              return;
+-            }
+-            // set the srcObject to null on page hide in order to prevent lock screen controls to show up for it
+-            dummyAudioEl.srcObject = document.hidden ? null : stream;
+-            if (!document.hidden) {
+-              this.log.debug('page visible again, triggering startAudio to resume playback and update playback status');
+-              this.startAudio();
+-            }
+-          });
++          const onVisibilityChange = blinqDummyAudioVisibilityListener(this, dummyAudioEl, stream);
++          document.addEventListener('visibilitychange', onVisibilityChange);
+           document.body.append(dummyAudioEl);
+           this.once(RoomEvent.Disconnected, () => {
++            // blinq patch: remove the listener with the element.
++            document.removeEventListener('visibilitychange', onVisibilityChange);
+             dummyAudioEl === null || dummyAudioEl === void 0 ? void 0 : dummyAudioEl.remove();
+             dummyAudioEl = null;
+           });
+@@ -34530,32 +34593,8 @@ class Room extends eventsExports.EventEmitter {
+       this.switchActiveDevice('audiooutput', unwrapConstraint(this.options.audioOutput.deviceId)).catch(e => this.log.warn("Could not set audio output: ".concat(e.message)));
+     }
+     if (isWeb()) {
+-      const cleanupController = new AbortController();
+-      let onDeviceChange;
+-      if (Room.cleanupRegistry) {
+-        // Wrap the listener in a WeakRef closure so navigator.mediaDevices does not
+-        // strongly retain the Room. When the user drops their Room ref, the
+-        // FinalizationRegistry callback aborts the controller and removes the listener.
+-        const roomRef = new WeakRef(this);
+-        onDeviceChange = () => {
+-          const self = roomRef.deref();
+-          if (!self) {
+-            return;
+-          }
+-          self.handleDeviceChange();
+-        };
+-        Room.cleanupRegistry.register(this, () => {
+-          cleanupController.abort();
+-        });
+-      } else {
+-        // Legacy browsers without WeakRef/FinalizationRegistry: fall back to a
+-        // direct listener (matches pre-#1944 behavior).
+-        onDeviceChange = this.handleDeviceChange;
+-      }
+       // in order to catch device changes prior to room connection we need to register the event in the constructor
+-      (_g = (_f = navigator.mediaDevices) === null || _f === void 0 ? void 0 : _f.addEventListener) === null || _g === void 0 ? void 0 : _g.call(_f, 'devicechange', onDeviceChange, {
+-        signal: cleanupController.signal
+-      });
++      blinqWatchDeviceChanges(this);
+     }
+   }
+   registerTextStreamHandler(topic, callback) {

@@ -1,0 +1,52 @@
+diff --git a/dist/cjs/useForm.cjs b/dist/cjs/useForm.cjs
+index 2a47f52ecf872779673eae9994d3fe35775ddb68..98cc3046c524470095155f510010ababf6dbcefe 100644
+--- a/dist/cjs/useForm.cjs
++++ b/dist/cjs/useForm.cjs
+@@ -54,7 +54,16 @@ function useForm(opts) {
+     );
+     return extendedApi;
+   })();
+-  Vue.onMounted(formApi.mount);
++  // blinq patch: keep mount()'s cleanup and run it on unmount. 1.33.5 dropped it, so the form devtools listeners on
++  // window kept every FormApi (and through onSubmit its component and everything that component provides) alive.
++  let cleanup;
++  Vue.onMounted(() => {
++    cleanup = formApi.mount();
++  });
++  Vue.onBeforeUnmount(() => {
++    cleanup?.();
++    cleanup = void 0;
++  });
+   formApi.update(opts);
+   return formApi;
+ }
+diff --git a/dist/esm/useForm.js b/dist/esm/useForm.js
+index 0c98053147446f88c3e1344456f98f726611ccb8..7bf138b9c6fcf70f3d4c2b22216af7030c9d66ae 100644
+--- a/dist/esm/useForm.js
++++ b/dist/esm/useForm.js
+@@ -1,6 +1,6 @@
+ import { FormApi } from "@tanstack/form-core";
+ import { useSelector } from "@tanstack/vue-store";
+-import { defineComponent, h, onMounted } from "vue";
++import { defineComponent, h, onBeforeUnmount, onMounted } from "vue";
+ import { Field } from "./useField.js";
+ import { FormGroup } from "./useFormGroup.js";
+ import { useFormId } from "./useFormId.js";
+@@ -52,7 +52,16 @@ function useForm(opts) {
+     );
+     return extendedApi;
+   })();
+-  onMounted(formApi.mount);
++  // blinq patch: keep mount()'s cleanup and run it on unmount. 1.33.5 dropped it, so the form devtools listeners on
++  // window kept every FormApi (and through onSubmit its component and everything that component provides) alive.
++  let cleanup;
++  onMounted(() => {
++    cleanup = formApi.mount();
++  });
++  onBeforeUnmount(() => {
++    cleanup?.();
++    cleanup = void 0;
++  });
+   formApi.update(opts);
+   return formApi;
+ }

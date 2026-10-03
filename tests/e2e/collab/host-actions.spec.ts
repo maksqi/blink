@@ -174,9 +174,9 @@ test.describe('host actions', () => {
     expect((rejoin.body.data as { code?: string } | undefined)?.code).toBe('JOIN_REMOVED')
   })
 
-  test('end for all ends every client', async ({ collab, guards }) => {
-    // The SDK logs its data channels closing when the server deletes the room under it; that is the expected end.
-    guards.allowConsoleError(/DataChannel error on \w+: User-Initiated Abort|data channel '\w+' closed unexpectedly/)
+  test('end for all ends every client', async ({ collab }) => {
+    // F-006: no console error either. The SCTP abort of the deleted room can arrive before the leave message; the
+    // patched SDK reports a data channel error only if the session is still open after a grace period.
     const { room, call: host } = await collab.meeting({ waitingRoom: false })
     const ana = await collab.addUser(room, host, { name: 'Ana Lima', camera: false })
     const ben = await collab.addGuest(room, host, { name: 'Ben Guest', camera: false })
@@ -189,5 +189,7 @@ test.describe('host actions', () => {
     for (const peer of [ana, ben, host]) await waitForPhase(peer.page, 'ended', 5_000)
     await expect(ana.page.getByTestId('call-end-notice-text')).toHaveText('The host ended the meeting for everyone.')
     await expect(ben.page.getByTestId('call-end-notice')).toBeVisible()
+    // Longer than the SDK's grace period, so a data channel error it would still report reaches the console guard.
+    await host.page.waitForTimeout(3_000)
   })
 })
