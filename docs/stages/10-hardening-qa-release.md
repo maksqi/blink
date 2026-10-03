@@ -145,8 +145,8 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       already null); the admin service works around it in `beforeDelete` — owner: fix-server — status: open
 - [ ] F-002 [low] server — 404 error responses carry `cache-control: no-cache` (Nitro error handler), not the documented
       `no-store` — owner: fix-server — status: open
-- [ ] F-003 [low] admin — the overview counts live meetings from the first 100 rooms only ("100+") — owner: admin —
-      status: open
+- [x] F-003 [low] admin — the overview counts live meetings from the first 100 rooms only ("100+") — owner: admin —
+      status: accepted (the overview says "100+" beyond 100 rooms; a counts endpoint is a feature, backlog)
 - [x] F-004 [low] ci — nightly.yml runs `--project=msedge`, which `playwright.config.ts` did not define — owner:
       orchestrator — status: fixed (W3 kickoff, `E2E_NIGHTLY_BROWSERS=1`)
 - [ ] F-005 [medium] call — `LocalMedia` ignores server-side mutes, so the local toggles stay "on" after a host mute;
@@ -155,8 +155,8 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       status: open
 - [ ] F-007 [low] call — participant-side dialogs live in a zero-footprint `start` control-bar item; no always-mounted
       overlay slot in `CallFeature` — owner: orchestrator (contract) + fix-call — status: open
-- [ ] F-008 [low] rooms — co-hosts can only be promoted during a call (no user lookup for non-admins) — owner:
-      orchestrator — status: open
+- [x] F-008 [low] rooms — co-hosts can only be promoted during a call (no user lookup for non-admins) — owner:
+      orchestrator — status: accepted (a user lookup for non-admins would reveal accounts; co-hosts are promoted during a call, backlog)
 - [ ] F-009 [low] recording — local-only file names use the slug; the room name is not in `CallContext` — owner:
       orchestrator (contract) + fix-call — status: open
 - [x] F-010 [low] media — `/vendor/mediapipe/*.tflite` is served as `text/plain` (with `nosniff`) — owner:
@@ -230,9 +230,9 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       (`app/composables/rooms/useJoinFlow.ts:99-107`) — owner: fix-ui — status: open
 - [ ] F-039 [medium] server — a LiveKit full reconnect (left on the old session, joined on the new one) is enforced as
       a removal (`server/services/meetings/webhooks.ts:62-103`) — owner: fix-server — status: open
-- [ ] F-040 [medium] db — `recordings.meeting_id` has no index (deleting a user with 5000 meetings takes 4.5 s vs
+- [x] F-040 [medium] db — `recordings.meeting_id` has no index (deleting a user with 5000 meetings takes 4.5 s vs
       68 ms); `room_invites.created_by`, `user_invites.created_by/used_by` are unindexed FKs; no partial index for the
-      stale-waiting sweep or `recordings.started_at` — owner: orchestrator — status: open
+      stale-waiting sweep or `recordings.started_at` — owner: orchestrator — status: fixed 55a129b (migration 0001_w3_indexes)
 - [ ] F-041 [medium] call — `startPreview` and `watchDevices` continue after dispose and add a `devicechange` listener
       that keeps the session alive (`app/lib/call/session.ts:270-279,997-1002`) — owner: fix-call — status: open
 - [ ] F-042 [medium] call — unhandled promise rejections from the hotkeys and pre-join toggles (`CallView.vue:89-98`,
@@ -252,8 +252,8 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       owner: fix-server — status: open
 - [ ] F-047 [low] server — bare clocks in `settings.ts`, `recordings/processor.ts`, `auth/providers/identity.ts`,
       `utils/cookies.ts` — owner: fix-server — status: open
-- [ ] F-048 [low] server — the dashboard room list (`OR`) and own-recordings list plus count use seq scans at volume
-      (5–16 ms at 60k rooms) — owner: orchestrator (indexes, with F-040) — status: open
+- [x] F-048 [low] server — the dashboard room list (`OR`) and own-recordings list plus count use seq scans at volume
+      (5–16 ms at 60k rooms) — owner: orchestrator (indexes, with F-040) — status: accepted (5–16 ms at 60k rooms; `recordings.started_at` indexed in 0001_w3_indexes)
 - [ ] F-049 [low] client — a BroadcastChannel can open after dispose (`useJoinFlow.ts:156-162`); `MicChain.destroy`
       does not stop `processedTrack`; recording uploads retry forever after unmount; livekit's iOS `visibilitychange`
       listener is never removed (upstream) — owner: fix-ui + fix-call — status: open
