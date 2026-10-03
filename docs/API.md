@@ -73,7 +73,7 @@ type ApiErrorBody = { statusCode: number; statusMessage: string; data: { code: E
 | recording | `RECORDING_DISABLED` 403 · `RECORDING_ACTIVE` 409 · `RECORDING_NOT_ALLOWED` 403 · `RECORDING_QUOTA_EXCEEDED` 409 · `RECORDING_TOO_LARGE` 413 · `RECORDING_INVALID_MEDIA` 422 · `RECORDING_NOT_READY` 409 |
 
 `CONFLICT` uses `details.reason` for specifics: `last_admin`, `self`, `slug_taken`, `email_taken`, `already_cohost`,
-`not_recording` (decision).
+`not_recording`, `not_live` (decision).
 
 ## 2. Public
 
@@ -316,7 +316,7 @@ Auth `admin` for every route. `recordings` routes are owned by `recording-server
 | POST | `/api/admin/settings/test-email` | `{ to?: string }` (default: the admin's email) (decision) | `{ ok: true }` | `SERVICE_UNAVAILABLE` (no SMTP or SMTP error, `details.smtpError`) |
 | GET | `/api/admin/rooms` | `paginationQuerySchema` | `Paginated<AdminRoom>` (live counts from LiveKit) | — |
 | DELETE | `/api/admin/rooms/:id` | — | 204 (soft delete, live meeting ended) | `NOT_FOUND` |
-| POST | `/api/admin/rooms/:id/end` | — | 204 | `NOT_FOUND`, `CONFLICT` (no live meeting) |
+| POST | `/api/admin/rooms/:id/end` | — | 204 | `NOT_FOUND`, `CONFLICT` (`not_live`: no live meeting) |
 | GET | `/api/admin/rooms/:id/meetings` | `paginationQuerySchema` | `Paginated<MeetingSummary>` | `NOT_FOUND` |
 | GET | `/api/admin/audit` | `auditQuerySchema` (+ `action`, `actorUserId`) | `Paginated<AuditEntry>` | — |
 | GET | `/api/admin/recordings` | `paginationQuerySchema` | `Paginated<RecordingSummary>` (all recordings) | — |
@@ -333,8 +333,11 @@ type AdminRoom = { id: Id; slug: string; name: string; owner: { id: Id; displayN
 type AuditEntry = { id: Id; at: IsoDate; actor: { userId: Id | null; displayName: string | null; participantId: Id | null }
   ip: string | null; action: string; targetType: string | null; targetId: string | null; details: Record<string, unknown> | null }
 ```
-Every admin mutation writes one audit entry (`admin.<verb>`). Admin responses never contain room keys, proofs, room
-invite tokens, chat or media. The last enabled admin cannot be demoted, disabled or deleted.
+Every admin mutation writes one audit entry (`admin.<verb>`): `admin.user_created`, `admin.user_updated`,
+`admin.user_password_reset`, `admin.user_sessions_revoked`, `admin.user_deleted`, `admin.invite_created`,
+`admin.invite_revoked`, `admin.settings_updated` (details `{ fields, old, new }`; an update that changes nothing is not
+audited), `admin.test_email_sent` (only when the mail was sent), `admin.room_ended`, `admin.room_deleted`,
+`admin.recording_deleted`. Admin responses never contain room keys, proofs, room invite tokens, chat or media. The last enabled admin cannot be demoted, disabled or deleted.
 
 ## 10. Webhooks
 
