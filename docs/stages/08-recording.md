@@ -271,22 +271,34 @@ saves the file on the recorder's device, uploads nothing and stays end-to-end en
 - [x] [agent-manual] `/recordings`, `/recordings/[id]` and `/admin/recordings` list, play, download and delete seeded
       recordings — evidence: report notes (automated later by `recording/playback`).
 ### recording-client
-- [ ] [auto] Both formats (forced webm and mp4) reach `ready`; ffprobe shows ≈ 10 s with audio and video; the audio is not
-      silent (`volumedetect`) — evidence: `pnpm test:e2e -- recording/formats`.
-- [ ] [auto] Chunk failures injected via `page.route` still produce a complete file — evidence:
-      `pnpm test:e2e -- recording/chunk-failures`.
-- [ ] [auto] The indicator reaches everyone in ≤ 1 s — evidence: `pnpm test:e2e -- recording/indicator`.
-- [ ] [auto] Guests and participants cannot record (UI hidden, API 403) — evidence:
-      `pnpm test:e2e -- recording/permissions`.
-- [ ] [auto] Local-only mode downloads the file and uploads nothing — evidence: `pnpm test:e2e -- recording/local-mode`.
-- [ ] [auto] Only encrypted-verified tracks are drawn and mixed — evidence: `app/lib/recording/sources.test.ts`.
-- [ ] [auto] MIME order, layout and uploader logic are unit-tested — evidence: `app/lib/recording/mime.test.ts`,
-      `app/lib/recording/layout.test.ts`, `app/lib/recording/uploader.test.ts`.
-- [ ] [auto] A recording plays from the recordings page — evidence: `pnpm test:e2e -- recording/playback`.
-- [ ] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- recording` (base fixture).
-- [ ] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
-- [ ] [agent-manual] Recording keeps going for 60 s with the recorder's tab in the background (no frozen stretch in the
-      result) — evidence: steps and a frame check of the file in the report.
+- [x] [auto] Both formats (forced webm and mp4) reach `ready`; ffprobe shows ≈ 10 s with audio and video; the audio is not
+      silent (`volumedetect`) — evidence: `pnpm test:e2e -- recording/formats` (Chromium webm and mp4: one h264 and
+      one aac stream, 10 ± 1.5 s, mean volume -20.9 / -21.1 dB with the host's own mic off, so the sound is the
+      participant's remote audio; Firefox webm -23.1 dB, mp4 skipped with an annotation).
+- [x] [auto] Chunk failures injected via `page.route` still produce a complete file — evidence:
+      `pnpm test:e2e -- recording/chunk-failures` (every third attempt aborted, the second answered 503; `retries` =
+      injected failures, `complete.chunkCount` = `chunksProduced`, `ready`, 14 ± 1.5 s).
+- [x] [auto] The indicator reaches everyone in ≤ 1 s — evidence: `pnpm test:e2e -- recording/indicator` (Chromium and
+      Firefox: REC shown 1 ms before the recorder read the 201 and hidden 0–2 ms around the stop's 204, because the
+      metadata update is published before the response; a late joiner sees it on connect; a co-host's stop makes the
+      recorder upload the rest and complete).
+- [x] [auto] Guests and participants cannot record (UI hidden, API 403) — evidence:
+      `pnpm test:e2e -- recording/permissions` (also a guest promoted to co-host).
+- [x] [auto] Local-only mode downloads the file and uploads nothing — evidence: `pnpm test:e2e -- recording/local-mode`.
+- [x] [auto] Only encrypted-verified tracks are drawn and mixed — evidence: `app/lib/recording/sources.test.ts`.
+- [x] [auto] MIME order, layout and uploader logic are unit-tested — evidence: `app/lib/recording/mime.test.ts`,
+      `app/lib/recording/layout.test.ts`, `app/lib/recording/uploader.test.ts` (also `mixer`, `recorder`,
+      `controller`, `announce` and `local-file` tests).
+- [x] [auto] A recording plays from the recordings page — evidence: `pnpm test:e2e -- recording/playback`.
+- [x] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- recording` (base fixture).
+- [x] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
+- [x] [agent-manual] Recording keeps going for 60 s with the recorder's tab in the background (no frozen stretch in the
+      result) — evidence: `tests/e2e/recording/background.spec.ts` (`@nightly`). Playwright keeps every page visible
+      (focus emulation; headless windows never occlude, verified with bringToFront and window minimizing), so the
+      spec gives the recorder's page what a hidden tab gets: `visibilityState` hidden with `visibilitychange`, no
+      rAF, main-thread timers at most once per second (a 33 ms interval fired 3 times in 3 s); workers untouched.
+      Over 60 s hidden the compositor drew 30.3 fps and chunks kept coming; for the 63.2 s result
+      `ffmpeg -vf freezedetect=n=-60dB:d=0.5` reports no frozen stretch.
 - [ ] [user] Safari (macOS, iOS) records mp4, Firefox records webm, and both play back — evidence: manual browser matrix
       in `docs/TESTING.md`.
 
