@@ -78,16 +78,6 @@ export function settlePending(
   return changed ? next : pending
 }
 
-/** The value a control shows: the pending request while it is in flight, otherwise the server truth. */
-export function displayedSetting<K extends LiveSettingKey>(
-  key: K,
-  pending: Partial<LiveSettings>,
-  state: LiveSettings | null | undefined,
-): LiveSettings[K] | undefined {
-  if (key in pending) return pending[key] as LiveSettings[K]
-  return state?.[key]
-}
-
 /**
  * Live-setting requests in flight and their confirmations (pure). The displayed value of a control is
  * 1. the requested value while its `PATCH /settings` is in flight (shown as pending),

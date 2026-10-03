@@ -108,8 +108,3 @@ export function participantMenu(actor: CallActor, target: MenuTarget, info?: Men
   add('remove', 'participant.remove', 'remove', true)
   return items
 }
-
-/** True when `actor` has any moderation item for someone (the menu trigger renders only then). */
-export function hasModerationMenu(actor: CallActor, target: MenuTarget, info?: MenuInfo | null): boolean {
-  return participantMenu(actor, target, info).length > 0
-}

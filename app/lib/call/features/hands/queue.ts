@@ -23,12 +23,6 @@ export function handQueue<T extends QueueParticipant>(participants: readonly T[]
     .map((participant, index) => ({ position: index + 1, participant }))
 }
 
-/** 1-based position of `identity`, or null when their hand is down. */
-export function queuePosition(queue: readonly QueueEntry[], identity: string | null | undefined): number | null {
-  if (!identity) return null
-  return queue.find((entry) => entry.participant.identity === identity)?.position ?? null
-}
-
 /** Remote participants whose hand went up (or was raised again) since `previous`. */
 export function newlyRaised<T extends QueueParticipant>(
   previous: ReadonlyMap<string, number | null>,
