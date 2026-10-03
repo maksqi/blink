@@ -23,6 +23,8 @@ export type TokenPath = (typeof TOKEN_PATHS)[number]
 export type RoomPath = `/m/${string}`
 export type FragmentKind = 'room' | 'token'
 
+// vue-router matches paths case-insensitively, so `/M/<slug>#k=…` opens the meeting page too: the key must leave the
+// address bar for every spelling the router accepts.
 const ROOM_PATH = /^\/m\/[^/]+$/
 
 /** The subset of the Web Storage API the store needs. */
@@ -59,10 +61,13 @@ export interface FragmentStore {
 
 type StoredFragment = { kind: 'room'; k?: string; t?: string; invalidKey: boolean } | { kind: 'token'; token: string }
 
-/** `/invite/` and `/invite` share one entry. */
+/**
+ * `/invite/`, `/Invite` and `/invite` share one entry: the router treats them as the same page (trailing slashes and
+ * letter case are ignored), so the capture and the page that takes it must agree on one key.
+ */
 export function normalizePathname(pathname: string): string {
   const trimmed = pathname.replace(/\/+$/, '')
-  return trimmed === '' ? '/' : trimmed
+  return trimmed === '' ? '/' : trimmed.toLowerCase()
 }
 
 export function fragmentKind(pathname: string): FragmentKind | null {

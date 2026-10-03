@@ -20,7 +20,8 @@ import { inCallView, nameModeFor } from '~/lib/join/machine'
 definePageMeta({ layout: 'call', colorMode: 'dark' })
 
 const route = useRoute()
-const slug = String(route.params.slug ?? '')
+// The router ignores letter case (`/M/ABC-…` opens this page); slugs, the join proof and the stored keys are lower case.
+const slug = String(route.params.slug ?? '').toLowerCase()
 const user = useAuthState()
 const flow = useJoinFlow(slug)
 const { state, session } = flow
