@@ -159,8 +159,8 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       orchestrator — status: open
 - [ ] F-009 [low] recording — local-only file names use the slug; the room name is not in `CallContext` — owner:
       orchestrator (contract) + fix-call — status: open
-- [ ] F-010 [low] media — `/vendor/mediapipe/*.tflite` is served as `text/plain` (with `nosniff`) — owner:
-      orchestrator (`nuxt.config.ts`) — status: open
+- [x] F-010 [low] media — `/vendor/mediapipe/*.tflite` is served as `text/plain` (with `nosniff`) — owner:
+      orchestrator (`nuxt.config.ts`) — status: fixed (route rule; `check-build.mjs production` asserts it)
 - [ ] F-011 [low] rooms — the sessionStorage fragment store (`blinq:fragment:/m/<slug>`) can keep an untaken key after
       sign-out — owner: fix-ui — status: open
 - [x] F-012 [medium] ci — the production SSR bundle contains `__blinqTest` (a JSDoc comment in

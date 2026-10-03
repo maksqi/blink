@@ -134,6 +134,13 @@ try {
       }
       const status = (await get('/api/__test/livekit-calls', 'application/json')).status
       check(status === 404, `GET /api/__test/livekit-calls is 404 (got ${status})`)
+      // Nitro has no MIME type for .tflite; nuxt.config.ts sets it (served with nosniff, so the type matters).
+      const model = await get('/vendor/mediapipe/selfie_segmenter.tflite', '*/*')
+      const type = model.headers.get('content-type')
+      check(
+        model.ok && type === 'application/octet-stream',
+        `GET the blur model is application/octet-stream (got ${model.status} ${type})`,
+      )
     } else {
       const response = await get('/dev/call')
       const html = await response.text()

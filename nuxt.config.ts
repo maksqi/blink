@@ -80,6 +80,8 @@ export default defineNuxtConfig({
     '/api/recordings/**': {
       security: { requestSizeLimiter: { maxRequestSizeInBytes: 20_000_000, maxUploadFileRequestInBytes: 20_000_000 } },
     },
+    // Nitro knows no MIME type for .tflite and would serve the blur model as text/plain.
+    '/vendor/mediapipe/selfie_segmenter.tflite': { headers: { 'content-type': 'application/octet-stream' } },
   },
 
   security: {
