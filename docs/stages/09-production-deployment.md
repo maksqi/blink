@@ -306,8 +306,8 @@ real DNS, real certificates and a relay-only call with UDP blocked.
 - ACME issuance needs 80/tcp and correct DNS before the first start; use `ACME_CA` (Let's Encrypt staging) while
   experimenting to avoid rate limits.
 - `bypassCSP` exists only in the transport-level smoke call; every other spec fails on CSP violations.
-- 9a results (infra, 2026-09-28, macOS Docker Desktop 29.8 / Compose 5.5, arm64), run on `main` (e822fce, server-core
-  merged) plus this branch, because the branch base 051a570 still has the W0a stubs of `/api/ready` and bootstrap:
+- 9a results (infra, 2026-09-28, macOS Docker Desktop 29.8 / Compose 5.5, arm64), run on `main` (62f7d34, server-core
+  merged) plus this branch, because the branch base 2f8fe39 still has the W0a stubs of `/api/ready` and bootstrap:
   - `sh scripts/smoke-prod.sh`: passed with 82 checks and 14 of 14 specs; `up --wait` 6–13 s with built images.
     `LIVEKIT_HTTP_PORT` moved to 17880 there because the dev stack publishes 127.0.0.1:7880 inside the Docker VM;
     preflight skipped (macOS).

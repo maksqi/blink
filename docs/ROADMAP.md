@@ -75,9 +75,9 @@ Wave base SHAs (filled in by the orchestrator):
 
 | Wave | Base SHA |
 |---|---|
-| W0b | c923e6d |
-| W1 | 051a570 (call-core, infra); see change log for auth, rooms-backend, recording-server |
-| W2 | f0d2471 or later (start from current main) |
+| W0b | a24cccf |
+| W1 | 2f8fe39 (call-core, infra); see change log for auth, rooms-backend, recording-server |
+| W2 | 1ab2ce3 or later (start from current main) |
 | W3 | — |
 
 ## Ownership map
@@ -154,9 +154,9 @@ Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
 ## Change log
 
 - 2026-09-28 — Roadmap created from the approved plan.
-- 2026-09-28 — Stage 00 done (all docs committed); W0a committed; W0b started from c923e6d.
+- 2026-09-28 — Stage 00 done (all docs committed); W0a committed; W0b started from a24cccf.
 - 2026-09-28 — W0b merged (devops-ci, ui-shell, server-core); Stage 01 done. Gate: lint, typecheck, 359 unit tests,
-  154 API tests, production build checks, CLI bootstrap. call-core and infra started from 051a570.
+  154 API tests, production build checks, CLI bootstrap. call-core and infra started from 2f8fe39.
 - 2026-09-28 — Wave 1 merged: auth, rooms-backend, recording-server, infra (smoke-prod passed locally), call-core
   (36/36 call E2E, join ~0.3 s). Gate on main: lint, typecheck, 870 unit tests, production build checks. Next: Wave 2
   (admin, rooms-ui, collab-ui, media-fx, recording-client) in a fresh session, then Wave 3.
