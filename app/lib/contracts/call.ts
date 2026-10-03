@@ -136,6 +136,8 @@ export interface CallContext {
   roomId: Readonly<ShallowRef<string | null>>
   slug: Readonly<ShallowRef<string | null>>
   phase: Readonly<ShallowRef<CallPhase>>
+  /** The meeting's name as the host set it (null until known), e.g. for file names. */
+  roomName: Readonly<ShallowRef<string | null>>
   self: ComputedRef<ParticipantView | null>
   participants: ComputedRef<ParticipantView[]>
   roomState: ComputedRef<RoomMetadata | null>

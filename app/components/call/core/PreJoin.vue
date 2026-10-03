@@ -15,7 +15,7 @@ import {
   VideoOffIcon,
 } from '@lucide/vue'
 import { supportsAudioOutputSelection } from 'livekit-client'
-import { computed, onMounted, provide, shallowRef } from 'vue'
+import { computed, onMounted, provide, shallowRef, watch } from 'vue'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
@@ -69,6 +69,11 @@ const emit = defineEmits<{
 
 provide(CALL_SESSION_KEY, props.session)
 const store = props.session.store
+watch(
+  () => props.title,
+  (title) => props.session.setRoomName(title),
+  { immediate: true },
+)
 
 const name = shallowRef(props.displayName)
 const nameError = shallowRef<string | null>(null)

@@ -52,6 +52,11 @@ watch(
 
 const store = props.session.store
 const ctx = props.session.context
+watch(
+  () => props.title,
+  (title) => props.session.setRoomName(title),
+  { immediate: true },
+)
 const phase = computed(() => store.phase)
 const terminal = computed(() => isTerminalPhase(phase.value))
 const phaseScreen = computed(() => (terminal.value ? phaseScreenFor(callRegistry, phase.value) : undefined))

@@ -265,6 +265,30 @@ describe('ChunkUploader', () => {
     expect(states.some((state) => state.behind)).toBe(true)
   })
 
+  it('uploads the rest but retries nothing after stopRetrying (F-049)', async () => {
+    const { transport, uploader } = setup()
+    transport.script.push({ status: 503 })
+    uploader.enqueue(blob(1))
+    uploader.enqueue(blob(1))
+    const done = uploader.finish(1000)
+    await vi.advanceTimersByTimeAsync(100)
+    // Waiting to retry chunk 0 when the page goes away: it ends now instead.
+    uploader.stopRetrying()
+    expect(await done).toMatchObject({ status: 'failed', errorCode: 'gave_up', acked: 0 })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(transport.puts).toEqual([0])
+
+    const second = setup()
+    second.transport.script.push({ status: 204 }, 'network')
+    second.uploader.stopRetrying()
+    second.uploader.enqueue(blob(1))
+    second.uploader.enqueue(blob(1))
+    const state = await second.uploader.finish(1000)
+    expect(state).toMatchObject({ status: 'failed', errorCode: 'gave_up', acked: 1, retries: 0 })
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(second.transport.puts).toEqual([0, 1])
+  })
+
   it('accepts no chunks after finish and aborts cleanly while waiting to retry', async () => {
     const { transport, uploader } = setup()
     transport.script.push({ status: 503 })

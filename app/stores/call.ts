@@ -46,6 +46,8 @@ export const useCallStore = defineStore('call', () => {
   const phaseHistory = shallowRef<CallPhase[]>([])
   const error = shallowRef<CallError | null>(null)
   const slug = shallowRef<string | null>(null)
+  /** The meeting's name (from the join info or the harness), for the top bar and file names. */
+  const roomName = shallowRef<string | null>(null)
   const roomId = shallowRef<string | null>(null)
   const localIdentity = shallowRef<string | null>(null)
   /** Everyone in the call, the local participant first, then by join time. */
@@ -103,6 +105,7 @@ export const useCallStore = defineStore('call', () => {
     phaseHistory.value = ['prejoin']
     error.value = null
     slug.value = null
+    roomName.value = null
     roomId.value = null
     localIdentity.value = null
     participants.value = []
@@ -141,6 +144,7 @@ export const useCallStore = defineStore('call', () => {
     phaseHistory,
     error,
     slug,
+    roomName,
     roomId,
     localIdentity,
     participants,

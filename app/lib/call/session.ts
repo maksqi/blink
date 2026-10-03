@@ -78,6 +78,8 @@ export type ApiClient = <T>(
 
 export interface CallSessionOptions {
   slug: string
+  /** The meeting's name, when known (the call view also sets it from its title). */
+  roomName?: string
   /** The room key K (from the fragment, the tab key or the key vault). Stays inside the session. */
   key: RoomKey
   /** Admin media limits from `GET /api/config` (`media`); defaults to the settings defaults. */
@@ -169,6 +171,7 @@ export class CallSession {
     this.store = useCallStore()
     this.store.reset(this.id)
     this.store.slug = options.slug
+    this.store.roomName = options.roomName?.trim() || null
     this.store.e2eeRequired = this.e2ee
     this.store.muteOnJoin = options.muteOnJoin === true
     this.api = options.api ?? (useApi() as ApiClient)
@@ -255,6 +258,13 @@ export class CallSession {
   setPhase(phase: CallPhase): void {
     if (this.disposed) return
     this.setPhaseInternal(phase)
+  }
+
+  /** The meeting's name for `CallContext.roomName` (pre-join and the call view pass their title; empty is ignored). */
+  setRoomName(name: string | null | undefined): void {
+    const trimmed = name?.trim()
+    if (this.disposed || !trimmed || this.store.roomName === trimmed) return
+    this.store.roomName = trimmed
   }
 
   /** Opens camera and microphone for the pre-join preview (with the remembered devices). */
@@ -629,6 +639,7 @@ export class CallSession {
       room,
       roomId: toRef(store, 'roomId'),
       slug: toRef(store, 'slug'),
+      roomName: toRef(store, 'roomName'),
       phase: toRef(store, 'phase'),
       self: computed(() => store.self),
       participants: computed(() => store.participants),

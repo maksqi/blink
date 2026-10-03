@@ -10,6 +10,8 @@
  * - 409 `not_recording` stops uploading locally (the recording was finalized elsewhere); any other 4xx stops with an
  *   error (quota, size, forbidden, gaps).
  * - A backlog above 256 MiB flags `behind` ("Uploading is falling behind"); nothing is dropped.
+ * - After `stopRetrying()` (the call page went away) what is queued still uploads, but the first failure that would be
+ *   retried ends the uploader instead (`failed`, `gave_up`), so nothing retries for ever in the background.
  *
  * Timers, randomness and the transport are injected, so the logic is unit-tested with fake timers.
  */
@@ -132,6 +134,7 @@ export class ChunkUploader {
   }
 
   private running = false
+  private retrying = true
   private attempt = 0
   private finishing: { durationMs: number } | null = null
   private done: Promise<UploaderState> | null = null
@@ -179,6 +182,12 @@ export class ChunkUploader {
     const done = this.whenDone()
     void this.pump()
     return done
+  }
+
+  /** No more retries (page teardown): a failure ends the uploader, also one that is waiting to retry now. */
+  stopRetrying(): void {
+    this.retrying = false
+    if (this.sleeping && !this.terminal) this.end('failed', 'gave_up')
   }
 
   /** Gives up immediately (page teardown); queued chunks are dropped. */
@@ -240,6 +249,10 @@ export class ChunkUploader {
     }
     if (outcome.kind === 'fatal') {
       this.end('failed', outcome.code)
+      return false
+    }
+    if (!this.retrying) {
+      this.end('failed', 'gave_up')
       return false
     }
     this.attempt++
