@@ -242,4 +242,13 @@
     [data-slot='checkbox']:is([data-state='checked'], [data-checked]) {
         --tw-inset-ring-shadow: inset 0 0 0 1px var(--primary);
     }
+    /* Slider thumbs: the same, a 16 px knob in a 44 px box (its 1 px primary outline becomes an inset ring). */
+    [data-slot='slider-thumb'] {
+        width: 44px;
+        height: 44px;
+        border: 14px solid transparent;
+        background-clip: padding-box;
+        --tw-inset-ring-shadow: inset 0 0 0 1px var(--primary);
+        --tw-shadow: 0 0 #0000;
+    }
 }
