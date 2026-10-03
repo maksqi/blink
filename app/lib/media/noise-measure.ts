@@ -100,7 +100,7 @@ async function renderOnce(input: Float32Array<ArrayBuffer>, readyWaitMs: number)
 
 export async function measureNoiseSuppression(): Promise<NoiseMeasurement> {
   const input = whiteNoise(MEASURE_LENGTH, MEASURE_NOISE_DB, MEASURE_SEED)
-  let output = new Float32Array(MEASURE_LENGTH)
+  let output: Float32Array = new Float32Array(MEASURE_LENGTH)
   for (const wait of READY_WAITS_MS) {
     output = await renderOnce(input, wait)
     if (!hasSilentSegment(output)) break
