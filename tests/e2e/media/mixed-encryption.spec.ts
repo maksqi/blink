@@ -37,7 +37,9 @@ test.describe('a participant with one unencrypted publication', () => {
   test('is blocked entirely, encrypted tracks included, and stays blocked after it is gone', async ({ joinAs }) => {
     const host = await joinAs('host', { name: 'Hana Host' })
     const xena = await joinAs('participant', { name: 'Xena Mixed', room: host.room })
-    const tile = host.page.locator(`[data-testid="participant-tile"][data-identity="${xena.identity}"]`)
+    const tile = host.page.locator(
+      `[data-testid="participant-tile"][data-identity="${xena.identity}"][data-source="camera"]`,
+    )
 
     // Before: Xena's encrypted camera and microphone play as usual.
     await waitForRemoteFrames(host.page, xena.identity, 5)
@@ -57,7 +59,7 @@ test.describe('a participant with one unencrypted publication', () => {
     await expect.poll(() => allBlocked(host.page, xena.identity)).toBe(true)
     await expect.poll(async () => (await callState(host.page))?.blocked).toEqual([xena.identity])
     await expect(tile).toHaveAttribute('data-blocked', 'true')
-    await expect(tile.locator('video')).toHaveCount(0)
+    await expect(host.page.locator(`[data-identity="${xena.identity}"] video`)).toHaveCount(0)
     await expect(host.page.getByTestId('unencrypted-warning')).toBeVisible()
     await expect(host.page.getByTestId('e2ee-badge')).toHaveAttribute('data-state', 'blocked')
     await expect.poll(() => inboundVideo(host.page, xena.identity)).toEqual([])

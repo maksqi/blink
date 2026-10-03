@@ -1,5 +1,6 @@
 import { expect, test } from '../fixtures'
-import { openToPrejoin, spendJoinBudget } from '../join/support'
+import { spendJoinBudget } from '../join/support'
+import { dashboardWithRoom, joinLink } from './support'
 
 // F-036 and F-041 (quality review): leaving the pre-join while the camera and microphone are still opening must not
 // leave them running (the camera light stayed on), and the abandoned session must not start listening for device
@@ -43,15 +44,13 @@ test.describe('resource hygiene', () => {
     const host = await rooms.createUser({ displayName: 'Hana Host' })
     const room = await rooms.createRoom(host, { name: 'Late devices', waitingRoom: false })
     await rooms.useIdentity(context, host)
-    // The first visit with the key puts it into the host's key vault, so the dashboard can open the meeting.
-    await openToPrejoin(page, room.link, 1)
-    await page.goto('/dashboard')
+    await dashboardWithRoom(page, host, room)
 
     await page.evaluate(() => {
       ;(window as unknown as { __lateDevices: LateDevices }).__lateDevices.delay = 2_500
     })
     await spendJoinBudget(1)
-    await page.locator(`[data-testid="room-item"][data-slug="${room.slug}"]`).getByTestId('room-join').click()
+    await joinLink(page, room).click()
     await expect(page.getByTestId('prejoin')).toBeVisible({ timeout: 20_000 })
     // Leave while the camera and microphone are still opening.
     await page.evaluate(() => history.back())
