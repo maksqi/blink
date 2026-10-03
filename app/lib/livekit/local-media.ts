@@ -66,6 +66,8 @@ export class LocalMedia {
     micDeviceId: null,
   }
 
+  /** The raw microphone is sent because the mic chain's AudioContext does not run (F-060). Final. */
+  micChainBypassed = false
   private cameraProcessor: TrackProcessor<Track.Kind.Video> | null = null
   private processing: MicProcessingConstraints = { ...DEFAULT_MIC_PROCESSING }
   private cameraQueue: Promise<unknown> = Promise.resolve()
@@ -228,6 +230,22 @@ export class LocalMedia {
     this.chain.setGain(gain)
   }
 
+  /**
+   * Sends the raw microphone for the rest of the call: no own gain and no inserts, because the chain's AudioContext
+   * does not run and would send silence (mic-chain-check.ts). The publication stays the same. True when it switched.
+   */
+  async bypassMicChain(): Promise<boolean> {
+    let switched = false
+    await this.queueMic(async () => {
+      if (this.micChainBypassed) return
+      this.micChainBypassed = true
+      switched = true
+      if (this.mic?.getProcessor()) await this.mic.stopProcessor()
+      this.options.onTracks()
+    })
+    return switched
+  }
+
   /** Resolves once the camera or microphone work queued so far has finished (never rejects). */
   idle(kind: 'camera' | 'mic'): Promise<void> {
     return (kind === 'camera' ? this.cameraQueue : this.micQueue).then(() => undefined)
@@ -276,9 +294,11 @@ export class LocalMedia {
     try {
       const mic = markRaw(await createLocalAudioTrack({ ...(deviceId ? { deviceId } : {}), ...this.processing }))
       if (this.stopIfDisposed(mic)) return false
-      mic.setAudioContext(this.chain.audioContext)
-      await mic.setProcessor(this.chain)
-      if (this.stopIfDisposed(mic)) return false
+      if (!this.micChainBypassed) {
+        mic.setAudioContext(this.chain.audioContext)
+        await mic.setProcessor(this.chain)
+        if (this.stopIfDisposed(mic)) return false
+      }
       this.mic = mic
       this.followMute(mic, 'micOn')
       this.update({ micError: null, micDeviceId: await this.deviceIdOf(mic) })

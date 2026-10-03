@@ -1,9 +1,9 @@
 <script setup lang="ts">
 /**
- * Call-level notices under the top bar: audio the browser refused to autoplay (needs one click) and unencrypted media
- * that was blocked.
+ * Call-level notices under the top bar: audio the browser refused to autoplay (needs one click), a microphone sent
+ * without the mic chain because the browser's audio processing does not run, and unencrypted media that was blocked.
  */
-import { ShieldAlertIcon, Volume2Icon } from '@lucide/vue'
+import { MicIcon, ShieldAlertIcon, Volume2Icon } from '@lucide/vue'
 import { computed } from 'vue'
 import { Button } from '@/components/ui/button'
 import { useCallSession } from '~/composables/call'
@@ -28,6 +28,18 @@ const blockedNames = computed(() =>
       <Volume2Icon class="size-4 text-primary" aria-hidden="true" />
       <span>Your browser paused the meeting audio.</span>
       <Button size="sm" @click="session.unlockAudio()">Play audio</Button>
+    </div>
+    <div
+      v-if="store.micChainBypassed"
+      data-testid="mic-chain-notice"
+      class="pointer-events-auto flex max-w-xl items-start gap-3 rounded-xl bg-popover/95 px-4 py-2.5 text-sm text-popover-foreground shadow-lg ring-1 ring-white/10"
+      role="status"
+    >
+      <MicIcon class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+      <span>
+        Your browser's audio processing isn't running, so your microphone is sent without your volume and noise
+        settings. Reload the page or use another browser to get them back.
+      </span>
     </div>
     <div
       v-if="store.blocked.length > 0"

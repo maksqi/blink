@@ -44,6 +44,7 @@ import { AudioEngine } from '../livekit/audio-engine'
 import { resumeSharedAudioContext } from '../livekit/audio-context'
 import { connectRoom } from '../livekit/connect'
 import { LocalMedia } from '../livekit/local-media'
+import { waitUntilRunning } from '../livekit/mic-chain-check'
 import { DEFAULT_MEDIA_LIMITS, screenSharePreset, type MediaLimits } from '../livekit/presets'
 import { createRoom } from '../livekit/room-factory'
 import { collectInboundStats } from '../livekit/stats'
@@ -364,6 +365,21 @@ export class CallSession {
     await Promise.allSettled([this.publishLocalTracks(), Promise.resolve(this.subscriptions?.apply())])
     this.scheduleViews()
     if (this.store.outputDevice) void this.audio.setOutputDevice(this.store.outputDevice)
+    void this.checkMicChain()
+  }
+
+  /**
+   * The mic chain sends what its AudioContext renders; one that never runs (no audio backend) would send silence.
+   * Then the raw microphone is sent and the person is told (F-060, mic-chain-check.ts).
+   */
+  private async checkMicChain(): Promise<void> {
+    const context = this.local.audioContext
+    void context.resume().catch(() => undefined)
+    if (await waitUntilRunning(context)) return
+    if (this.disposed || !this.isConnected) return
+    if (!(await this.local.bypassMicChain()) || this.disposed) return
+    console.warn('blinq: the audio context does not run; the microphone is sent without the mic chain')
+    this.store.micChainBypassed = true
   }
 
   /** Leaves the call (the phase becomes `left`). */
@@ -1126,6 +1142,7 @@ export class CallSession {
           this.store.layout,
           this.store.pinned,
           this.store.micGain,
+          this.store.micChainBypassed,
           this.store.localVolumes,
         ],
         () => {
@@ -1143,6 +1160,7 @@ export class CallSession {
             layout: this.store.layout,
             pinned: this.store.pinned,
             micGain: this.store.micGain,
+            micChainBypassed: this.store.micChainBypassed,
             localVolumes: { ...this.store.localVolumes },
             participants: this.store.participants.map((p) => ({ ...p })),
             safetyCode: this.store.safetyCode,

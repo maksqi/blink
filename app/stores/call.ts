@@ -78,6 +78,8 @@ export const useCallStore = defineStore('call', () => {
   const connectedAt = shallowRef<number | null>(null)
   const localVolumes = shallowRef<Record<string, number>>({})
   const micGain = shallowRef(1)
+  /** The raw microphone is sent because the browser's audio processing does not run (no own gain, no RNNoise). */
+  const micChainBypassed = shallowRef(false)
   const muteOnJoin = shallowRef(false)
 
   const self = computed(() => participants.value.find((p) => p.isLocal) ?? null)
@@ -129,6 +131,7 @@ export const useCallStore = defineStore('call', () => {
     connectedAt.value = null
     localVolumes.value = {}
     micGain.value = 1
+    micChainBypassed.value = false
     muteOnJoin.value = false
   }
 
@@ -168,6 +171,7 @@ export const useCallStore = defineStore('call', () => {
     connectedAt,
     localVolumes,
     micGain,
+    micChainBypassed,
     muteOnJoin,
     self,
     remoteParticipants,

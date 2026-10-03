@@ -72,6 +72,10 @@ class FakeTrack extends EventEmitter {
     return this.processor
   }
 
+  readonly stopProcessor = vi.fn(async () => {
+    this.processor = undefined
+  })
+
   setAudioContext() {}
 
   async getDeviceId() {
@@ -238,5 +242,26 @@ describe('LocalMedia.idle (F-059)', () => {
     })
     await expect(local.enableCamera()).rejects.toThrow('denied')
     await expect(local.idle('camera')).resolves.toBeUndefined()
+  })
+})
+
+describe('LocalMedia.bypassMicChain (F-060)', () => {
+  it('takes the mic chain off the microphone once, and later microphones never get it', async () => {
+    const { local } = media()
+    const mic = readyDevice('audio')
+    await local.enableMic()
+    expect(mic.processor).toBeDefined()
+    await expect(local.bypassMicChain()).resolves.toBe(true)
+    expect(mic.stopProcessor).toHaveBeenCalledTimes(1)
+    expect(local.micChainBypassed).toBe(true)
+    await expect(local.bypassMicChain()).resolves.toBe(false)
+    expect(mic.stopProcessor).toHaveBeenCalledTimes(1)
+
+    const fresh = media()
+    await fresh.local.bypassMicChain()
+    const later = readyDevice('audio')
+    await fresh.local.enableMic()
+    expect(later.processor).toBeUndefined()
+    expect(fresh.local.status.micOn).toBe(true)
   })
 })
