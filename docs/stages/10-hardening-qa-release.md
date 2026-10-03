@@ -261,6 +261,8 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       `hasModerationMenu`, `bytesEqual`, `queuePosition`, `displayedSetting`) and duplicates (UUID regex ×8,
       `likePattern` ×5, moderator check ×3, server forks of `StreamEvent` and the settings patch schema) — owner:
       fix-server + fix-call + fix-ui (dead code); duplicates accepted for v1 — status: open
+- [ ] F-051 [low] ui — the 403 and 404 error pages log `[NUXT_E1005]` to the console while hydrating (e2e-security) —
+      owner: fix-ui — status: open
 
 ## Tests
 - API: `tests/api/security/{authz-matrix,idor,csrf,rate-limits,cookies,headers}.test.ts`.
