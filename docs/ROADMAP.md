@@ -171,3 +171,7 @@ Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
   pre-existing failures from the Wave 1 merge (recording tests start meetings without a LiveKit room, so the real
   `publishRoomState` gets `not_found`; one lobby-latency timing failure), fixed by `fix-w1-api` in parallel. Wave 2
   agents (admin, rooms-ui, collab-ui, media-fx, recording-client) start from the commit after this entry.
+- 2026-10-03 — fix/w1-api merged: recording API tests start meetings through the join API (the real
+  `publishRoomState` needs the fake LiveKit room), the REC metadata check is enabled, and API test files restore
+  `guests.allowed` before the server's settings cache expires. Gate on main: lint, typecheck, check:english, 578 API
+  tests (4 LiveKit-only skips).
