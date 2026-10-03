@@ -62,97 +62,97 @@ what `canPerform()` allows, and the server stays the only enforcement point.
       microphone/camera"), and revoked sources are switched off locally. collab-ui adds only the other notices.
 - Feature `setup(ctx)` runs when the call session is created (pre-join), before the room connects.
 ### Shared plumbing
-- [ ] `app/lib/call/features/host-actions/actions.ts`: typed wrappers over `ctx.callApi` for every route in
+- [x] `app/lib/call/features/host-actions/actions.ts`: typed wrappers over `ctx.callApi` for every route in
       `docs/API.md` §7, bodies built with the shared schemas. Errors map through `errorMessage(data.code)` to a
       `vue-sonner` toast; `404 NOT_FOUND` on a target means "they left" → toast and participant refetch.
-- [ ] `app/lib/call/features/participants/useParticipantInfo.ts`: `GET /participants` → `{ items: CallParticipantInfo[] }`
+- [x] `app/lib/call/features/participants/useParticipantInfo.ts`: `GET /participants` → `{ items: CallParticipantInfo[] }`
       for the allowances `ParticipantView` lacks (`micAllowed`, `cameraAllowed`, `volumeLevel`). Refetch on panel open,
       on `server.hint` `participant.changed`, after each own action and on `participant.joined/left` (debounced 200 ms).
-- [ ] The `canPerform` actor is `{ identity, role, kind }` from `ctx.self`; targets come from `ParticipantView`.
+- [x] The `canPerform` actor is `{ identity, role, kind }` from `ctx.self`; targets come from `ParticipantView`.
 ### Participants panel (`participants`)
-- [ ] SidePanel `participants` ("People", count badge) → `app/components/call/participants/ParticipantsPanel.vue`: name,
+- [x] SidePanel `participants` ("People", count badge) → `app/components/call/participants/ParticipantsPanel.vue`: name,
       "Host" / "Co-host" / "Guest" badges, mic, camera and screen-share state, speaking and connection quality, hand
       state, a "media blocked" warning when `mediaEncrypted` is false, a "(you)" marker.
-- [ ] Sections: raised hands (queue, below), then host, co-hosts, everyone else by name (`localeCompare`).
-- [ ] Search filters by name (case-insensitive, NFKC-normalized, trimmed); pure `list.ts` (`sortParticipants`,
+- [x] Sections: raised hands (queue, below), then host, co-hosts, everyone else by name (`localeCompare`).
+- [x] Search filters by name (case-insensitive, NFKC-normalized, trimmed); pure `list.ts` (`sortParticipants`,
       `filterParticipants`).
-- [ ] Own row: "Rename" (dialog validated with `displayNameSchema`, `POST /me/name`); other rows: the host-actions menu.
-- [ ] Tile badges (`tileBadges`): role badge for host and co-hosts, "Guest" badge for guests.
+- [x] Own row: "Rename" (dialog validated with `displayNameSchema`, `POST /me/name`); other rows: the host-actions menu.
+- [x] Tile badges (`tileBadges`): role badge for host and co-hosts, "Guest" badge for guests.
 ### Waiting room (`lobby`)
-- [ ] SidePanel `lobby` ("Waiting room"), `visible` = `canPerform(self, 'lobby.view')`, badge = waiting count →
+- [x] SidePanel `lobby` ("Waiting room"), `visible` = `canPerform(self, 'lobby.view')`, badge = waiting count →
       `app/components/call/lobby/LobbyPanel.vue`: entries from `GET /lobby` ordered by `requestedAt`, "Guest" badge,
       Admit, Deny and Admit all (`POST /lobby/admit-all` → toast with `admitted`).
-- [ ] Refetch on `server.hint` `lobby.changed` (debounced 150 ms), on panel open, after each decision and every 10 s while
+- [x] Refetch on `server.hint` `lobby.changed` (debounced 150 ms), on panel open, after each decision and every 10 s while
       entries exist, as a fallback for a lost hint (decision). A 404 or 409 on admit/deny (another moderator decided
       first) only refetches.
-- [ ] A new waiting person raises a moderator toast with an "Admit" action (stacked into one toast above 3 people).
-- [ ] Pure `lobby-store.ts`: merge fetched lists, dedupe by `requestId`, stable order.
+- [x] A new waiting person raises a moderator toast with an "Admit" action (stacked into one toast above 3 people).
+- [x] Pure `lobby-store.ts`: merge fetched lists, dedupe by `requestId`, stable order.
 ### Hands (`hands`)
-- [ ] ControlBarItem `raise-hand` (everyone): toggles `POST /me/hand { raised }` based on `self.handRaisedAt`.
-- [ ] Pure `queue.ts`: participants with `handRaisedAt`, ascending by the server-set `hand` time, ties by identity.
-- [ ] `app/components/call/participants/HandQueue.vue`: numbered positions; moderators get "Allow to speak" and "Lower
+- [x] ControlBarItem `raise-hand` (everyone): toggles `POST /me/hand { raised }` based on `self.handRaisedAt`.
+- [x] Pure `queue.ts`: participants with `handRaisedAt`, ascending by the server-set `hand` time, ties by identity.
+- [x] `app/components/call/participants/HandQueue.vue`: numbered positions; moderators get "Allow to speak" and "Lower
       hand" (`POST /participants/:identity/lower-hand`); a participant sees their own position.
-- [ ] "Allow to speak" (decision) = `POST permissions { microphone: true }` → `POST lower-hand` → `POST ask-unmute`.
-- [ ] Moderator toast "<name> raised their hand", at most one per 5 s (summarized beyond that).
+- [x] "Allow to speak" (decision) = `POST permissions { microphone: true }` → `POST lower-hand` → `POST ask-unmute`.
+- [x] Moderator toast "<name> raised their hand", at most one per 5 s (summarized beyond that).
 ### Host actions (`host-actions`)
-- [ ] Pure `menu.ts`: `participantMenu(actor, target, info)` → ordered items, each gated by `canPerform(actor, action,
+- [x] Pure `menu.ts`: `participantMenu(actor, target, info)` → ordered items, each gated by `canPerform(actor, action,
       target)` plus state: Mute microphone / Stop camera / Stop screen share (`mute` with `source`), Ask to unmute
       (`ask-unmute`, only while muted), Allow or take away microphone and camera (`permissions`, "give voice"), Volume
       for everyone (`volume`, slider 0–100 %, sent on release), Rename (`name`), Make co-host / Remove co-host (`role`),
       Lower hand (`lower-hand`), Remove from meeting (`remove`).
-- [ ] `app/components/call/host/ParticipantActionsMenu.vue` (DropdownMenu), used by the participants panel and by a tile
+- [x] `app/components/call/host/ParticipantActionsMenu.vue` (DropdownMenu), used by the participants panel and by a tile
       badge that renders only for moderators.
-- [ ] Remove: AlertDialog "Remove <name>? They cannot rejoin this meeting." On success the host (role `host`) gets a
+- [x] Remove: AlertDialog "Remove <name>? They cannot rejoin this meeting." On success the host (role `host`) gets a
       persistent toast "People you remove still know this meeting's key. Rotate it in the room settings after the
       meeting." linking to `/rooms/<roomId>`; co-hosts get "Ask the host to rotate the room key after the meeting."
       The reminder stays in the host controls menu until the call ends.
-- [ ] Participant side (feature `setup`, via `ctx.events` and `ctx.room`): `server.hint` `ask-unmute` → dialog "The host
+- [x] Participant side (feature `setup`, via `ctx.events` and `ctx.room`): `server.hint` `ask-unmute` → dialog "The host
       asks you to unmute" with [Unmute] [Stay muted]; only the click calls
       `localParticipant.setMicrophoneEnabled(true)`. A local track muted by the server → "The host muted your
       microphone" (or camera, screen share). `ParticipantPermissionsChanged` → "The host turned off your microphone" /
       "You can unmute now".
-- [ ] End notices `app/components/call/host/EndNotice.vue`: `removed` → "You were removed from this meeting. You cannot
+- [x] End notices `app/components/call/host/EndNotice.vue`: `removed` → "You were removed from this meeting. You cannot
       rejoin it."; `ended` → "The host ended the meeting for everyone." (a `phaseScreens` entry, order ≥ 1).
 ### Room controls and live settings (`room-settings`)
-- [ ] ControlBarItem `host-controls` (placement `end`, `visible` for moderators) →
+- [x] ControlBarItem `host-controls` (placement `end`, `visible` for moderators) →
       `app/components/call/host/HostControlsMenu.vue`: Lock meeting (`call.lock`); Waiting room, Screen share (everyone
       or hosts only), Let participants unmute themselves, Chat (all `call.settings`, host only); Mute all with a
       "Prevent self-unmute" checkbox (`call.muteAll`); End meeting for all (`call.end`, AlertDialog).
-- [ ] Changes go through `PATCH /settings` (`liveSettingsSchema`, one field per request). The displayed value is
+- [x] Changes go through `PATCH /settings` (`liveSettingsSchema`, one field per request). The displayed value is
       `ctx.roomState` (server truth); a switch shows a pending state until the `{ state }` response or the metadata
       update confirms it, and reverts with a toast on failure.
-- [ ] Pure `controls.ts`: which controls an actor sees (co-hosts: lock and mute all only).
+- [x] Pure `controls.ts`: which controls an actor sees (co-hosts: lock and mute all only).
 ### Chat (`chat`)
-- [ ] SidePanel `chat` ("Chat"), badge = unread count while the panel is closed →
+- [x] SidePanel `chat` ("Chat"), badge = unread count while the panel is closed →
       `app/components/call/chat/ChatPanel.vue`.
-- [ ] Send: validate with `chatBodySchema`, then `ctx.messaging.send('chat', { text })`; live counter and hard stop at
+- [x] Send: validate with `chatBodySchema`, then `ctx.messaging.send('chat', { text })`; live counter and hard stop at
       `CHAT_MAX_LENGTH` (2000); Enter sends, Shift+Enter inserts a newline, IME composition is respected; own messages
       are appended after `send` resolves (LiveKit never echoes them); failures show inline with Retry.
-- [ ] Receive: `ctx.messaging.on('chat', …)`. The messaging layer already drops NONE-encrypted packets, unknown or
+- [x] Receive: `ctx.messaging.on('chat', …)`. The messaging layer already drops NONE-encrypted packets, unknown or
       mismatched senders and duplicate ids; the feature re-validates bodies with `chatBodySchema`, caps each sender at
       20 messages per 10 s (decision), keeps at most 500 messages, orders by arrival and shows the sender `ts` clamped to
       receive time ± 5 min.
-- [ ] `roomState.chatEnabled === false`: input disabled ("The host turned off chat") and incoming chat dropped
+- [x] `roomState.chatEnabled === false`: input disabled ("The host turned off chat") and incoming chat dropped
       (decision).
-- [ ] Text-only rendering: pure `linkify.ts` splits text into text and link segments; links only for `http:`/`https:`
+- [x] Text-only rendering: pure `linkify.ts` splits text into text and link segments; links only for `http:`/`https:`
       URLs accepted by `new URL()`, trailing punctuation trimmed, rendered as `<a target="_blank" rel="noopener
       noreferrer">`; bidi override and isolate controls (U+202A–U+202E, U+2066–U+2069) removed (decision);
       `white-space: pre-wrap` with long-word wrapping. No `v-html`, no markdown.
-- [ ] Auto-scroll unless the reader scrolled up (then a "New messages" pill); `aria-live="polite"` on new messages.
+- [x] Auto-scroll unless the reader scrolled up (then a "New messages" pill); `aria-live="polite"` on new messages.
 ### Reactions (`reactions`)
-- [ ] ControlBarItem `reactions` (placement `center`) → popover with the six `REACTIONS`;
+- [x] ControlBarItem `reactions` (placement `center`) → popover with the six `REACTIONS`;
       `ctx.messaging.send('reaction', { reaction })`, at most 3 per second.
-- [ ] `app/components/call/reactions/ReactionsOverlay.vue`, teleported to `body` by the control-bar item (fixed layer,
+- [x] `app/components/call/reactions/ReactionsOverlay.vue`, teleported to `body` by the control-bar item (fixed layer,
       `pointer-events: none`): emoji plus sender name for about 3 s, at most 20 on screen; bodies checked with
       `reactionBodySchema`; per-sender limit in pure `limiter.ts`; `prefers-reduced-motion` → fade only. Emoji glyphs
       are written as `\u{…}` escapes (decision). If the control bar unmounts `center` items on phones, request an
       overlay slot.
-- [ ] Tile badge: the sender's latest reaction on their tile for 3 s.
+- [x] Tile badge: the sender's latest reaction on their tile for 3 s.
 ### Test helpers
-- [ ] Specs use the shared `rooms` fixture (`tests/e2e/fixtures/join.ts`): users with sessions, `POST /api/rooms`,
+- [x] Specs use the shared `rooms` fixture (`tests/e2e/fixtures/join.ts`): users with sessions, `POST /api/rooms`,
       invites, `POST /api/join/:slug`, `waitForAdmission` over the SSE, then `/dev/call#…` from `harnessPath()`.
       Shared spec helpers (open the harness, click Join, wait for `inCall`) live in `tests/e2e/collab/helpers.ts`.
-- [ ] Wire capture for the chat spec, as a test-only `page.addInitScript` (never app code): wrap
+- [x] Wire capture for the chat spec, as a test-only `page.addInitScript` (never app code): wrap
       `RTCDataChannel.prototype.send` and the `message` events of every data channel to record payload bytes.
 
 ## Tests
@@ -190,31 +190,41 @@ what `canPerform()` allows, and the server stays the only enforcement point.
   - `responsive.spec.ts` (`@responsive`): panels, menus and dialogs at 375/768/1440 px without horizontal overflow.
 
 ## Definition of Done
-- [ ] [auto] Authorization matrix: the UI offers an action only when `canPerform` allows it — evidence:
+- [x] [auto] Authorization matrix: the UI offers an action only when `canPerform` allows it — evidence:
       `app/lib/call/features/host-actions/menu.test.ts`, `app/lib/call/features/room-settings/controls.test.ts`,
       `pnpm test:e2e -- collab/permissions-ui`; server side: `tests/api/calls/authz.test.ts` (Stage 04).
-- [ ] [auto] A host action reaches the peer in ≤ 1 s — evidence: `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] A revoked mic cannot unmute — evidence: `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] The host turns a participant's camera off — evidence: `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] Ask to unmute never unmutes without the participant's click — evidence:
+      Result (collab-ui): unit tests pass; permissions-ui passes in Chromium.
+- [x] [auto] A host action reaches the peer in ≤ 1 s — evidence: `pnpm test:e2e -- collab/host-actions`.
+- [x] [auto] A revoked mic cannot unmute — evidence: `pnpm test:e2e -- collab/host-actions`.
+- [x] [auto] The host turns a participant's camera off — evidence: `pnpm test:e2e -- collab/host-actions`.
+      Result (collab-ui): all six host-actions specs pass in Chromium and Firefox.
+- [x] [auto] Ask to unmute never unmutes without the participant's click — evidence:
       `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] Raise hand → allow to speak → the participant unmutes — evidence: `pnpm test:e2e -- collab/hands`.
-- [ ] [auto] Volume for everyone is applied by receivers — evidence: `pnpm test:e2e -- collab/volume`.
+- [x] [auto] Raise hand → allow to speak → the participant unmutes — evidence: `pnpm test:e2e -- collab/hands`.
+- [x] [auto] Volume for everyone is applied by receivers — evidence: `pnpm test:e2e -- collab/volume`.
 - [ ] [auto] Chat is ciphertext on the wire and an XSS payload renders as text — evidence:
       `pnpm test:e2e -- collab/chat`, `app/lib/call/features/chat/linkify.test.ts`.
-- [ ] [auto] The hand queue is ordered by raise time — evidence: `app/lib/call/features/hands/queue.test.ts`,
+      Result (collab-ui): linkify and chat-store unit tests pass; "chat turned off" passes in Chromium and
+      Firefox. The three specs that need a peer to receive a message fail (and so does collab/reactions):
+      call-core drops every app message because livekit-client 2.22.3 never sets `EncryptedPacket.encryptionType`,
+      so receivers see `NONE` (request in the collab-ui report). Not ticked until that fix lands.
+- [x] [auto] The hand queue is ordered by raise time — evidence: `app/lib/call/features/hands/queue.test.ts`,
       `pnpm test:e2e -- collab/hands`.
-- [ ] [auto] A waiting person appears for moderators ≤ 1 s; admit, deny and admit all work — evidence:
+- [x] [auto] A waiting person appears for moderators ≤ 1 s; admit, deny and admit all work — evidence:
       `pnpm test:e2e -- collab/lobby`.
-- [ ] [auto] Live settings reach everyone ≤ 1 s and a locked room rejects joins — evidence:
+- [x] [auto] Live settings reach everyone ≤ 1 s and a locked room rejects joins — evidence:
       `pnpm test:e2e -- collab/room-settings`.
-- [ ] [auto] Removal shows the removed notice and the rotate-key prompt; end for all ends every client — evidence:
+- [x] [auto] Removal shows the removed notice and the rotate-key prompt; end for all ends every client — evidence:
       `pnpm test:e2e -- collab/host-actions`.
 - [ ] [auto] No horizontal overflow at 375/768/1440 px — evidence: `pnpm test:e2e -- collab/responsive`.
-- [ ] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- collab` (base fixture).
-- [ ] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
-- [ ] [agent-manual] Only owned paths changed and every feature appears without editing core files — evidence:
+      Result (collab-ui): no horizontal overflow at any width, and 375/1440 pass in Chromium, Firefox and
+      mobile-chromium. At 768 px (desktop engines) the core control bar lets its end group overlap the center
+      buttons once a host has all controls (request in the collab-ui report). Not ticked until that fix lands.
+- [x] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- collab` (base fixture).
+- [x] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
+- [x] [agent-manual] Only owned paths changed and every feature appears without editing core files — evidence:
       `git diff --stat <waveBaseSha>...HEAD` in the report.
+      Result (collab-ui): 66 files, all under the owned feature folders, `tests/e2e/collab/**` and this file.
 - [ ] [user] Moderation, chat and reactions work in Safari (macOS, iOS) and Android Chrome — evidence: manual browser
       matrix in `docs/TESTING.md`.
 
