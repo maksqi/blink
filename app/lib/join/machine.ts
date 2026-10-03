@@ -80,9 +80,10 @@ function fail(state: JoinState, problem: JoinProblem): JoinState {
 
 function onInfo(state: JoinState, info: JoinInfo): JoinState {
   const next = { ...state, info }
-  if (!info.signedIn && !info.guestsAllowed) return fail(next, { code: 'ROOM_GUESTS_NOT_ALLOWED' })
-  // Everyone but the host and co-hosts needs an invite (docs/API.md §6): say so before the camera even opens.
+  // The join would fail on these, in the server's order (invite, then guests): say so before the camera opens.
+  // Everyone but the host and co-hosts needs an invite (docs/API.md §6).
   if (info.yourRole === 'participant' && !state.hasInvite) return fail(next, { code: 'ROOM_INVITE_REQUIRED' })
+  if (!info.signedIn && !info.guestsAllowed) return fail(next, { code: 'ROOM_GUESTS_NOT_ALLOWED' })
   return { ...next, phase: 'prejoin' }
 }
 

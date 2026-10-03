@@ -92,6 +92,9 @@ describe('info', () => {
     const participant = run([...noInvite, { type: 'infoLoaded', info: INFO }])
     expect(participant.phase).toBe('error')
     expect(participant.problem).toEqual({ code: 'ROOM_INVITE_REQUIRED' })
+    // The missing invite is named first, as the server checks it first.
+    const both = run([...noInvite, { type: 'infoLoaded', info: { ...INFO, guestsAllowed: false } }])
+    expect(both.problem).toEqual({ code: 'ROOM_INVITE_REQUIRED' })
     for (const yourRole of ['host', 'cohost'] as const) {
       expect(run([...noInvite, { type: 'infoLoaded', info: { ...INFO, yourRole, signedIn: true } }]).phase).toBe(
         'prejoin',
@@ -99,16 +102,14 @@ describe('info', () => {
     }
   })
 
-  it.each([
-    ['ROOM_KEY_INVALID'],
-    ['ROOM_NOT_FOUND'],
-    ['ROOM_INVITE_INVALID'],
-    ['RATE_LIMITED'],
-  ])('shows %s from the info request full-screen', (code) => {
-    const state = run([...toInfo, { type: 'infoFailed', code }])
-    expect(state.phase).toBe('error')
-    expect(state.problem?.code).toBe(code)
-  })
+  it.each([['ROOM_KEY_INVALID'], ['ROOM_NOT_FOUND'], ['ROOM_INVITE_INVALID'], ['RATE_LIMITED']])(
+    'shows %s from the info request full-screen',
+    (code) => {
+      const state = run([...toInfo, { type: 'infoFailed', code }])
+      expect(state.phase).toBe('error')
+      expect(state.problem?.code).toBe(code)
+    },
+  )
 
   it('keeps the rate-limit wait and maps unknown codes and network errors to UNKNOWN', () => {
     expect(run([...toInfo, { type: 'infoFailed', code: 'RATE_LIMITED', retryAfter: 12.2 }]).problem).toEqual({
@@ -139,7 +140,11 @@ describe('duplicate tabs', () => {
   })
 
   it('ignores the flag once the person is waiting or in the call', () => {
-    const waiting = run([...toPrejoin(), clickJoin, { type: 'joinSucceeded', response: { status: 'waiting', requestId: 'r1' } }])
+    const waiting = run([
+      ...toPrejoin(),
+      clickJoin,
+      { type: 'joinSucceeded', response: { status: 'waiting', requestId: 'r1' } },
+    ])
     expect(joinReducer(waiting, { type: 'duplicate', present: true })).toBe(waiting)
   })
 })
@@ -163,7 +168,11 @@ describe('pre-join and join', () => {
   })
 
   it('waits on 202', () => {
-    const state = run([...toPrejoin(), clickJoin, { type: 'joinSucceeded', response: { status: 'waiting', requestId: 'r1' } }])
+    const state = run([
+      ...toPrejoin(),
+      clickJoin,
+      { type: 'joinSucceeded', response: { status: 'waiting', requestId: 'r1' } },
+    ])
     expect(state.phase).toBe('waiting')
     expect(state.requestId).toBe('r1')
     expect(inCallView(state)).toBe(false)
@@ -288,7 +297,11 @@ describe('password', () => {
 })
 
 describe('waiting room', () => {
-  const waiting = run([...toPrejoin(), clickJoin, { type: 'joinSucceeded', response: { status: 'waiting', requestId: 'r1' } }])
+  const waiting = run([
+    ...toPrejoin(),
+    clickJoin,
+    { type: 'joinSucceeded', response: { status: 'waiting', requestId: 'r1' } },
+  ])
   const { status: _status, ...grantData } = GRANT
 
   it('stays on status events', () => {

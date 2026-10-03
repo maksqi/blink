@@ -112,7 +112,12 @@ watch(
 </script>
 
 <template>
-  <form class="flex flex-col gap-6" novalidate data-testid="room-settings-form" @submit.prevent.stop="form.handleSubmit()">
+  <form
+    class="flex flex-col gap-6"
+    novalidate
+    data-testid="room-settings-form"
+    @submit.prevent.stop="form.handleSubmit()"
+  >
     <FormAlert :message="formError" />
     <FormAlert v-if="!editable" tone="info" message="Only the room owner can change these settings." />
     <FieldGroup class="gap-5">

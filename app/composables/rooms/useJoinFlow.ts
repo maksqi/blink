@@ -85,8 +85,14 @@ export function useJoinFlow(slug: string) {
         notice: next.notice?.code ?? null,
         requestId: next.requestId,
         duplicate: next.duplicate,
+        /** Graceful leave for test teardown (a live connection torn down abruptly makes the SDK log errors). */
+        leave: () => session.value?.leave(),
       }
     }
+  }
+
+  function currentPhase(): CallPhase {
+    return state.value.phase
   }
 
   function dispatch(event: JoinEvent) {
@@ -130,7 +136,8 @@ export function useJoinFlow(slug: string) {
       supported,
       hasInvite: resolved.status === 'found' && Boolean(inviteToken),
     })
-    if (state.value.phase === 'info') await loadInfo()
+    // dispatch() moved the state on; read it again rather than relying on the narrowed type above.
+    if (currentPhase() === 'info') await loadInfo()
   }
 
   async function loadConfig(): Promise<PublicConfig | null> {

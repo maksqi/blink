@@ -38,9 +38,9 @@ describe('resolveRoomKey', () => {
   it('reports a missing key', () => {
     expect(resolveRoomKey({ fragment: null, tab: null, vault: null })).toEqual({ status: 'missing' })
     // An invite token alone does not open a meeting.
-    expect(
-      resolveRoomKey({ fragment: { inviteToken: T_LINK, invalidKey: false }, tab: null, vault: null }),
-    ).toEqual({ status: 'missing' })
+    expect(resolveRoomKey({ fragment: { inviteToken: T_LINK, invalidKey: false }, tab: null, vault: null })).toEqual({
+      status: 'missing',
+    })
   })
 
   it('reports a damaged key in the link even when another source has one', () => {

@@ -46,7 +46,10 @@ function open() {
 
 describe('parseWaitingEvent', () => {
   it('parses every documented event', () => {
-    expect(parseWaitingEvent('status', '{"status":"waiting"}')).toEqual({ event: 'status', data: { status: 'waiting' } })
+    expect(parseWaitingEvent('status', '{"status":"waiting"}')).toEqual({
+      event: 'status',
+      data: { status: 'waiting' },
+    })
     expect(parseWaitingEvent('admitted', JSON.stringify(GRANT))).toEqual({ event: 'admitted', data: GRANT })
     for (const reason of ['denied', 'removed', 'locked']) {
       expect(parseWaitingEvent('denied', JSON.stringify({ reason }))).toEqual({ event: 'denied', data: { reason } })

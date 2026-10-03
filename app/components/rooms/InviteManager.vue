@@ -47,7 +47,7 @@ const EXPIRY_OPTIONS: Array<{ value: InviteExpiry; label: string }> = [
   { value: '7d', label: '7 days' },
   { value: 'never', label: 'Never' },
 ]
-const labelSchema = createRoomInviteSchema.shape.label
+const labelSchema = createRoomInviteSchema.shape.label.unwrap()
 const maxUsesSchema = createRoomInviteSchema.shape.maxUses.unwrap().unwrap()
 
 const rooms = useRoomsApi()

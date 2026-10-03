@@ -21,8 +21,15 @@ defineSlots<{ default?(): unknown; media?(): unknown; description?(): unknown }>
   <div class="flex min-h-full flex-1 items-center justify-center px-4 py-10 sm:px-6">
     <div class="flex w-full max-w-md flex-col items-center text-center">
       <slot name="media">
-        <span class="flex size-14 items-center justify-center rounded-2xl bg-white/8 text-white/90 ring-1 ring-white/10">
-          <component :is="icon" class="size-7" :class="busy ? 'motion-safe:animate-spin' : undefined" aria-hidden="true" />
+        <span
+          class="flex size-14 items-center justify-center rounded-2xl bg-white/8 text-white/90 ring-1 ring-white/10"
+        >
+          <component
+            :is="icon"
+            class="size-7"
+            :class="busy ? 'motion-safe:animate-spin' : undefined"
+            aria-hidden="true"
+          />
         </span>
       </slot>
       <p v-if="meeting" class="mt-5 max-w-full truncate text-sm text-muted-foreground">{{ meeting }}</p>

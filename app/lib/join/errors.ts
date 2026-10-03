@@ -157,7 +157,8 @@ export function isJoinApiCode(value: unknown): value is JoinApiCode {
 export function toJoinProblem(code: unknown, retryAfter?: unknown): JoinProblem {
   const problem: JoinProblem = { code: isJoinApiCode(code) ? code : 'UNKNOWN' }
   const seconds = Number(retryAfter)
-  if (problem.code === 'RATE_LIMITED' && Number.isFinite(seconds) && seconds > 0) problem.retryAfter = Math.ceil(seconds)
+  if (problem.code === 'RATE_LIMITED' && Number.isFinite(seconds) && seconds > 0)
+    problem.retryAfter = Math.ceil(seconds)
   return problem
 }
 

@@ -31,16 +31,16 @@ export function useRoomsApi() {
     create: (body: CreateRoomBody) => api<{ room: RoomDetails }>('/api/rooms', { method: 'POST', body }),
     update: async (id: string, body: RoomUpdate) =>
       (await api<{ room: RoomDetails }>(room(id), { method: 'PATCH', body })).room,
-    remove: (id: string) => api<void>(room(id), { method: 'DELETE' }),
+    remove: (id: string) => api<unknown>(room(id), { method: 'DELETE' }),
     rotateKey: async (id: string, proof: string) =>
       (await api<{ room: RoomDetails }>(`${room(id)}/key`, { method: 'PUT', body: { proof } })).room,
     removeCohost: (id: string, userId: string) =>
-      api<void>(`${room(id)}/cohosts/${encodeURIComponent(userId)}`, { method: 'DELETE' }),
+      api<unknown>(`${room(id)}/cohosts/${encodeURIComponent(userId)}`, { method: 'DELETE' }),
     invites: async (id: string) => (await api<{ items: RoomInvite[] }>(`${room(id)}/invites`)).items,
     createInvite: async (id: string, body: { label?: string; expiresIn: InviteExpiry; maxUses: number | null }) =>
       (await api<{ invite: RoomInvite }>(`${room(id)}/invites`, { method: 'POST', body })).invite,
     revokeInvite: (id: string, inviteId: string) =>
-      api<void>(`${room(id)}/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' }),
+      api<unknown>(`${room(id)}/invites/${encodeURIComponent(inviteId)}`, { method: 'DELETE' }),
     meetings: (id: string, query: { page: number; pageSize: number }) =>
       api<Paginated<MeetingSummary>>(`${room(id)}/meetings`, { query }),
   }

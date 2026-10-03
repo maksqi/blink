@@ -56,7 +56,11 @@ describe('key vault', () => {
     storage = new MemoryStorage()
     clock = 1_000
   })
-  const vault = () => createKeyVault(() => storage, () => clock)
+  const vault = () =>
+    createKeyVault(
+      () => storage,
+      () => clock,
+    )
 
   it('stores keys under blinq:keys:<userId> in the documented shape', () => {
     const key = generateRoomKey()

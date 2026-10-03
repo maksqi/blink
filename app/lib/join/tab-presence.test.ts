@@ -57,7 +57,9 @@ describe('tab presence', () => {
     tab(bus, 'idle', () => false)
     const fresh = tab(bus, 'new', () => false)
     expect(await fresh.probe(30)).toBeNull()
-    expect(await new TabPresence({ channel: null, id: 'x', inCall: () => true, onLeaveRequest: () => {} }).probe(30)).toBeNull()
+    expect(
+      await new TabPresence({ channel: null, id: 'x', inCall: () => true, onLeaveRequest: () => {} }).probe(30),
+    ).toBeNull()
   })
 
   it('asks the other tab to leave and waits for its confirmation', async () => {
