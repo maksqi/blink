@@ -64,6 +64,7 @@ import { outcomeForDisconnect, isTerminalPhase } from './disconnect'
 import { createEventBus, type DisposableEventBus } from './event-bus'
 import { callRegistry } from './features'
 import { createMessaging, type CallMessaging } from './messaging'
+import { afterPageLoad } from './page-load'
 import { joinClickMarked, markJoin, markJoinClick, JOIN_MARKS } from './metrics'
 import { toParticipantView } from './participant-view'
 import { setupFeatures } from './registry'
@@ -275,6 +276,9 @@ export class CallSession {
     // A remounted pre-join keeps the user's choices; it only refreshes the device lists.
     if (this.previewStarted) return this.refreshDevices()
     this.previewStarted = true
+    // Media elements created before `load` can hold it for ever (Firefox): open the devices after it (F-064).
+    await afterPageLoad(typeof document === 'undefined' ? undefined : document)
+    if (this.disposed) return
     const prefs = readDevicePrefs(browserStorage())
     const forcedOff = this.store.muteOnJoin
     const wantCamera = this.options.camera !== false && !forcedOff
