@@ -29,8 +29,6 @@ import {
   type Peer,
 } from './support'
 
-// pending finding: the microphone volume slider's thumb has no accessible name (pre-join effects, device settings).
-const SLIDER = { 'aria-input-field-name': PENDING.sliderName }
 
 test.describe('axe on the meeting page', () => {
   test('join screens: pre-join, password, waiting room, missing key', async ({
@@ -50,7 +48,7 @@ test.describe('axe on the meeting page', () => {
     await openToPrejoin(page, room.link)
     await expectTheme(page, 'dark')
     await expect(page.getByTestId('prejoin-preview')).toBeVisible()
-    await expectAccessible(page, 'pre-join (host)', { pending: SLIDER })
+    await expectAccessible(page, 'pre-join (host)')
 
     // Waiting room of a guest (the host's own join started the meeting).
     await rooms.join(room, host)
@@ -58,7 +56,7 @@ test.describe('axe on the meeting page', () => {
     const guestContext = await newWatchedContext(browser, guards)
     const guest = await guestContext.newPage()
     await openToPrejoin(guest, link)
-    await expectAccessible(guest, 'pre-join (guest, name field)', { pending: SLIDER })
+    await expectAccessible(guest, 'pre-join (guest, name field)')
     await waitingRequestId(guest, room.slug, () => pressJoin(guest, 'Wanda Waiting'))
     await expect(guest.getByTestId('waiting-room')).toBeVisible()
     await expectAccessible(guest, 'waiting room')
@@ -136,10 +134,7 @@ test.describe('axe on the meeting page', () => {
       await expectAccessible(page, 'more-options menu', { include: ['[role="menu"]'] })
       await page.getByRole('menuitem', { name: 'Settings' }).click()
       await expect(page.getByTestId('call-settings')).toBeVisible()
-      await expectAccessible(page, 'device settings dialog', {
-        include: ['[data-testid="call-settings"]'],
-        pending: SLIDER,
-      })
+      await expectAccessible(page, 'device settings dialog', { include: ['[data-testid="call-settings"]'] })
       await page.keyboard.press('Escape')
       await settle(page)
 
