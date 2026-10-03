@@ -2,7 +2,8 @@
 /**
  * The in-call view (`<CallView :session>`): top bar with the E2EE badge, grid or speaker/presentation stage, side
  * panels and the control bar from the feature registries, reconnect banner, notices and dialogs. Terminal phases
- * show the highest-order registered phase screen. Hotkeys: M, V, Space (push to talk), ?.
+ * show the highest-order registered phase screen. Feature overlays (participant-side dialogs) stay mounted in every
+ * phase. Hotkeys: M, V, Space (push to talk), ?.
  */
 import { LoaderCircleIcon, UsersIcon, XIcon } from '@lucide/vue'
 import { useIntervalFn, useMediaQuery, useWindowSize } from '@vueuse/core'
@@ -210,6 +211,7 @@ useCallHotkeys({
       <SettingsDialog />
       <HotkeyHelp />
       <SafetyCodeDialog />
+      <component :is="overlay.component" v-for="overlay in callRegistry.overlays" :key="overlay.id" />
     </div>
   </TooltipProvider>
 </template>

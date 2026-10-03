@@ -197,6 +197,17 @@ export interface PhaseScreen {
   component: Component
 }
 
+/**
+ * Always-mounted content of the call view: participant-side dialogs and anything else that needs a mounted component
+ * but takes no room in the layout (render dialogs and portals only). Mounted once while the call view is, in every
+ * phase including the terminal screens, and never remounted by layout changes.
+ */
+export interface CallOverlay {
+  id: string
+  order: number
+  component: Component
+}
+
 export interface CallFeature {
   id: string
   controlBar?: ControlBarItem[]
@@ -205,6 +216,7 @@ export interface CallFeature {
   preJoin?: PreJoinSlot[]
   settings?: SettingsSection[]
   phaseScreens?: PhaseScreen[]
+  overlays?: CallOverlay[]
   /** Called once when the call context is ready; return a cleanup function. */
   setup?: (ctx: CallContext) => (() => void) | undefined
 }

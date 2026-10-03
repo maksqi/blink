@@ -6,6 +6,7 @@
 import type {
   CallContext,
   CallFeature,
+  CallOverlay,
   CallPhase,
   ControlBarItem,
   PhaseScreen,
@@ -23,6 +24,7 @@ export interface CallRegistry {
   preJoin: PreJoinSlot[]
   settings: SettingsSection[]
   phaseScreens: PhaseScreen[]
+  overlays: CallOverlay[]
 }
 
 export interface BuildRegistryOptions {
@@ -104,6 +106,7 @@ export function buildRegistry(modules: FeatureModules | CallFeature[], options: 
     preJoin: collect('pre-join slot', (f) => f.preJoin),
     settings: collect('settings section', (f) => f.settings),
     phaseScreens: collect('phase screen', (f) => f.phaseScreens),
+    overlays: collect('overlay', (f) => f.overlays),
   }
 }
 
