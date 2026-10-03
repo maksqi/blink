@@ -12,6 +12,7 @@ import {
   LinkIcon,
   LockKeyholeIcon,
   LogInIcon,
+  ServerOffIcon,
   ShieldOffIcon,
   TimerIcon,
   UserXIcon,
@@ -41,6 +42,7 @@ const ICONS: Partial<Record<JoinProblemCode, Component>> = {
   RATE_LIMITED: TimerIcon,
   UNSUPPORTED_BROWSER: ShieldOffIcon,
   MEETING_ENDED: DoorClosedIcon,
+  SERVICE_UNAVAILABLE: ServerOffIcon,
 }
 
 const copy = computed(() => joinErrorCopy(props.problem))

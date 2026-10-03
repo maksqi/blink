@@ -40,6 +40,14 @@ describe('join error copy', () => {
     }
   })
 
+  // F-044: 503 when the server cannot reach LiveKit is a known, temporary problem, not "something went wrong".
+  it('explains an unreachable media service and offers a retry', () => {
+    const copy = joinErrorCopy(toJoinProblem('SERVICE_UNAVAILABLE'))
+    expect(copy).toEqual(expect.objectContaining({ title: "The meeting service isn't available", next: 'retry' }))
+    expect(copy).not.toEqual(joinErrorCopy({ code: 'UNKNOWN' }))
+    expect(isInlineJoinProblem('SERVICE_UNAVAILABLE')).toBe(true)
+  })
+
   it('says how long a rate limit lasts', () => {
     expect(joinErrorCopy({ code: 'RATE_LIMITED', retryAfter: 1 }).message).toContain('1 second.')
     expect(joinErrorCopy({ code: 'RATE_LIMITED', retryAfter: 42 }).message).toContain('42 seconds')
@@ -51,6 +59,7 @@ describe('join error copy', () => {
 describe('toJoinProblem', () => {
   it('keeps join codes and maps everything else to UNKNOWN', () => {
     expect(toJoinProblem('ROOM_FULL')).toEqual({ code: 'ROOM_FULL' })
+    expect(toJoinProblem('SERVICE_UNAVAILABLE')).toEqual({ code: 'SERVICE_UNAVAILABLE' })
     expect(toJoinProblem('NETWORK')).toEqual({ code: 'UNKNOWN' })
     expect(toJoinProblem('CSRF_REJECTED')).toEqual({ code: 'UNKNOWN' })
     expect(toJoinProblem(undefined)).toEqual({ code: 'UNKNOWN' })
