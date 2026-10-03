@@ -193,6 +193,8 @@ tracked as F-001 to F-011 in the Stage 10 Findings list):
 - Multi-node deployment (Redis for LiveKit, shared event bus and limiter stores)
 - Scheduled meetings and calendar integration (client-side invites only, never server-sent room links)
 - Published container images on GHCR (workflow prepared, not run)
+- macOS WebKit with E2EE in nightly CI: GitHub's macOS runners have no Docker, so Postgres, LiveKit and Caddy would
+  need a native harness (today: `E2E_NIGHTLY_BROWSERS=1 sh scripts/e2e.sh --project=webkit` on a Mac with Docker)
 
 ## Change log
 
@@ -252,3 +254,8 @@ tracked as F-001 to F-011 in the Stage 10 Findings list):
   `fix-ui` (forms, key vault, fragments, join cleanup, copy, a11y, touch targets, initial JS `/` 144 KiB and `/login`
   182 KiB gzip) merged. Full E2E after fix-ui: 461 passed; the remaining failures are F-006 (SDK data-channel errors on
   removal, fix-call) and two responsive issues fixed on main (pagination touch size, a seeded-recording race).
+- 2026-10-03 — W3 `fix-call` merged (F-005 to F-064 call items: E2EE sticky block + worker frame drop, device and
+  session lifecycle, heap ~1.3 MB → ~0.1 MB per join/leave via livekit-client and @tanstack/vue-form patches, call a11y,
+  data-channel noise, pre-join JS 414 KiB) and `e2e-perf` merged (perf budget, CDP degradation, long recording, swarm,
+  on-box load results in PERFORMANCE.md). nightly.yml jobs enabled (join time, degradation, long recording, Edge);
+  LiveKit limits from measurements (`LIVEKIT_MAX_TRACKS` 1600, `LIVEKIT_MAX_BYTES_PER_SEC` 62500000).

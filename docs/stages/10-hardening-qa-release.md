@@ -306,6 +306,13 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
 - Manual (user): Stage 9b and the browser matrix in `docs/TESTING.md`.
 
 ## Definition of Done
+- [ ] F-065 [medium] infra — under the CDP degradation (5 % loss, 150 ms, 500 kbit/s) a receiver that also publishes is
+      never moved to a lower layer and its picture freezes (median 0 fps); no disconnect, recovery in 3 s. LiveKit's
+      `rtc.congestion_control.use_send_side_bwe: true` kept about 5 fps in a manual probe (e2e-perf) — owner:
+      orchestrator — status: open
+- [x] F-066 [low] infra — Caddy's default zstd level is ~3 % larger than gzip-5 and the `.tflite` model is served
+      uncompressed — owner: orchestrator — status: accepted (the budget is measured with the production encoder; the
+      model is 244 KB of mostly incompressible weights, loaded only when blur is turned on)
 - [ ] [agent-manual] Every DoD item of Stages 01–08 and 9a is checked — evidence:
       `awk '/^## Definition of Done/{d=1;next} /^## /{d=0} d && /^- \[ \]/ && !/\[user\]/' docs/stages/0*.md`
       prints nothing (`[user]` items such as 9b are excluded until the user runs them).

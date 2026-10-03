@@ -119,11 +119,11 @@ services:
           departure_timeout: 20
           max_participants: 25
           enable_remote_unmute: false
-        # Estimates until Stage 10 measures them (docs/PERFORMANCE.md): about two full 25-person rooms (tracks in and
-        # out) and 500 Mbit/s.
+        # Measured in Stage 10 (docs/PERFORMANCE.md §8): a full 25-person meeting is about 1250 tracks (in and out) and
+        # 15-25 MB/s. Size both per server: about 400 tracks per vCPU, and the bandwidth plan in bytes per second.
         limit:
-          num_tracks: 2600
-          bytes_per_sec: 62500000
+          num_tracks: ${LIVEKIT_MAX_TRACKS:-1600}
+          bytes_per_sec: ${LIVEKIT_MAX_BYTES_PER_SEC:-62500000}
         logging:
           level: info
           pion_level: error

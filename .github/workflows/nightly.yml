@@ -1,8 +1,8 @@
 name: nightly
 
-# Slow and strict checks that never gate pull requests (docs/TESTING.md §6.7-6.9). Every job is a prepared stub that
-# stays skipped: nobody sets the repository variable BLINQ_NIGHTLY_STUBS. Stage 10 writes a job's specs and then removes
-# that job's `if:` line. Actions are pinned by commit SHA.
+# Slow and strict checks that never gate pull requests (docs/TESTING.md §6.7-6.9). The Edge job is non-blocking. macOS
+# WebKit with E2EE runs on a Mac with Docker (`E2E_NIGHTLY_BROWSERS=1 sh scripts/e2e.sh --project=webkit`): GitHub's
+# macOS runners have no Docker (docs/ROADMAP.md backlog). Actions are pinned by commit SHA.
 on:
   schedule:
     - cron: '17 2 * * *'
@@ -21,9 +21,8 @@ env:
 
 jobs:
   join-time:
-    name: Join time p95 < 3 s
-    # TODO(Stage 10): enable once call/join-time measures 1 warm-up + 10 warm joins (TESTING.md §6.7).
-    if: vars.BLINQ_NIGHTLY_STUBS == 'enabled'
+    # E2E_NIGHTLY=1 (workflow env) switches both specs to 1 warm-up + 10 joins with p50 and p95 assertions.
+    name: Join time p50 < 1.5 s, p95 < 3 s
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -39,13 +38,12 @@ jobs:
       - run: cp .env.dev.example .env
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm dev:deps
-      - run: sh scripts/e2e.sh --project=chromium --grep @nightly call/join-time
+      - run: sh scripts/e2e.sh --project=chromium tests/e2e/call/join-time.spec.ts tests/e2e/join/guest-invite.spec.ts
 
   network-degradation:
-    name: Network degradation (tc netem)
-    # TODO(Stage 10): enable once the degradation spec exists. It impairs the dev LiveKit container's interface with
-    # tc netem through nsenter, so it needs root and runs only here (TESTING.md §6.9).
-    if: vars.BLINQ_NIGHTLY_STUBS == 'enabled'
+    # Chromium's CDP WebRTC emulation (packet loss, latency, 500 kbit/s); tc netem stays the manual Firefox path
+    # (TESTING.md §6.9).
+    name: Network degradation (CDP)
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -59,17 +57,18 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: cp .env.dev.example .env
-      - run: pnpm exec playwright install --with-deps chromium firefox
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm dev:deps
-      - run: sh scripts/e2e.sh --project=chromium --grep @nightly call/degradation
+      - run: sh scripts/e2e.sh --project=chromium --grep @nightly network/degradation
 
   long-recording:
-    name: Long recording (30 min or more)
-    # TODO(Stage 10): enable once recording/long covers upload backlog, memory and the partial finalize path
-    # (TESTING.md §6.8). ffmpeg and ffprobe come from mwader/static-ffmpeg:9.0.2 as in e2e.yml.
-    if: vars.BLINQ_NIGHTLY_STUBS == 'enabled'
+    # Upload backlog, memory and the partial finalize path (TESTING.md §6.8). ffmpeg and ffprobe come from
+    # mwader/static-ffmpeg:9.0.2 as in e2e.yml.
+    name: Long recording (30 min)
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    env:
+      E2E_LONG_RECORDING_MINUTES: '30'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -92,11 +91,13 @@ jobs:
       - run: sh scripts/e2e.sh --project=chromium --grep @nightly recording/long
 
   edge:
-    name: Microsoft Edge
-    # TODO(Stage 10): enable once playwright.config.ts has an Edge project (channel 'msedge') for nightly runs.
-    if: vars.BLINQ_NIGHTLY_STUBS == 'enabled'
+    # The msedge project exists only with E2E_NIGHTLY_BROWSERS=1 (playwright.config.ts).
+    name: Microsoft Edge (non-blocking)
+    continue-on-error: true
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
+    env:
+      E2E_NIGHTLY_BROWSERS: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -110,18 +111,4 @@ jobs:
       - run: cp .env.dev.example .env
       - run: pnpm exec playwright install --with-deps msedge
       - run: pnpm dev:deps
-      - run: sh scripts/e2e.sh --project=msedge
-
-  macos-webkit:
-    name: WebKit with E2EE on macOS (non-blocking)
-    # TODO(Stage 10): enable with a native harness. GitHub's macOS runners have no Docker, so Postgres 18, LiveKit
-    # v1.13.7 and Caddy 2.11.4 must run natively there (Homebrew binaries) instead of through compose.
-    if: vars.BLINQ_NIGHTLY_STUBS == 'enabled'
-    continue-on-error: true
-    runs-on: macos-15
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - run: echo "TODO(Stage 10) native harness for macOS WebKit"
+      - run: sh scripts/e2e.sh --project=msedge --grep-invert @nightly
