@@ -87,6 +87,21 @@ render_global() {
 	# No admin API: the configuration never changes at runtime.
 	admin off
 	persist_config off
+	# Caddy's error log (a 502 from LiveKit or the app, a 413) repeats the request without the filters of the site's
+	# access loggers (site.caddyfile), so it gets the pages filter: no query at all (/rtc carries the LiveKit token).
+	log errors {
+		include http.log.error
+		output stderr
+		format filter {
+			wrap json
+			request>uri regexp \?.*$ ?REDACTED
+			request>headers>Referer regexp \?.*$ ?REDACTED
+		}
+	}
+	# Requests for any other host name (scanners) are not logged: their access log would be unfiltered as well.
+	log default {
+		exclude http.log.access http.log.error
+	}
 EOF
   case "$TLS_MODE" in
     acme)
