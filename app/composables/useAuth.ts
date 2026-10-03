@@ -207,7 +207,6 @@ export function useAuth() {
     user,
     loaded,
     refresh,
-    forgetSession,
     sessionLost,
     forgetOrphanedKeys,
     login,
