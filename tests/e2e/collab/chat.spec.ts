@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import type { Page } from '@playwright/test'
 import { CHAT_MAX_LENGTH } from '#shared/schemas/livekit'
-import { closePanel, expect, openPanel, test, toggleSetting } from './helpers'
+import { closePanel, dismiss, expect, openPanel, test, toggleSetting } from './helpers'
 
 // Stage 06 DoD: chat is ciphertext on the wire and an XSS payload renders as text; unread badge; 2000-character limit;
 // chat turned off by the host. Runs in Chromium and Firefox.
@@ -184,7 +184,7 @@ test.describe('chat', () => {
     await toggleSetting(host.page, 'chatEnabled')
     await expect(ana.page.getByTestId('chat-disabled')).toHaveText('The host turned off chat')
     await expect(ana.page.getByTestId('chat-input')).toHaveCount(0)
-    await host.page.keyboard.press('Escape')
+    await dismiss(host.page)
     await openPanel(host.page, 'chat')
     await expect(host.page.getByTestId('chat-disabled')).toBeVisible()
 

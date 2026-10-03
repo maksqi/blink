@@ -1,6 +1,7 @@
 import type { Page } from '@playwright/test'
 import { callState, waitForPhase } from '../fixtures/livekit'
 import {
+  actionsMenu,
   cameraButton,
   expect,
   micButton,
@@ -30,14 +31,14 @@ test.describe('host actions', () => {
     await expect.poll(field(host.page, ana.identity, 'cameraEnabled')).toBe(true)
 
     await openActions(host.page, ana.identity)
-    await host.page.getByTestId('participant-actions-menu').locator('[data-action="mute-microphone"]').click()
+    await actionsMenu(host.page).locator('[data-action="mute-microphone"]').click()
     await within1s(field(host.page, ana.identity, 'micEnabled'), 'the host sees the microphone off').toBe(false)
     await expect(toastWith(ana.page, 'The host muted your microphone')).toBeVisible()
     // call-core's toggle follows the server mute, so one click turns it back on.
     await expect(micButton(ana.page)).toHaveAttribute('aria-pressed', 'false')
 
     await openActions(host.page, ana.identity)
-    await host.page.getByTestId('participant-actions-menu').locator('[data-action="stop-camera"]').click()
+    await actionsMenu(host.page).locator('[data-action="stop-camera"]').click()
     await within1s(field(host.page, ana.identity, 'cameraEnabled'), 'the host sees the camera off').toBe(false)
     await expect(toastWith(ana.page, 'The host stopped your camera')).toBeVisible()
     await expect(cameraButton(ana.page)).toHaveAttribute('aria-pressed', 'false')
@@ -173,7 +174,9 @@ test.describe('host actions', () => {
     expect((rejoin.body.data as { code?: string } | undefined)?.code).toBe('JOIN_REMOVED')
   })
 
-  test('end for all ends every client', async ({ collab }) => {
+  test('end for all ends every client', async ({ collab, guards }) => {
+    // The SDK logs its data channels closing when the server deletes the room under it; that is the expected end.
+    guards.allowConsoleError(/DataChannel error on \w+: User-Initiated Abort|data channel '\w+' closed unexpectedly/)
     const { room, call: host } = await collab.meeting({ waitingRoom: false })
     const ana = await collab.addUser(room, host, { name: 'Ana Lima', camera: false })
     const ben = await collab.addGuest(room, host, { name: 'Ben Guest', camera: false })

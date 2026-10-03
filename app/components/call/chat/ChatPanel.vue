@@ -69,12 +69,17 @@ function showName(index: number): boolean {
 
 async function send() {
   if (sending.value) return
+  const text = draft.value
   error.value = null
+  // Clear right away, so whatever is typed while the message is on its way stays in the box.
+  draft.value = ''
   sending.value = true
   try {
-    const problem = await chat.send(draft.value)
-    if (problem) error.value = problem
-    else draft.value = ''
+    const problem = await chat.send(text)
+    if (problem) {
+      error.value = problem
+      if (!draft.value) draft.value = text
+    }
   } finally {
     sending.value = false
   }

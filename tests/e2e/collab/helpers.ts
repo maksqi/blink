@@ -206,9 +206,19 @@ export function panelTestId(id: string): string {
   return id === 'participants' ? 'participants-panel' : `${id}-panel`
 }
 
+/** Overlay contents that are still animating out (they keep focus traps and the Escape layer until they unmount). */
+const CLOSING =
+  '[data-state="closed"]:is([data-slot="popover-content"],[data-slot="dialog-content"],[data-slot="alert-dialog-content"],[data-slot="sheet-content"],[data-slot="dropdown-menu-content"])'
+
+/** Waits until no menu, popover or dialog is still closing (fast test input would otherwise race their focus return). */
+export async function settle(page: Page): Promise<void> {
+  await expect(page.locator(CLOSING)).toHaveCount(0)
+}
+
 /** Opens a side panel: its control-bar toggle on wide screens, the More menu on narrow ones. */
 export async function openPanel(page: Page, id: string): Promise<void> {
   const content = page.getByTestId(panelTestId(id))
+  await settle(page)
   if (await content.isVisible()) return
   const toggle = page.locator(`button[data-panel="${id}"]`)
   if (await toggle.isVisible()) {
@@ -222,6 +232,7 @@ export async function openPanel(page: Page, id: string): Promise<void> {
 
 export async function closePanel(page: Page, id: string): Promise<void> {
   const content = page.getByTestId(panelTestId(id))
+  await settle(page)
   if (!(await content.isVisible())) return
   // Wide screens show the panel in an aside next to the video; narrower ones in a sheet (closed with Escape).
   if (await page.locator(`aside[data-panel="${id}"]`).isVisible())
@@ -234,33 +245,45 @@ export function participantRow(page: Page, identity: string) {
   return page.getByTestId('participants-panel').locator(`[data-testid="participant-row"][data-identity="${identity}"]`)
 }
 
+/** The open moderation menu. */
+export function actionsMenu(page: Page) {
+  return page.locator('[data-testid="participant-actions-menu"][data-state="open"]')
+}
+
 /** Opens the people panel and the moderation menu of `identity`. */
 export async function openActions(page: Page, identity: string): Promise<void> {
   await openPanel(page, 'participants')
   await participantRow(page, identity).getByTestId('participant-actions').click()
-  await expect(page.getByTestId('participant-actions-menu')).toBeVisible()
+  await expect(actionsMenu(page)).toBeVisible()
 }
 
 /** Runs a moderation menu item (`data-action`, e.g. `mute-microphone`) on `identity`. */
 export async function participantAction(page: Page, identity: string, action: string): Promise<void> {
   await openActions(page, identity)
-  await page.getByTestId('participant-actions-menu').locator(`[data-action="${action}"]`).click()
+  await actionsMenu(page).locator(`[data-action="${action}"]`).click()
 }
 
 /** Menu item ids offered for `identity` (closes the menu again). */
 export async function menuActions(page: Page, identity: string): Promise<string[]> {
   await openActions(page, identity)
-  const ids = await page
-    .getByTestId('participant-actions-menu')
+  const ids = await actionsMenu(page)
     .locator('[data-action]')
     .evaluateAll((items) => items.map((item) => item.getAttribute('data-action') ?? ''))
   await page.keyboard.press('Escape')
-  await expect(page.getByTestId('participant-actions-menu')).toBeHidden()
+  await expect(actionsMenu(page)).toBeHidden()
+  await settle(page)
   return ids
+}
+
+/** Presses Escape and waits until the closed overlay is gone. */
+export async function dismiss(page: Page): Promise<void> {
+  await page.keyboard.press('Escape')
+  await settle(page)
 }
 
 export async function openHostControls(page: Page): Promise<void> {
   const panel = page.getByTestId('host-controls')
+  await settle(page)
   if (await panel.isVisible()) return
   await page.locator('[data-control="host-controls"]').click()
   await expect(panel).toBeVisible()

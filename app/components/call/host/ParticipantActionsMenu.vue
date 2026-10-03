@@ -6,6 +6,7 @@
  */
 import {
   EllipsisVerticalIcon,
+  ShieldEllipsisIcon,
   HandIcon,
   MicIcon,
   MicOffIcon,
@@ -222,7 +223,9 @@ async function confirmRemove() {
             )
           "
         >
+          <!-- Tiles already have a "more" menu (pin, local volume): moderation gets its own icon there. -->
           <Spinner v-if="busy" class="size-4" />
+          <ShieldEllipsisIcon v-else-if="variant === 'tile'" class="size-4" aria-hidden="true" />
           <EllipsisVerticalIcon v-else class="size-4" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>

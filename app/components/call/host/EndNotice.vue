@@ -22,7 +22,14 @@ const view = computed(() =>
         title: 'Removed from the meeting',
         text: 'You were removed from this meeting. You cannot rejoin it.',
       }
-    : { icon: DoorOpenIcon, title: 'The meeting has ended', text: 'The host ended the meeting for everyone.' },
+    : {
+        icon: DoorOpenIcon,
+        title: 'The meeting has ended',
+        text:
+          state.role.value === 'host'
+            ? 'You ended the meeting for everyone.'
+            : 'The host ended the meeting for everyone.',
+      },
 )
 const rotateFollowUp = computed(
   () => !removed.value && state.role.value === 'host' && state.removedCount.value > 0 && Boolean(ctx.roomId.value),

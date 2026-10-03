@@ -1,5 +1,15 @@
 import type { Page } from '@playwright/test'
-import { closePanel, expect, horizontalOverflow, openActions, openHostControls, openPanel, test } from './helpers'
+import {
+  actionsMenu,
+  closePanel,
+  dismiss,
+  expect,
+  horizontalOverflow,
+  openActions,
+  openHostControls,
+  openPanel,
+  test,
+} from './helpers'
 
 // Stage 06 DoD: panels, menus and dialogs fit at 375, 768 and 1440 px without horizontal overflow (also in the
 // mobile-chromium project through the @responsive tag).
@@ -29,12 +39,12 @@ test.describe('collaboration UI fits', { tag: '@responsive' }, () => {
       await openPanel(page, 'participants')
       await fits(page, 'people panel')
       await openActions(page, ana.identity)
-      await expect(page.getByTestId('participant-actions-menu')).toBeInViewport({ ratio: 1 })
+      await expect(actionsMenu(page)).toBeInViewport({ ratio: 1 })
       await fits(page, 'moderation menu')
-      await page.getByTestId('participant-actions-menu').locator('[data-action="remove"]').click()
+      await actionsMenu(page).locator('[data-action="remove"]').click()
       await expect(page.getByTestId('remove-dialog')).toBeInViewport({ ratio: 1 })
       await fits(page, 'remove dialog')
-      await page.keyboard.press('Escape')
+      await dismiss(page)
       await closePanel(page, 'participants')
 
       // Waiting room panel.
@@ -60,12 +70,12 @@ test.describe('collaboration UI fits', { tag: '@responsive' }, () => {
       await page.getByTestId('host-mute-all').click()
       await expect(page.getByTestId('mute-all-dialog')).toBeInViewport({ ratio: 1 })
       await fits(page, 'mute all dialog')
-      await page.keyboard.press('Escape')
+      await dismiss(page)
       await openHostControls(page)
       await page.getByTestId('host-end-meeting').click()
       await expect(page.getByTestId('end-meeting-dialog')).toBeInViewport({ ratio: 1 })
       await fits(page, 'end meeting dialog')
-      await page.keyboard.press('Escape')
+      await dismiss(page)
 
       // Reactions.
       const reactions = page.locator('[data-control="reactions"]')
@@ -73,13 +83,13 @@ test.describe('collaboration UI fits', { tag: '@responsive' }, () => {
       await reactions.click()
       await expect(page.getByTestId('reactions-menu')).toBeInViewport({ ratio: 1 })
       await fits(page, 'reactions')
-      await page.keyboard.press('Escape')
+      await dismiss(page)
 
       // The ask-to-unmute prompt on the participant's side.
       await ana.page.setViewportSize(viewport)
       await ana.page.locator('[data-control="microphone"] button').first().click()
       await openActions(page, ana.identity)
-      await page.getByTestId('participant-actions-menu').locator('[data-action="ask-unmute"]').click()
+      await actionsMenu(page).locator('[data-action="ask-unmute"]').click()
       await expect(ana.page.getByTestId('ask-unmute-dialog')).toBeInViewport({ ratio: 1 })
       await fits(ana.page, 'ask-to-unmute prompt')
     })

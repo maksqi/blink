@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { expect, menuActions, openHostControls, openPanel, participantRow, test } from './helpers'
+import { dismiss, expect, menuActions, openHostControls, openPanel, participantRow, test } from './helpers'
 
 // Stage 06 DoD (authorization matrix, UI side): participants and guests see no moderator controls; a co-host lacks
 // host-only items and has no actions on the host. The server enforces the same matrix (tests/api/calls/authz).
@@ -45,7 +45,7 @@ test('participants and guests see no moderator controls; co-hosts lack host-only
     'host-end-meeting',
   ])
     await expect(controls.getByTestId(hostOnly)).toHaveCount(0)
-  await cohost.page.keyboard.press('Escape')
+  await dismiss(cohost.page)
   await expect(cohost.page.locator('button[data-panel="lobby"]')).toBeVisible()
 
   await openPanel(cohost.page, 'participants')
@@ -69,7 +69,7 @@ test('participants and guests see no moderator controls; co-hosts lack host-only
     'host-end-meeting',
   ])
     await expect(host.page.getByTestId('host-controls').getByTestId(control)).toBeVisible()
-  await host.page.keyboard.press('Escape')
+  await dismiss(host.page)
   await openPanel(host.page, 'participants')
   await expect(participantRow(host.page, host.identity).getByTestId('participant-actions')).toHaveCount(0)
   expect(await menuActions(host.page, ana.identity)).toContain('make-cohost')

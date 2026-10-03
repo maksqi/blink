@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test'
-import { expect, openActions, test } from './helpers'
+import { actionsMenu, dismiss, expect, openActions, test } from './helpers'
 
 // Stage 06 DoD: "volume for everyone" is applied by every receiver: a third peer plays the participant at the host's
 // level times its own local volume (call-core's audio state in window.__blinqTest.state.audio).
@@ -27,7 +27,7 @@ test('volume for everyone at 25 % is applied by a third peer', async ({ collab }
   await expect.poll(async () => (await audioOf(ben.page, ana.identity))?.hostVolume).toBe(100)
 
   await openActions(host.page, ana.identity)
-  const menu = host.page.getByTestId('participant-actions-menu')
+  const menu = actionsMenu(host.page)
   const slider = menu.getByRole('slider')
   await slider.focus()
   await host.page.keyboard.press('Home')
@@ -52,5 +52,5 @@ test('volume for everyone at 25 % is applied by a third peer', async ({ collab }
       }, ana.identity),
     )
     .toBe(25)
-  await host.page.keyboard.press('Escape')
+  await dismiss(host.page)
 })
