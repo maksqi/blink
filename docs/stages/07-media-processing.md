@@ -156,23 +156,28 @@ instead of broken controls, and heavy CPU use triggers a warning.
   - `persistence.spec.ts`: choices survive a reload and are applied in pre-join for the same devices.
 
 ## Definition of Done
-- [ ] [auto] Processors swap without republishing or dropping the track — evidence: `pnpm test:e2e -- media/blur-swap`,
-      `pnpm test:e2e -- media/mic-chain`.
-- [ ] [auto] The browser makes no external network requests — evidence:
-      `pnpm test:e2e -- media/no-external-requests`.
-- [ ] [auto] RNNoise lowers seeded white noise by ≥ 10 dB (OfflineAudioContext, threshold above) — evidence:
-      `pnpm test:e2e -- media/rnnoise-offline`.
-- [ ] [auto] Unsupported browsers get disabled controls with a reason and a working call — evidence:
+- [x] [auto] Processors swap without republishing or dropping the track — evidence: `pnpm test:e2e -- media/blur-swap`,
+      `pnpm test:e2e -- media/mic-chain` (chromium and firefox pass: same camera and mic trackSid on both sides through
+      7 blur switches, camera off/on and a track restart; longest gap between frames the peer presented <= 1 s).
+- [x] [auto] The browser makes no external network requests — evidence:
+      `pnpm test:e2e -- media/no-external-requests` (chromium and firefox; vendor files confirmed in the e2e Caddy log,
+      because Chromium reports AudioWorklet module fetches neither as request events nor in resource timing).
+- [x] [auto] RNNoise lowers seeded white noise by ≥ 10 dB (OfflineAudioContext, threshold above) — evidence:
+      `pnpm test:e2e -- media/rnnoise-offline` (both engines: -30.0 dBFS in, -59.5 dBFS out).
+- [x] [auto] Unsupported browsers get disabled controls with a reason and a working call — evidence:
       `pnpm test:e2e -- media/fallback`.
-- [ ] [auto] Preferences persist per device — evidence: `app/lib/media/preferences.test.ts`,
-      `pnpm test:e2e -- media/persistence`.
-- [ ] [auto] The CPU warning follows its thresholds — evidence: `app/lib/media/cpu-monitor.test.ts`.
-- [ ] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- media` (base fixture).
-- [ ] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
-- [ ] [agent-manual] `node scripts/vendor-assets.mjs` is idempotent, needs no network and fails clearly on a missing file
+- [x] [auto] Preferences persist per device — evidence: `app/lib/media/preferences.test.ts`,
+      `app/lib/call/features/effects/controller.test.ts`, `pnpm test:e2e -- media/persistence` (Chromium gives the fake
+      camera a new id on every page load, so the per-camera reload check runs in Firefox; per-mic runs in both).
+- [x] [auto] The CPU warning follows its thresholds — evidence: `app/lib/media/cpu-monitor.test.ts`.
+- [x] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- media` (base fixture; MediaPipe logs INFO
+      lines through console.log/warn only).
+- [x] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: local runs on the branch
+      (975 unit tests); `node scripts/check-build.mjs production` passes.
+- [x] [agent-manual] `node scripts/vendor-assets.mjs` is idempotent, needs no network and fails clearly on a missing file
       or a model hash mismatch — evidence: output of two runs (one with the model renamed) in the report.
-- [ ] [agent-manual] `/vendor/**/*.wasm` is served as `application/wasm` and `.js` as `text/javascript` — evidence:
-      `curl -sI` output per file in the report.
+- [x] [agent-manual] `/vendor/**/*.wasm` is served as `application/wasm` and `.js` as `text/javascript` — evidence:
+      `curl -sI` output per file in the report (`.tflite` is `text/plain`, which works for `fetch()`).
 - [ ] [user] Blur and noise suppression behave per the manual browser matrix (Chrome, Edge, Firefox, Safari macOS/iOS,
       Android Chrome: working, or disabled with a reason; no audio glitches) — evidence: `docs/TESTING.md` matrix rows.
 
