@@ -100,7 +100,7 @@ async function renameSelf(displayName: string): Promise<boolean> {
     <button
       v-if="participant.isLocal"
       type="button"
-      class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-white/8 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+      class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground max-sm:size-11 pointer-coarse:size-11 hover:bg-white/8 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
       aria-label="Rename yourself"
       title="Rename"
       data-testid="rename-self"

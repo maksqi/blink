@@ -59,7 +59,7 @@ const rowWidth = computed(() => grid.value.cols * grid.value.tileWidth + (grid.v
         type="button"
         aria-label="Previous page"
         :disabled="page === 0"
-        class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-40"
+        class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-40 max-sm:size-11 pointer-coarse:size-11"
         @click="page = Math.max(0, page - 1)"
       >
         <ChevronLeftIcon class="size-4" aria-hidden="true" />
@@ -77,7 +77,7 @@ const rowWidth = computed(() => grid.value.cols * grid.value.tileWidth + (grid.v
         type="button"
         aria-label="Next page"
         :disabled="page >= pages - 1"
-        class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-40"
+        class="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-40 max-sm:size-11 pointer-coarse:size-11"
         @click="page = Math.min(pages - 1, page + 1)"
       >
         <ChevronRightIcon class="size-4" aria-hidden="true" />
