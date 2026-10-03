@@ -6,6 +6,8 @@
  *   page would push the run over it (docs/TESTING.md §6.1).
  * - `apiAs()` calls the API directly as a fixture user, for actions the `rooms` fixture has no helper for.
  */
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import type { Browser, BrowserContext, Page } from '@playwright/test'
 import { expect } from '../fixtures'
 import type { Guards } from '../fixtures/base'
@@ -18,19 +20,45 @@ const JOIN_IP_WINDOW_MS = 60_000
 /** Headroom for requests this module does not see (a retry, a reload by the app). */
 const JOIN_IP_HEADROOM = 6
 
-const spent: number[] = []
+/** Margin over the server's window, for clock and request latency. */
+const JOIN_IP_MARGIN_MS = 1_500
+
+/**
+ * Bookings live in a file next to the E2E logs, because the limiter outlives a Playwright worker: every project
+ * (chromium, firefox) and every worker restart after a failure starts a fresh worker.
+ */
+function budgetFile(): string {
+  return join(process.env.E2E_LOG_DIR ?? join(process.cwd(), 'logs', 'e2e'), 'join-ip-budget.json')
+}
+
+function readBookings(): number[] {
+  try {
+    const value = JSON.parse(readFileSync(budgetFile(), 'utf8')) as unknown
+    return Array.isArray(value) ? value.filter((item): item is number => typeof item === 'number') : []
+  } catch {
+    return []
+  }
+}
+
+function writeBookings(bookings: number[]): void {
+  mkdirSync(dirname(budgetFile()), { recursive: true })
+  writeFileSync(budgetFile(), JSON.stringify(bookings))
+}
 
 /** Waits until `count` more join-ip requests fit into the per-minute budget of this run, then books them. */
 export async function spendJoinBudget(count: number): Promise<void> {
   const allowed = JOIN_IP_LIMIT - JOIN_IP_HEADROOM
   for (;;) {
     const now = Date.now()
-    while (spent.length && spent[0]! <= now - JOIN_IP_WINDOW_MS - 1_000) spent.shift()
-    if (spent.length + count <= allowed) {
-      for (let i = 0; i < count; i++) spent.push(now)
+    const live = readBookings()
+      .filter((at) => at > now - JOIN_IP_WINDOW_MS - JOIN_IP_MARGIN_MS && at <= now)
+      .sort((a, b) => a - b)
+    if (live.length + count <= allowed) {
+      writeBookings([...live, ...Array.from({ length: count }, () => now)])
       return
     }
-    const wait = spent[0]! + JOIN_IP_WINDOW_MS + 1_000 - now
+    // The booking that has to expire before `count` more fit.
+    const wait = live[live.length + count - allowed - 1]! + JOIN_IP_WINDOW_MS + JOIN_IP_MARGIN_MS - now
     await new Promise((resolve) => setTimeout(resolve, Math.max(250, wait)))
   }
 }
