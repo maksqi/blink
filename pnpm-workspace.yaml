@@ -19,3 +19,14 @@ allowBuilds:
 # livekit-client: set encryption_type on encrypted data packets, so receivers can require E2EE for chat (2.22.3 bug).
 patchedDependencies:
   livekit-client@2.22.3: patches/livekit-client@2.22.3.patch
+
+# Audit exceptions (`pnpm audit`, ci.yml and release.yml). Only for build-time packages that never reach the runtime
+# bundle (.output) and have no patched release yet; re-check on every dependency update and drop when a fix ships.
+auditConfig:
+  ignoreGhsas:
+    # node-forge <=1.4.0 (RSA PKCS#1 v1.5 signatures), via nuxt > @nuxt/cli and nitropack > listhen: dev-server HTTPS
+    # certificates only. No 1.4.1 on npm yet (2026-10-03).
+    - GHSA-86w9-cpqp-85rv
+    # braces <=3.0.3 (stack exhaustion on crafted patterns), via nitropack > globby > micromatch: build-time globs over
+    # our own files. No 3.0.4 on npm yet (2026-10-03).
+    - GHSA-vfj7-8cjw-p6xm

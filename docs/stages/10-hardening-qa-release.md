@@ -172,6 +172,53 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
 - [ ] F-014 [medium] ui — after creating a room the "Room created" toast (bottom right) covers the pre-join Join button
       at 1280×720; hovering it to click Join pauses its dismissal (`rooms/create-and-join` fails in Firefox) — owner:
       fix-ui — status: open
+- [ ] F-015 [high] call — E2EE: livekit-client keeps one decrypt flag per participant that every `TrackPublished`
+      overwrites, and the worker passes frames through undecrypted when it is off; blinq checks encryption per track,
+      so a compromised SFU can announce one `NONE` track and get plaintext played, mixed and recorded on that
+      participant's encrypted tracks (security-review S-01) — owner: fix-call (+ the livekit-client patch) — status: open
+- [ ] F-016 [medium] server — login: the DB backoff races (40 parallel wrong passwords → 40×401, no 429), there is no
+      `auth-ip` limiter, the argon2 semaphore queue is unbounded (a 200-request flood slows a real login to ~1 s), and
+      `PATCH /api/rooms/:id {password}` re-hashes with no limiter (S-02) — owner: fix-server — status: open
+- [ ] F-017 [medium] server — anyone can soft-lock a known account: the email-only backoff key makes the victim's
+      correct password answer 429 for up to 900 s (S-03, contradicts SECURITY.md §4) — owner: fix-server — status: open
+- [ ] F-018 [medium] server — "removed is final for the meeting" holds per guest session or user only: a removed guest
+      with a fresh cookie and the same multi-use invite is admitted again (S-04) — owner: fix-server (+ fix-call hint)
+      — status: open
+- [ ] F-019 [medium] server — no cap on waiting-room SSE streams per request or IP (150/150 opened) (S-05) — owner:
+      fix-server — status: open
+- [ ] F-020 [medium] ui — forms submitted before hydration send `GET /login?email=…&password=…` or `/?link=…#k=…`
+      into the URL, history and the Caddy log (S-06) — owner: fix-ui (+ fix-infra: Caddy query redaction) — status: open
+- [x] F-021 [medium] deps — `pnpm audit --prod --audit-level high` exits 1: node-forge GHSA-86w9-cpqp-85rv and braces
+      GHSA-vfj7-8cjw-p6xm (build-time only, no patched release on npm) (S-07) — owner: orchestrator — status: fixed
+      (`auditConfig.ignoreGhsas` with reasons in `pnpm-workspace.yaml`, `shadcn-vue` moved to devDependencies)
+- [ ] F-022 [low] infra — the app runtime image keeps npm (all 7 HIGH trivy findings) and the Caddy binary has 6 HIGH
+      Go module findings (S-09) — owner: fix-infra — status: open
+- [ ] F-023 [low] infra — `postgres:18-alpine` and `node:24-bookworm-slim` are pinned by major version only (S-10) —
+      owner: fix-infra (+ orchestrator for workflows) — status: open
+- [ ] F-024 [low] server — password-reset request timing reveals whether an account exists (7.7 ms vs 1.5 ms) (S-11)
+      — owner: fix-server — status: open
+- [ ] F-025 [low] server — chunked request bodies bypass the 1 MB limit outside Caddy (nuxt-security checks
+      `Content-Length` only) (S-12) — owner: fix-server — status: open
+- [ ] F-026 [low] server — the room-password backoff has the same race as login (25 parallel guesses evaluated) (S-13)
+      — owner: fix-server — status: open
+- [ ] F-027 [low] infra — ffmpeg runs as the app uid and could read the app's `/proc/<pid>/environ` after an ffmpeg
+      exploit (S-14) — owner: orchestrator — status: open
+- [ ] F-028 [low] server — `/api/**` responses carry no `Cross-Origin-Resource-Policy` (S-15) — owner: fix-server —
+      status: open
+- [ ] F-029 [low] ui — the key vault survives an expired session (cleared only when a previous user was known; no 401
+      hook) (S-16, SECURITY.md §3.1) — owner: fix-ui — status: open
+- [ ] F-030 [low] ui — `/M/<slug>#k=…` (mixed case) keeps the key in the address bar: the fragment store matches the
+      path case-sensitively (S-17) — owner: fix-ui — status: open
+- [ ] F-031 [low] call — chat and reaction envelopes can be replayed by the SFU after a reload or 5000 ids (in-memory
+      dedupe, no freshness check) (S-18) — owner: fix-call — status: open
+- [ ] F-032 [low] server — Nitro error bodies reflect `X-Forwarded-Host` in `url` (Caddy overwrites it in production)
+      — owner: fix-server (with F-002) — status: open
+- [x] F-033 [low] server — a resume within 120 s skips the lock and capacity checks (`resume.ts`) — owner:
+      orchestrator — status: accepted (by design: a reconnecting participant keeps the seat it already holds)
+- [x] F-034 [low] call — co-hosts can mute, remove and rename other co-hosts — owner: orchestrator — status: accepted
+      (SECURITY.md "manage co-hosts" means promoting and demoting, which stays host-only)
+- [x] F-035 [low] server — an invited guest can fill the 50-slot lobby for an hour; there is no deny-all — owner:
+      orchestrator — status: accepted (hosts lock the room or revoke the invite; deny-all is a feature, backlog)
 
 ## Tests
 - API: `tests/api/security/{authz-matrix,idor,csrf,rate-limits,cookies,headers}.test.ts`.
