@@ -3,8 +3,10 @@
  * docs/ARCHITECTURE.md §7, docs/SECURITY.md §3.2.
  *
  * Rules, in order:
- * 1. A publication whose encryption is NONE is never subscribed (so it is never attached, mixed or recorded) and is
- *    reported as blocked. Nothing overrides this, not even a feature demand.
+ * 1. A participant with a publication whose encryption is NONE, now or earlier in this call (`untrusted`), has every
+ *    publication blocked: none is subscribed (so nothing of theirs is attached, mixed or recorded) and the participant
+ *    is reported as blocked. Nothing overrides this, not even a feature demand. Blocking the whole participant matters
+ *    because livekit-client keeps one decrypt flag per participant that any of their publications can turn off.
  * 2. A client that is not encrypted itself (the test-only `e2ee=off` harness client) subscribes to nothing.
  * 3. Audio (microphone, screen-share audio) is always subscribed and enabled, also in background tabs.
  * 4. Video is subscribed and paused unless a visible tile on the current page (in a visible document) or a feature
@@ -48,6 +50,8 @@ export interface PolicyInput {
   localEncrypted: boolean
   /** Max sum of requested device pixels for tiles without priority. */
   pixelBudget?: number
+  /** Identities already blocked earlier in this call (the block is sticky; see rule 1). */
+  untrusted?: Iterable<string>
 }
 
 export interface SubscriptionDecision {
@@ -60,13 +64,13 @@ export interface SubscriptionDecision {
   /** Requested video size in pixels (video tracks that are enabled). */
   width?: number
   height?: number
-  /** Unencrypted: never subscribed. */
+  /** The participant is blocked (rule 1): never subscribed. */
   blocked: boolean
 }
 
 export interface SubscriptionPlan {
   decisions: SubscriptionDecision[]
-  /** Identities with at least one unencrypted (blocked) publication, sorted. */
+  /** Blocked identities, sorted: `untrusted` plus every identity with an unencrypted publication. */
   blockedIdentities: string[]
 }
 
@@ -123,7 +127,8 @@ export function computeSubscriptions(input: PolicyInput): SubscriptionPlan {
     demandSizes.set(k, larger(demandSizes.get(k), demand))
   }
 
-  const blocked = new Set<string>()
+  const blocked = new Set<string>(input.untrusted ?? [])
+  for (const publication of input.publications) if (!publication.encrypted) blocked.add(publication.identity)
   const decisions: SubscriptionDecision[] = []
   const sorted = [...input.publications].sort((a, b) =>
     a.identity === b.identity ? a.trackSid.localeCompare(b.trackSid) : a.identity.localeCompare(b.identity),
@@ -136,8 +141,7 @@ export function computeSubscriptions(input: PolicyInput): SubscriptionPlan {
       kind: publication.kind,
       source: publication.source,
     }
-    if (!publication.encrypted) {
-      blocked.add(publication.identity)
+    if (blocked.has(publication.identity)) {
       decisions.push({ ...base, subscribed: false, enabled: false, blocked: true })
       continue
     }

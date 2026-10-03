@@ -71,7 +71,12 @@ function sourceOf(publication: TrackPublication): PublicationSource {
   }
 }
 
-function remoteFacts(room: Room): RemotePublicationFacts<MediaStreamTrack>[] {
+function remoteFacts(ctx: CallContext, room: Room): RemotePublicationFacts<MediaStreamTrack>[] {
+  // A participant call-core blocked (an unencrypted publication, now or earlier in the call) is never recorded, whatever
+  // their other publications say: livekit-client's decrypt flag is per participant.
+  const blocked = new Set(
+    ctx.participants.value.filter((view) => !view.isLocal && !view.mediaEncrypted).map((view) => view.identity),
+  )
   const facts: RemotePublicationFacts<MediaStreamTrack>[] = []
   for (const participant of room.remoteParticipants.values()) {
     for (const publication of participant.trackPublications.values()) {
@@ -79,7 +84,7 @@ function remoteFacts(room: Room): RemotePublicationFacts<MediaStreamTrack>[] {
         identity: participant.identity,
         source: sourceOf(publication),
         kind: publication.kind === Track.Kind.Audio ? 'audio' : 'video',
-        encrypted: publication.isEncrypted,
+        encrypted: publication.isEncrypted && !blocked.has(participant.identity),
         subscribed: publication.isSubscribed,
         muted: publication.isMuted,
         track: publication.track?.mediaStreamTrack ?? null,
@@ -104,7 +109,7 @@ export function buildScene(ctx: CallContext, room: Room): SceneTile[] {
         { identity: self.identity, source: 'screen_share', track: localScreenTrack(room) },
       ]
     : []
-  const video = drawableVideo(remoteFacts(room), local)
+  const video = drawableVideo(remoteFacts(ctx, room), local)
   const cameras: SceneTile[] = []
   const screens: SceneTile[] = []
   for (const participant of ctx.participants.value) {
@@ -157,7 +162,7 @@ export function demandsFor(
 
 function syncMix(ctx: CallContext, room: Room, mixer: RecordingMixer) {
   const views = new Map(ctx.participants.value.map((view) => [view.identity, view]))
-  const remote = mixableAudio(remoteFacts(room), ctx.audio.remoteAudioTracks())
+  const remote = mixableAudio(remoteFacts(ctx, room), ctx.audio.remoteAudioTracks())
   mixer.sync(buildMixSources(remote, (identity) => views.get(identity)?.volumeForEveryone, ctx.media.micTrack()))
 }
 

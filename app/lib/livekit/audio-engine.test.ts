@@ -86,7 +86,7 @@ function fakeTrack(sid: string): AttachableAudioTrack & { attached: unknown[] } 
   }
 }
 
-function engine(hostVolumes: Record<string, number> = {}) {
+function engine(hostVolumes: Record<string, number> = {}, blocked = new Set<string>()) {
   const elements: FakeElement[] = []
   const appended: unknown[] = []
   const setMicGain = vi.fn()
@@ -99,8 +99,9 @@ function engine(hostVolumes: Record<string, number> = {}) {
     container: () => ({ append: (el: unknown) => appended.push(el) }) as unknown as HTMLElement,
     hostVolume: (identity) => hostVolumes[identity] ?? 100,
     setMicGain,
+    blocked: (identity) => blocked.has(identity),
   })
-  return { audio, elements, appended, setMicGain, hostVolumes }
+  return { audio, elements, appended, setMicGain, hostVolumes, blocked }
 }
 
 describe('AudioEngine', () => {
@@ -122,6 +123,21 @@ describe('AudioEngine', () => {
     audio.addTrack('p_mallory', 'microphone', fakeTrack('TR_m'), false)
     expect(elements).toHaveLength(0)
     expect(audio.remoteAudioTracks()).toEqual([])
+  })
+
+  it('never plays or hands out the audio of a blocked participant, even from encrypted publications', () => {
+    const { audio, elements, blocked } = engine()
+    audio.addTrack('p_x', 'microphone', fakeTrack('TR_x1'), true)
+    audio.addTrack('p_alice', 'microphone', fakeTrack('TR_a'), true)
+    // p_x published something unencrypted: the session blocks the participant and drops their audio.
+    blocked.add('p_x')
+    expect(audio.remoteAudioTracks().map((t) => t.id)).toEqual(['mst-TR_a'])
+    audio.removeIdentity('p_x')
+    expect(elements[0]!.removed).toBe(true)
+    expect(elements[1]!.removed).toBe(false)
+    audio.addTrack('p_x', 'screen_share_audio', fakeTrack('TR_x2'), true)
+    expect(elements).toHaveLength(2)
+    expect(audio.snapshot()).toEqual({ p_alice: expect.any(Object) })
   })
 
   it('applies local volume × host volume and follows changes of either', () => {

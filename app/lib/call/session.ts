@@ -151,6 +151,8 @@ export class CallSession {
   private readonly scope: EffectScope
   private readonly cleanups: Array<() => void> = []
   private featureCleanup: (() => void) | null = null
+  /** The test hook this session installed (dispose removes only its own, never a newer session's). */
+  private unencryptedHook: (() => Promise<void>) | null = null
   private readonly views = new Map<string, ParticipantView>()
   private viewsScheduled = false
   private audioContainer: HTMLElement | null = null
@@ -188,6 +190,7 @@ export class CallSession {
           events: this.events,
           localEncrypted: () => this.e2ee && Boolean(this.room?.isE2EEEnabled),
           onPlan: (plan) => this.onPlan(plan),
+          onBlocked: (identity) => this.onBlocked(identity),
         }),
       )
     }
@@ -206,6 +209,7 @@ export class CallSession {
         createElement: () => document.createElement('audio'),
         container: () => this.ensureAudioContainer(),
         hostVolume: (identity) => this.views.get(identity)?.volumeForEveryone ?? 100,
+        blocked: (identity) => this.isBlocked(identity),
         setMicGain: (gain) => {
           this.local.setMicGain(gain)
           this.store.micGain = gain
@@ -372,9 +376,10 @@ export class CallSession {
     if (__BLINQ_TEST_HOOKS__) {
       const hooks = testHooks()
       if (hooks) {
-        delete hooks.publishUnencryptedTrack
+        if (hooks.publishUnencryptedTrack === this.unencryptedHook) delete hooks.publishUnencryptedTrack
         delete hooks.state.call
       }
+      this.unencryptedHook = null
     }
   }
 
@@ -564,6 +569,7 @@ export class CallSession {
       if (source === 'camera') return this.local.camera && !this.local.camera.isMuted ? this.local.camera : null
       return null
     }
+    if (this.isBlocked(identity)) return null
     const participant = room.remoteParticipants.get(identity)
     const publication = participant?.getTrackPublication(lkSource) as RemoteTrackPublication | undefined
     if (!publication || !publication.isEncrypted || publication.isMuted) return null
@@ -739,8 +745,9 @@ export class CallSession {
   }
 
   private onTrackSubscribed(track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) {
-    // Defense in depth: the policy never subscribes NONE, but never play one even if it happened.
-    if (!publication.isEncrypted) {
+    // Defense in depth: the policy never subscribes NONE or a blocked participant, but never play one even if it
+    // happened.
+    if (!publication.isEncrypted || this.isBlocked(participant.identity)) {
       publication.setSubscribed(false)
       return
     }
@@ -886,7 +893,24 @@ export class CallSession {
     return toParticipantView(participant, {
       localEncrypted: this.e2ee && Boolean(this.room?.isE2EEEnabled),
       now: this.store.connectedAt ?? Date.now(),
+      blocked: !participant.isLocal && this.isBlocked(participant.identity),
     })
+  }
+
+  /**
+   * A remote participant with an unencrypted publication (now or earlier in this call) is blocked for the rest of the
+   * call: livekit-client keeps one decrypt flag per participant, which that publication may have turned off for their
+   * encrypted tracks too (docs/SECURITY.md §3.2, F-015).
+   */
+  private isBlocked(identity: string): boolean {
+    return this.subscriptions?.isBlocked(identity) ?? false
+  }
+
+  private onBlocked(identity: string) {
+    // The policy unsubscribes everything of theirs; stop what already plays and drop their video at once.
+    this.audio.removeIdentity(identity)
+    this.bumpTracks()
+    this.scheduleViews()
   }
 
   private scheduleViews() {
@@ -1010,15 +1034,14 @@ export class CallSession {
   private installTestHooks() {
     const hooks = testHooks()
     if (!hooks) return
+    const room = this.room
     void import('./test-support').then((support) => {
       if (this.disposed) return
-      hooks.useFakeScreenSource = (enabled) => support.setFakeScreenSource(enabled)
-      if (!this.e2ee && this.room) {
-        const room = this.room
-        hooks.publishUnencryptedTrack = () => support.publishUnencryptedTrack(room)
-      } else {
-        delete hooks.publishUnencryptedTrack
-      }
+      // The module function itself: a closure created here would keep this session alive after dispose (F-037).
+      hooks.useFakeScreenSource = support.setFakeScreenSource
+      if (!room) return
+      this.unencryptedHook = () => support.publishUnencryptedTrack(room)
+      hooks.publishUnencryptedTrack = this.unencryptedHook
     })
     this.scope.run(() => {
       watch(

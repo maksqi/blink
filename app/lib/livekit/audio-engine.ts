@@ -5,8 +5,8 @@
  *   while the recording mixer taps the same track: Chrome plays remote WebRTC audio into WebAudio only while an
  *   element also plays it (Chrome bug 40094084).
  * - Element volume = local volume (0..1, set in the tile menu) × host volume for everyone (`vol` attribute) / 100.
- * - Only tracks of encrypted publications are accepted (the subscription policy never subscribes others; this is the
- *   second check), so `remoteAudioTracks()` is safe for the recording mixer.
+ * - Only tracks of encrypted publications from participants that are not blocked are accepted (the subscription policy
+ *   never subscribes others; this is the second check), so `remoteAudioTracks()` is safe for the recording mixer.
  *
  * The session wires LiveKit events to `addTrack` / `removeTrack`; this module only needs structural types, which keeps
  * the volume math unit-testable in Node.
@@ -31,6 +31,8 @@ export interface AudioEngineOptions {
   hostVolume: (identity: string) => number
   /** Own mic gain (the mic chain in audio-context.ts). */
   setMicGain: (gain: number) => void
+  /** The participant is blocked for the rest of the call (an unencrypted publication); their audio never plays. */
+  blocked?: (identity: string) => boolean
   onChange?: () => void
 }
 
@@ -75,7 +77,7 @@ export class AudioEngine implements AudioControl {
 
   /** Starts playback of an encrypted remote track. Unencrypted tracks are refused. */
   addTrack(identity: string, source: AudioSource, track: AttachableAudioTrack, encrypted: boolean): void {
-    if (!encrypted) return
+    if (!encrypted || this.options.blocked?.(identity)) return
     const key = track.sid ?? track.mediaStreamTrack.id
     const existing = this.entries.get(key)
     if (existing?.track === track) return
@@ -104,6 +106,11 @@ export class AudioEngine implements AudioControl {
     this.options.onChange?.()
   }
 
+  /** Stops every track of one participant (they were blocked). */
+  removeIdentity(identity: string): void {
+    for (const [key, entry] of [...this.entries]) if (entry.identity === identity) this.removeTrack(key)
+  }
+
   /** Re-applies volumes after a host volume (`vol`) change. */
   refreshVolumes(): void {
     for (const entry of this.entries.values()) this.applyVolume(entry)
@@ -126,6 +133,7 @@ export class AudioEngine implements AudioControl {
 
   remoteAudioTracks(): MediaStreamTrack[] {
     return [...this.entries.values()]
+      .filter((entry) => !this.options.blocked?.(entry.identity))
       .map((entry) => entry.track.mediaStreamTrack)
       .filter((track) => track.readyState === 'live')
   }
