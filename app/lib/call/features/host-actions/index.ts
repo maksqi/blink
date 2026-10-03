@@ -6,10 +6,12 @@
  * at hand for toasts.
  */
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { setupParticipantSide } from './participant-side'
-import EndNotice from '~/components/call/host/EndNotice.vue'
-import ParticipantNotices from '~/components/call/host/ParticipantNotices.vue'
-import TileActionsBadge from '~/components/call/host/TileActionsBadge.vue'
+
+const EndNotice = lazyCallComponent(() => import('~/components/call/host/EndNotice.vue'))
+const ParticipantNotices = lazyCallComponent(() => import('~/components/call/host/ParticipantNotices.vue'))
+const TileActionsBadge = lazyCallComponent(() => import('~/components/call/host/TileActionsBadge.vue'))
 
 export default defineCallFeature({
   id: 'host-actions',

@@ -64,6 +64,7 @@ import {
 import { outcomeForDisconnect, isTerminalPhase } from './disconnect'
 import { createEventBus, type DisposableEventBus } from './event-bus'
 import { callRegistry } from './features'
+import { preloadCallComponents } from './lazy'
 import { createMessaging, type CallMessaging } from './messaging'
 import { afterPageLoad } from './page-load'
 import { joinClickMarked, markJoin, markJoinClick, JOIN_MARKS } from './metrics'
@@ -308,6 +309,8 @@ export class CallSession {
   /** Call from the Join click handler (before any network request) so the join-time measurement starts there. */
   markJoinClick(): void {
     markJoinClick()
+    // The call view's feature components load on demand (lazy.ts); fetch them now, while the join request runs.
+    void preloadCallComponents()
     void resumeSharedAudioContext()
     void this.room?.startAudio().catch(() => undefined)
   }

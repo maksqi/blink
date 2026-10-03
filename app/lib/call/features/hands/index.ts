@@ -5,10 +5,12 @@
 import { effectScope, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { openCallPanel } from '../host-actions/state'
 import { isModeratorRole } from '../participants/useParticipantInfo'
 import { HandNotifier, handSnapshot, newlyRaised } from './queue'
-import RaiseHandButton from '~/components/call/participants/RaiseHandButton.vue'
+
+const RaiseHandButton = lazyCallComponent(() => import('~/components/call/participants/RaiseHandButton.vue'))
 
 export default defineCallFeature({
   id: 'hands',

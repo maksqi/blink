@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildPublishDefaults, cameraPreset, DEFAULT_MEDIA_LIMITS, screenSharePreset } from './presets'
 import {
   canShareScreen,
   canSimulcastWithE2EE,
+  currentBrowserEnv,
   evaluateCallSupport,
   isMobileOs,
   parseBrowser,
@@ -150,4 +151,31 @@ describe('presets', () => {
     expect(defaults.screenShareEncoding).toMatchObject({ maxBitrate: 2_500_000, maxFramerate: 15 })
     expect(buildPublishDefaults({ limits: DEFAULT_MEDIA_LIMITS, simulcast: false }).simulcast).toBe(false)
   })
+})
+
+describe('currentBrowserEnv (F-043: no SDK import)', () => {
+  const engines: Array<[string, Record<string, unknown>]> = [
+    ['chromium', { RTCPeerConnection: {}, RTCRtpSender: { prototype: { createEncodedStreams() {} } } }],
+    [
+      'firefox and safari',
+      { RTCPeerConnection: {}, RTCRtpSender: { prototype: {} }, RTCRtpScriptTransform: {} },
+    ],
+    ['no encoded transforms', { RTCPeerConnection: {}, RTCRtpSender: { prototype: {} } }],
+    ['no WebRTC', {}],
+  ]
+
+  for (const [label, globals] of engines) {
+    it(`detects encoded transforms like livekit-client does (${label})`, async () => {
+      vi.stubGlobal('window', { ...globals, Worker: {} })
+      vi.stubGlobal('navigator', { userAgent: UA.chrome, maxTouchPoints: 0 })
+      try {
+        const sdk = await import('livekit-client')
+        const env = currentBrowserEnv()
+        expect(env.hasInsertableStreams).toBe(sdk.isInsertableStreamSupported())
+        expect(env.hasScriptTransform).toBe(sdk.isScriptTransformSupported())
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    })
+  }
 })

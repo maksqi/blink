@@ -4,8 +4,10 @@
  */
 import { MessageSquareTextIcon } from '@lucide/vue'
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { chatState } from './useChat'
-import ChatPanel from '~/components/call/chat/ChatPanel.vue'
+
+const ChatPanel = lazyCallComponent(() => import('~/components/call/chat/ChatPanel.vue'))
 
 export default defineCallFeature({
   id: 'chat',

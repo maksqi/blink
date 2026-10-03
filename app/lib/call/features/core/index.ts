@@ -4,15 +4,17 @@
  */
 import { defineComponent, h, markRaw } from 'vue'
 import { defineCallFeature } from '../../../contracts/call'
-import AudioSettings from '~/components/call/core/AudioSettings.vue'
-import CallEndScreen from '~/components/call/core/CallEndScreen.vue'
+import { lazyCallComponent } from '../../lazy'
 import CameraControl from '~/components/call/core/CameraControl.vue'
-import DeviceSettings from '~/components/call/core/DeviceSettings.vue'
-import InviteButton from '~/components/call/core/InviteButton.vue'
-import LayoutMenuItem from '~/components/call/core/LayoutMenuItem.vue'
 import LeaveButton from '~/components/call/core/LeaveButton.vue'
 import MicControl from '~/components/call/core/MicControl.vue'
 import ScreenShareButton from '~/components/call/core/ScreenShareButton.vue'
+
+const AudioSettings = lazyCallComponent(() => import('~/components/call/core/AudioSettings.vue'))
+const CallEndScreen = lazyCallComponent(() => import('~/components/call/core/CallEndScreen.vue'))
+const DeviceSettings = lazyCallComponent(() => import('~/components/call/core/DeviceSettings.vue'))
+const InviteButton = lazyCallComponent(() => import('~/components/call/core/InviteButton.vue'))
+const LayoutMenuItem = lazyCallComponent(() => import('~/components/call/core/LayoutMenuItem.vue'))
 
 const menuEntry = (entry: 'layout' | 'settings' | 'hotkeys') =>
   markRaw(defineComponent({ name: `CoreMenu-${entry}`, setup: () => () => h(LayoutMenuItem, { entry }) }))

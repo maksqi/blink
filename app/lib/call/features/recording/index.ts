@@ -3,10 +3,12 @@
  * button for hosts and co-hosts with an account. `setup` creates the per-call controller (app/lib/recording/).
  */
 import { defineCallFeature } from '../../../contracts/call'
+import { lazyCallComponent } from '../../lazy'
 import { attachRecording, canRecord, recordingFor } from './state'
-import RecordButton from '~/components/call/recording/RecordButton.vue'
 import RecordingIndicator from '~/components/call/recording/RecordingIndicator.vue'
-import RecordingStatus from '~/components/call/recording/RecordingStatus.vue'
+
+const RecordButton = lazyCallComponent(() => import('~/components/call/recording/RecordButton.vue'))
+const RecordingStatus = lazyCallComponent(() => import('~/components/call/recording/RecordingStatus.vue'))
 
 export default defineCallFeature({
   id: 'recording',
