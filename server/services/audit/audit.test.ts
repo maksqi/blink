@@ -37,7 +37,7 @@ describe('buildAuditRow', () => {
     },
   )
 
-  it.each(['system.bootstrap', 'auth.password_changed', 'admin.update_settings', 'recording.admin_download', 'a.b.c'])(
+  it.each(['system.bootstrap', 'auth.password_changed', 'admin.settings_updated', 'recording.admin_download', 'a.b.c'])(
     'accepts the action name %s',
     (action) => {
       expect(buildAuditRow({ action }, { ip: null, actorUserId: null, now }).action).toBe(action)

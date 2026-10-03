@@ -95,6 +95,7 @@ describe('settings service', () => {
     const admin = await createAdmin()
     try {
       const before = await getSettings()
+      const keysBefore = (await testDb().select({ key: settings.key }).from(settings)).map((r) => r.key)
       const next = await updateSettings({ 'limits.maxRoomsPerUser': 7 }, admin.id)
       expect(next['limits.maxRoomsPerUser']).toBe(7)
       expect(next['guests.allowed']).toBe(before['guests.allowed'])
@@ -102,7 +103,7 @@ describe('settings service', () => {
       const [row] = await testDb().select().from(settings).where(eq(settings.key, 'limits.maxRoomsPerUser'))
       expect(row).toMatchObject({ value: 7, updatedBy: admin.id })
       const rows = await testDb().select({ key: settings.key }).from(settings)
-      expect(rows.map((r) => r.key)).not.toContain('guests.allowed')
+      expect(rows.map((r) => r.key).sort()).toEqual([...new Set([...keysBefore, 'limits.maxRoomsPerUser'])].sort())
     } finally {
       await testDb().delete(settings).where(eq(settings.key, 'limits.maxRoomsPerUser'))
       invalidateSettingsCache()
