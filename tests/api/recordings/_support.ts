@@ -5,8 +5,9 @@
  * - `startProcessingServer(label)`: a second test server with RECORDING_ALLOW_DISK_WORKDIR=true. The harness server
  *   runs with NODE_ENV=production and therefore refuses to transcode outside a tmpfs (macOS, CI runners); this one is
  *   identical otherwise (same database, recordings dir and keys).
- * - `liveCall(baseUrl)`: owner + room + live meeting + joined host row + a signed-in client.
- * - `joinAs(...)`: another participant row (user or guest) with its own client.
+ * - `liveCall(baseUrl)`: owner + room + a signed-in client; the owner joins through the join API on that server, which
+ *   starts the meeting (and its LiveKit room) and creates the host row.
+ * - `joinAs(...)`: another participant row (user or guest) in that meeting, with its own client.
  * - `startServerRecording`, `uploadChunks`, `waitForRecording`, `downloadFile`.
  * - `seedReadyRecording(...)`: a `ready` row whose BLQ1 file is written directly (file and access tests).
  * - `setSetting(key, value)` / `resetSetting(key)`: writes the settings table and waits until the server sees it.
@@ -18,12 +19,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { eq } from 'drizzle-orm'
 import { expect } from 'vitest'
-import { recordings, settings } from '../../../server/database/schema'
+import { type callParticipants, meetings, recordings, settings } from '../../../server/database/schema'
 import { encryptBuffer, recordingInfo } from '../../../server/services/recordings/blq1'
 import {
   createClient,
   createGuestSession,
-  createMeeting,
   createParticipant,
   createRoom,
   createUser,
@@ -36,6 +36,7 @@ import {
   type TestServer,
   type TestUser,
 } from '../_harness'
+import { join as joinRoom, participantRow } from '../rooms/_support'
 
 export const GENERATE_SCRIPT = join(REPO_ROOT, 'tests/fixtures/media/generate.sh')
 
@@ -76,18 +77,27 @@ export function masterKey(): Buffer {
 export interface LiveCall {
   owner: TestUser
   room: Awaited<ReturnType<typeof createRoom>>
-  meeting: Awaited<ReturnType<typeof createMeeting>>
-  host: Awaited<ReturnType<typeof createParticipant>>
+  meeting: typeof meetings.$inferSelect
+  host: typeof callParticipants.$inferSelect
   client: ApiClient
 }
 
+/**
+ * The owner joins through `POST /api/join/:slug` on `baseUrl` (default: the harness server), the way production starts
+ * a meeting: the meeting row, the LiveKit room in that server's (fake) RoomService and the admitted host row. Rows
+ * written by factories alone would leave the RoomService without the room, so publishRoomState (the REC indicator)
+ * would fail.
+ */
 export async function liveCall(baseUrl?: string): Promise<LiveCall> {
   const owner = await createUser()
   const room = await createRoom(owner)
-  const meeting = await createMeeting(room)
-  const host = await createParticipant({ room, meeting, userId: owner.id, role: 'host', displayName: owner.displayName })
   const client = await loginAs(owner, createClient({ baseUrl }))
-  return { owner, room, meeting, host, client }
+  const joined = await joinRoom(client, room)
+  expect(joined.status, joined.text).toBe(200)
+  const host = await participantRow(joined.body.identity)
+  expect(host).toMatchObject({ roomId: room.id, userId: owner.id, roomRole: 'host', status: 'admitted' })
+  const [meeting] = await testDb().select().from(meetings).where(eq(meetings.id, host!.meetingId!))
+  return { owner, room, meeting: meeting!, host: host!, client }
 }
 
 /** Another person in the call: a user (default) or a guest, with the given role. */

@@ -5,8 +5,13 @@ import { settings } from '../../../server/database/schema'
 import { apiBaseUrl, createClient, serverEnv, testDb } from '../_harness'
 
 describe('GET /api/config', () => {
+  // The server caches settings for up to 5 s: wait until it sees the default again, so later files that join as guests
+  // never inherit guests.allowed = false.
   afterEach(async () => {
     await testDb().delete(settings).where(eq(settings.key, 'guests.allowed'))
+    await expect
+      .poll(async () => (await createClient().get('/api/config')).body.guestsAllowed, { timeout: 8_000, interval: 250 })
+      .toBe(true)
   })
 
   it('matches publicConfigSchema exactly, with values from the environment', async () => {
