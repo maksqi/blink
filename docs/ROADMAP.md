@@ -166,3 +166,8 @@ Stage files: each owner ticks the checkboxes in its own `docs/stages/NN-*.md`.
 - 2026-09-28 — Wave 1 merged: auth, rooms-backend, recording-server, infra (smoke-prod passed locally), call-core
   (36/36 call E2E, join ~0.3 s). Gate on main: lint, typecheck, 870 unit tests, production build checks. Next: Wave 2
   (admin, rooms-ui, collab-ui, media-fx, recording-client) in a fresh session, then Wave 3.
+- 2026-10-03 — Wave 2 preparation committed (63caea9): `muteOnJoin` in `JoinInfo`, `peak` in the noise test hook,
+  `E2E_HTTP_PORT`, stage notes matching Wave 1. Gate: lint, typecheck, 870 unit tests, check:english; `test:api` has 35
+  pre-existing failures from the Wave 1 merge (recording tests start meetings without a LiveKit room, so the real
+  `publishRoomState` gets `not_found`; one lobby-latency timing failure), fixed by `fix-w1-api` in parallel. Wave 2
+  agents (admin, rooms-ui, collab-ui, media-fx, recording-client) start from the commit after this entry.
