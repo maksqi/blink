@@ -1,5 +1,5 @@
 diff --git a/dist/livekit-client.e2ee.worker.mjs b/dist/livekit-client.e2ee.worker.mjs
-index ad55a83819c0e24fde8a65784395b2f797bab99f..47533b6d0a01ae013485fc6ba6a262a7141f5768 100644
+index ad55a83819c0e24fde8a65784395b2f797bab99f..fb9b5932385c513b25a7f27096c06baa8c066b1b 100644
 --- a/dist/livekit-client.e2ee.worker.mjs
 +++ b/dist/livekit-client.e2ee.worker.mjs
 @@ -7046,8 +7046,9 @@ class FrameCryptor extends BaseFrameCryptor {
@@ -28,19 +28,41 @@ index ad55a83819c0e24fde8a65784395b2f797bab99f..47533b6d0a01ae013485fc6ba6a262a7
        if (isFrameServerInjected(encodedFrame.data, this.sifTrailer)) {
          encodedFrame.data = encodedFrame.data.slice(0, encodedFrame.data.byteLength - this.sifTrailer.byteLength);
 diff --git a/dist/livekit-client.esm.mjs b/dist/livekit-client.esm.mjs
-index 0bdf98540d93d7deb581737dca7afb299308d307..ed6f252de2779f175e598c085226d656a810d277 100644
+index 0bdf98540d93d7deb581737dca7afb299308d307..4a524135c45f9ec1438060718eda4ef1240d3dca 100644
 --- a/dist/livekit-client.esm.mjs
 +++ b/dist/livekit-client.esm.mjs
-@@ -24303,6 +24303,8 @@ function videoLayersFromEncodings(width, height, encodings, svc) {
+@@ -22647,6 +22647,7 @@ class LocalTrack extends Track {
+     this._mediaStreamTrack.removeEventListener('ended', this.handleEnded);
+     this._mediaStreamTrack.removeEventListener('mute', this.handleTrackMuteEvent);
+     this._mediaStreamTrack.removeEventListener('unmute', this.handleTrackUnmuteEvent);
++    blinqForgetProcessedTrack(this);
+     (_a = this.processor) === null || _a === void 0 ? void 0 : _a.destroy();
+     this.processor = undefined;
+   }
+@@ -22831,6 +22832,7 @@ class LocalTrack extends Track {
+         var _a, _b;
+         if (!_this5.processor) return;
+         _this5.log.debug('stopping processor', _this5.logContext);
++        blinqForgetProcessedTrack(_this5);
+         (_a = _this5.processor.processedTrack) === null || _a === void 0 ? void 0 : _a.stop();
+         yield _this5.processor.destroy();
+         _this5.processor = undefined;
+@@ -24303,6 +24305,14 @@ function videoLayersFromEncodings(width, height, encodings, svc) {
    });
  }const minReconnectWait = 2 * 1000;
  const leaveReconnect = 'leave-reconnect';
 +/** blinq patch: how long a data channel error waits for the server's leave message before it is reported. */
 +const BLINQ_SERVER_CLOSE_GRACE_MS = 2000;
++/** blinq patch: SCTP cause code of an abort the peer (the SFU) chose to send. */
++const BLINQ_SCTP_USER_INITIATED_ABORT = 12;
++/** blinq patch: the session is neither closed nor reconnecting. */
++function blinqSessionUp(engine) {
++  return !engine._isClosed && !engine.attemptingReconnect && engine.pcState === PCState.Connected;
++}
  /**
   * How long local connection quality must stay `LOST` while connected and publishing before we
   * force a full reconnect — `LOST` is the server's verdict that it isn't receiving our media.
-@@ -24464,27 +24466,44 @@ class RTCEngine extends eventsExports.EventEmitter {
+@@ -24464,27 +24474,51 @@ class RTCEngine extends eventsExports.EventEmitter {
        }
        const channel = event.currentTarget;
        const channelKind = channel.maxRetransmits === 0 ? 'lossy' : 'reliable';
@@ -55,23 +77,27 @@ index 0bdf98540d93d7deb581737dca7afb299308d307..ed6f252de2779f175e598c085226d656
 -        this.log.error("Unknown DataChannel error on ".concat(channelKind), {
 -          event
 -        });
--      }
-+      // blinq patch: when the server ends the session (room deleted, participant removed) the SCTP abort can arrive
-+      // before the signal's leave message closes the engine. Report the error only if the engine is still open a
-+      // moment later, so the expected end of a session logs nothing.
++      // blinq patch: when the server ends the session (room deleted, participant removed, account disabled) it aborts
++      // the SCTP association ("User-Initiated Abort", cause 12), and the abort can arrive before the signal's leave
++      // message closes the engine. Such an abort is the server's decision, not a client error: it is logged as a
++      // warning, and any data channel problem is reported only if the session is still up a moment later.
++      const error = typeof RTCErrorEvent !== 'undefined' && event instanceof RTCErrorEvent ? event.error : undefined;
++      if ((error === null || error === void 0 ? void 0 : error.sctpCauseCode) === BLINQ_SCTP_USER_INITIATED_ABORT) {
++        this.blinqServerAborted = true;
+       }
 +      setTimeout(() => {
-+        if (this._isClosed) {
++        if (!blinqSessionUp(this)) {
 +          return;
 +        }
-+        if (typeof RTCErrorEvent !== 'undefined' && event instanceof RTCErrorEvent && event.error) {
-+          const error = event.error;
-+          this.log.error("DataChannel error on ".concat(channelKind, ": ").concat(error.message), {
++        const report = this.blinqServerAborted ? this.log.warn : this.log.error;
++        if (error) {
++          report.call(this.log, "DataChannel error on ".concat(channelKind, ": ").concat(error.message), {
 +            error,
 +            errorDetail: error.errorDetail,
 +            sctpCauseCode: error.sctpCauseCode
 +          });
 +        } else {
-+          this.log.error("Unknown DataChannel error on ".concat(channelKind), {
++          report.call(this.log, "Unknown DataChannel error on ".concat(channelKind), {
 +            event
 +          });
 +        }
@@ -84,23 +110,25 @@ index 0bdf98540d93d7deb581737dca7afb299308d307..ed6f252de2779f175e598c085226d656
        // (see livekit/rust-sdks#1137). Surface it; do not attempt renegotiation.
 -      if (!this._isClosed && ((_a = this.pcManager) === null || _a === void 0 ? void 0 : _a.publisher.getConnectionState()) === 'connected') {
 -        this.log.error("publisher data channel '".concat(DataChannelKind[kind], "' closed unexpectedly"), this.logContext);
-+      // blinq patch: checked again after a moment, like handleDataError (a server-side close races the leave).
++      // blinq patch: checked again after a moment, like handleDataError (a server-side close races the leave), and
++      // only a warning when the server aborted the association.
 +      const unexpected = () => {
 +        var _a;
-+        return !this._isClosed && ((_a = this.pcManager) === null || _a === void 0 ? void 0 : _a.publisher.getConnectionState()) === 'connected';
++        return blinqSessionUp(this) && ((_a = this.pcManager) === null || _a === void 0 ? void 0 : _a.publisher.getConnectionState()) === 'connected';
 +      };
 +      if (!unexpected()) {
 +        return;
        }
 +      setTimeout(() => {
 +        if (unexpected()) {
-+          this.log.error("publisher data channel '".concat(DataChannelKind[kind], "' closed unexpectedly"), this.logContext);
++          const report = this.blinqServerAborted ? this.log.warn : this.log.error;
++          report.call(this.log, "publisher data channel '".concat(DataChannelKind[kind], "' closed unexpectedly"), this.logContext);
 +        }
 +      }, BLINQ_SERVER_CLOSE_GRACE_MS);
      };
      // websocket reconnect behavior. if websocket is interrupted, and the PeerConnection
      // continues to work, we can reconnect to websocket to continue the session
-@@ -25600,7 +25619,10 @@ class RTCEngine extends eventsExports.EventEmitter {
+@@ -25600,7 +25634,10 @@ class RTCEngine extends eventsExports.EventEmitter {
              value: new EncryptedPacket({
                encryptedValue: encryptedData.payload,
                iv: encryptedData.iv,
@@ -112,10 +140,25 @@ index 0bdf98540d93d7deb581737dca7afb299308d307..ed6f252de2779f175e598c085226d656
              })
            };
          }
-@@ -33631,6 +33653,54 @@ class DeferrableMap extends Map {
+@@ -33631,6 +33668,69 @@ class DeferrableMap extends Map {
  })(ConnectionState || (ConnectionState = {}));
  const CONNECTION_RECONCILE_FREQUENCY_MS = 4 * 1000;
  const STATS_LOG_FREQUENCY_MS = 30 * 1000;
++/**
++ * blinq patch: LocalAudioTrack.setProcessor adds the Krisp listeners to the processor's output track and 2.22.3 never
++ * removed them. An output that outlives the track (a MediaStreamAudioDestinationNode of a long-lived AudioContext keeps
++ * its track alive) then kept the LocalAudioTrack, and through its logger context the whole Room, alive. Removed when
++ * the processor stops or the track stops.
++ */
++function blinqForgetProcessedTrack(track) {
++  var _a;
++  const output = (_a = track.processor) === null || _a === void 0 ? void 0 : _a.processedTrack;
++  if (!output || !track.handleKrispNoiseFilterEnable) {
++    return;
++  }
++  output.removeEventListener('enable-lk-krisp-noise-filter', track.handleKrispNoiseFilterEnable);
++  output.removeEventListener('disable-lk-krisp-noise-filter', track.handleKrispNoiseFilterDisable);
++}
 +/**
 + * blinq patch: registers the Room's devicechange listener from a function that has no `this` in scope. In 2.22.3 the
 + * WeakRef listener and the FinalizationRegistry callback were created inside the Room constructor and shared its
@@ -167,7 +210,7 @@ index 0bdf98540d93d7deb581737dca7afb299308d307..ed6f252de2779f175e598c085226d656
  /**
   * In LiveKit, a room is the logical grouping for a list of participants.
   * Participants in a room can publish tracks, and subscribe to others' tracks.
-@@ -33970,19 +34040,12 @@ class Room extends eventsExports.EventEmitter {
+@@ -33970,19 +34070,12 @@ class Room extends eventsExports.EventEmitter {
            track.enabled = true;
            const stream = new MediaStream([track]);
            dummyAudioEl.srcObject = stream;
@@ -191,7 +234,7 @@ index 0bdf98540d93d7deb581737dca7afb299308d307..ed6f252de2779f175e598c085226d656
              dummyAudioEl === null || dummyAudioEl === void 0 ? void 0 : dummyAudioEl.remove();
              dummyAudioEl = null;
            });
-@@ -34530,32 +34593,8 @@ class Room extends eventsExports.EventEmitter {
+@@ -34530,32 +34623,8 @@ class Room extends eventsExports.EventEmitter {
        this.switchActiveDevice('audiooutput', unwrapConstraint(this.options.audioOutput.deviceId)).catch(e => this.log.warn("Could not set audio output: ".concat(e.message)));
      }
      if (isWeb()) {

@@ -8,7 +8,8 @@
  *   publication announced as unencrypted turned decryption off for all of that participant's tracks, and the worker
  *   then passed frames to the decoder undecrypted. Patched, it drops them (and never encodes without encryption).
  * - Room (F-037): the `devicechange` listener kept every Room alive through its constructor's closure context; the
- *   iOS silent-audio `visibilitychange` listener was never removed.
+ *   iOS silent-audio `visibilitychange` listener was never removed; the Krisp listeners on an audio processor's output
+ *   track were never removed, so the mic chain's output (kept alive by the shared AudioContext) held every Room.
  * - Engine (F-006): a server-side close (room deleted, participant removed) logged data channel errors when the SCTP
  *   abort arrived before the leave message.
  */
@@ -79,11 +80,28 @@ describe('livekit-client patch', () => {
     expect(listener).not.toMatch(/\bthis\b/)
   })
 
+  it("removes the Krisp listeners from a processor's output when the processor or the track stops", () => {
+    const forget = blockAfter(bundle, 'function blinqForgetProcessedTrack(track) {')
+    expect(forget).toContain("removeEventListener('enable-lk-krisp-noise-filter'")
+    expect(forget).toContain("removeEventListener('disable-lk-krisp-noise-filter'")
+    expect(blockAfter(bundle, 'internalStopProcessor() {')).toContain('blinqForgetProcessedTrack(_this5)')
+    const stop = bundle.slice(bundle.indexOf('this.manuallyStopped = true;'))
+    expect(stop.slice(0, stop.indexOf('this.processor = undefined;'))).toContain('blinqForgetProcessedTrack(this)')
+  })
+
   it('reports data channel errors only when the engine is still open after the grace period', () => {
     const onError = blockAfter(bundle, 'this.handleDataError = event =>')
     expect(onError).toContain('setTimeout(')
     expect(onError).toContain('BLINQ_SERVER_CLOSE_GRACE_MS')
+    expect(onError).toContain('blinqSessionUp(this)')
+    // A server-side abort (SCTP cause 12) is a warning, not an error.
+    expect(onError).toContain('BLINQ_SCTP_USER_INITIATED_ABORT')
+    expect(onError).toContain('this.blinqServerAborted ? this.log.warn : this.log.error')
     const onClose = blockAfter(bundle, 'this.handleDataChannelClose = kind => () =>')
     expect(onClose).toContain('setTimeout(')
+    expect(onClose).toContain('this.blinqServerAborted ? this.log.warn : this.log.error')
+    const up = blockAfter(bundle, 'function blinqSessionUp(engine) {')
+    expect(up).toContain('engine._isClosed')
+    expect(up).toContain('engine.attemptingReconnect')
   })
 })
