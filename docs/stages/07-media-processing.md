@@ -62,57 +62,76 @@ instead of broken controls, and heavy CPU use triggers a warning.
 - [x] Blur and noise-suppression rows exist in the manual browser matrix of `docs/TESTING.md`.
 - Feature `setup(ctx)` runs when the call session is created (pre-join), before the room connects.
 ### Vendored assets
-- [ ] `scripts/vendor-assets.mjs` (Node, no network, idempotent): copy
+- [x] `scripts/vendor-assets.mjs` (Node, no network, idempotent): copy
       `node_modules/@mediapipe/tasks-vision/wasm/{vision_wasm_internal,vision_wasm_nosimd_internal}.{js,wasm}` →
       `public/vendor/mediapipe/wasm/`; copy `@sapphi-red/web-noise-suppressor/dist/rnnoise/workletProcessor.js`,
       `dist/rnnoise.wasm` and `dist/rnnoise_simd.wasm` → `public/vendor/rnnoise/`. Fail with a clear message when a
       source file is missing, when the installed `@mediapipe/tasks-vision` is not exactly `0.10.14`, or when the
       committed model's sha256 differs from the constant in the script. Print one summary line.
-- [ ] Model `public/vendor/mediapipe/selfie_segmenter.tflite` (float16 selfie segmenter, the track-processors default),
+- [x] Model `public/vendor/mediapipe/selfie_segmenter.tflite` (float16 selfie segmenter, the track-processors default),
       fetched once by hand and committed; `public/vendor/mediapipe/README.md` records source URL, version, license and
       sha256.
-- [ ] `app/lib/media/vendor-paths.ts` is the only place with `/vendor/...` paths: `tasksVisionFileSet:
+- [x] `app/lib/media/vendor-paths.ts` is the only place with `/vendor/...` paths: `tasksVisionFileSet:
       '/vendor/mediapipe/wasm'`, `modelAssetPath: '/vendor/mediapipe/selfie_segmenter.tflite'`,
       `/vendor/rnnoise/workletProcessor.js`, `/vendor/rnnoise/rnnoise.wasm`, `/vendor/rnnoise/rnnoise_simd.wasm`.
 ### Background blur
-- [ ] `app/lib/media/support.ts`: `supportsBlur()` = `supportsBackgroundProcessors()` from `@livekit/track-processors`
+- [x] `app/lib/media/support.ts`: `supportsBlur()` = `supportsBackgroundProcessors()` from `@livekit/track-processors`
       (needs `OffscreenCanvas`, `VideoFrame`, `createImageBitmap` and WebGL2: Chrome/Edge, Firefox ≥ 130, Safari ≥ 16.4);
       `supportsRnnoise()` = `AudioWorkletNode` + `WebAssembly` + a 48 kHz shared context. Pure over an injectable
       environment for tests.
-- [ ] `app/lib/media/blur.ts`: create the processor once per call page with `BackgroundProcessor({ mode: 'disabled',
+- [x] `app/lib/media/blur.ts`: create the processor once per call page with `BackgroundProcessor({ mode: 'disabled',
       assetPaths, maxFps: 30 })`; attach it on the first enable (`setCameraProcessor`), afterwards only
       `processor.switchTo({ mode: 'background-blur', blurRadius })` and `switchTo({ mode: 'disabled' })`. Never
       `stopProcessor()` or unpublish during a call; destroy on leave. Levels `off` | `light` (radius 6) | `strong`
       (radius 14) (decision).
-- [ ] The first enable shows "Loading background blur…" while wasm and model load. A load or init failure → toast
+- [x] The first enable shows "Loading background blur…" while wasm and model load. A load or init failure → toast
       "Background blur isn't available right now", the control returns to off, the unprocessed track keeps flowing.
-- [ ] Blur survives camera off/on and device switches (call-core re-applies the processor; covered in E2E).
+- [x] Blur survives camera off/on and device switches (call-core re-applies the processor; covered in E2E).
 ### Noise suppression and mic gain
-- [ ] `app/lib/media/constraints.ts` (pure): `off` → `noiseSuppression: false`; `browser` → `true`; `rnnoise` → `false`
+- [x] `app/lib/media/constraints.ts` (pure): `off` → `noiseSuppression: false`; `browser` → `true`; `rnnoise` → `false`
       plus the worklet. `echoCancellation` and `autoGainControl` stay on in every mode (decision).
-- [ ] `app/lib/media/rnnoise.ts` on `ctx.media.audioContext()` (assert `sampleRate === 48000`, else RNNoise is
+- [x] `app/lib/media/rnnoise.ts` on `ctx.media.audioContext()` (assert `sampleRate === 48000`, else RNNoise is
       unavailable): `audioWorklet.addModule('/vendor/rnnoise/workletProcessor.js')` once per context (a same-origin
       file, never a `blob:` URL); `loadRnnoise({ url, simdUrl })` cached; `new RnnoiseWorkletNode(ctx, { maxChannels: 1,
       wasmBinary })`; inserted through a `MicInsert` with `setMicInsert(insert)`; `processorerror` → fall back to
       `browser` with a toast.
-- [ ] Switch order: constraints first (`setMicProcessing`), then insert or remove the `MicInsert` (`setMicInsert`). The
+- [x] Switch order: constraints first (`setMicProcessing`), then insert or remove the `MicInsert` (`setMicInsert`). The
       mic publication keeps its `trackSid`.
-- [ ] Mic gain slider 0–200 % (default 100 %) → `ctx.audio.setMicGain(gain)`; the pre-join meter (call-core) reflects it.
+- [x] Mic gain slider 0–200 % (default 100 %) → `ctx.audio.setMicGain(gain)`; the pre-join meter (call-core) reflects it.
 ### Preferences, UI and warnings
-- [ ] `app/lib/media/preferences.ts`: localStorage `blinq:media:v1`, zod-validated on read (garbage ignored), every
+- [x] `app/lib/media/preferences.ts`: localStorage `blinq:media:v1`, zod-validated on read (garbage ignored), every
       access in try/catch. Blur per camera `deviceId`; noise mode and gain per microphone `deviceId`; a browser-wide
       default for unknown devices (decision). Defaults: blur `off`, noise `browser`, gain 1.
-- [ ] `app/lib/call/features/effects/index.ts`: `defineCallFeature({ id: 'effects', preJoin, settings, controlBar,
+- [x] `app/lib/call/features/effects/index.ts`: `defineCallFeature({ id: 'effects', preJoin, settings, controlBar,
       setup })`. `setup` applies saved preferences to the pre-join tracks, re-applies them after device changes,
       publishes `testHooks()?.state.media = { blur, noise, gain, cameraTrackSid, micTrackSid }` and cleans up on leave.
-- [ ] `app/components/call/effects/PreJoinEffects.vue` (pre-join slot) and `EffectsSettings.vue` (settings section "Video
+- [x] `app/components/call/effects/PreJoinEffects.vue` (pre-join slot) and `EffectsSettings.vue` (settings section "Video
       and audio effects"): blur level; noise suppression "Off" / "Browser" / "Enhanced (RNNoise)"; mic gain. An
       unsupported control stays visible, disabled, with the reason ("Your browser can't blur the background").
-- [ ] `app/components/call/effects/BlurToggle.vue`: ControlBarItem in `overflow` ("Blur background" on/off).
-- [ ] `app/lib/media/cpu-monitor.ts` (pure core): warn when the rolling 10 s average of `onFrameProcessed`
+- [x] `app/components/call/effects/BlurToggle.vue`: ControlBarItem in `overflow` ("Blur background" on/off).
+- [x] `app/lib/media/cpu-monitor.ts` (pure core): warn when the rolling 10 s average of `onFrameProcessed`
       `processingTimeMs` exceeds 80 % of the frame budget, or the camera sender reports `qualityLimitationReason ===
       'cpu'` for 10 s (`LocalVideoTrack.getSenderStats()`). Toast "Background blur is using a lot of CPU. Turn it off if
       your video stutters." with a "Turn off" action, at most once per call.
+### Implementation notes (media-fx)
+- The orchestration lives in `app/lib/call/features/effects/controller.ts` (`EffectsController`, unit-tested with fakes);
+  components find it with `effectsFor(useCall())`. It reads the call store for device ids, `cameraOn` and `micGain`.
+- Blur attach timing (decision): in pre-join the processor attaches once the camera runs (a MediaPipe failure never
+  breaks the camera start); in a call it attaches right away, even with the camera off, so the first published frame
+  is processed. A processor that never ran and a camera that then fails with `failed` count as a blur failure.
+- One RNNoise node per AudioContext is reused by every insert: the library's processor ignores its `destroy` message
+  (its port is never started), so a node per insert would keep running. `connect()` never throws (pass-through plus
+  `onError`), because it runs while call-core (re)starts the mic.
+- Fallbacks (blur failure, RNNoise unavailable) are not remembered (decision): the saved choice is retried next call.
+- The settings section has no second mic gain slider (decision): core's "Audio" section already shows one, and every
+  change of the store's `micGain` is remembered per microphone. The pre-join slot has the slider.
+- "Blur background" turns on the last level chosen (default `strong`, decision).
+- Test hooks: `state.media` also carries `blurActive`, `blurLoading`, `blurFrames`, `rnnoiseActive`, `noiseBusy`,
+  `sampleRate`, `micProcessing`, the device ids and both support results; `state.mediaFx.restartCamera()` restarts the
+  published camera like a device switch (the E2E browsers have one fake camera).
+- `measureNoiseSuppression()` waits before `startRendering()`: the worklet loads its wasm asynchronously and Firefox has
+  no `OfflineAudioContext.suspend()`. Measured: -30.0 dBFS in, -59.5 dBFS out (Chromium, Firefox and a Node run of the
+  same processor agree).
 
 ## Tests
 - Unit (colocated in `app/lib/media/`): `preferences.test.ts` (per-device keys, defaults, invalid JSON, storage
@@ -137,23 +156,28 @@ instead of broken controls, and heavy CPU use triggers a warning.
   - `persistence.spec.ts`: choices survive a reload and are applied in pre-join for the same devices.
 
 ## Definition of Done
-- [ ] [auto] Processors swap without republishing or dropping the track — evidence: `pnpm test:e2e -- media/blur-swap`,
-      `pnpm test:e2e -- media/mic-chain`.
-- [ ] [auto] The browser makes no external network requests — evidence:
-      `pnpm test:e2e -- media/no-external-requests`.
-- [ ] [auto] RNNoise lowers seeded white noise by ≥ 10 dB (OfflineAudioContext, threshold above) — evidence:
-      `pnpm test:e2e -- media/rnnoise-offline`.
-- [ ] [auto] Unsupported browsers get disabled controls with a reason and a working call — evidence:
+- [x] [auto] Processors swap without republishing or dropping the track — evidence: `pnpm test:e2e -- media/blur-swap`,
+      `pnpm test:e2e -- media/mic-chain` (chromium and firefox pass: same camera and mic trackSid on both sides through
+      7 blur switches, camera off/on and a track restart; longest gap between frames the peer presented <= 1 s).
+- [x] [auto] The browser makes no external network requests — evidence:
+      `pnpm test:e2e -- media/no-external-requests` (chromium and firefox; vendor files confirmed in the e2e Caddy log,
+      because Chromium reports AudioWorklet module fetches neither as request events nor in resource timing).
+- [x] [auto] RNNoise lowers seeded white noise by ≥ 10 dB (OfflineAudioContext, threshold above) — evidence:
+      `pnpm test:e2e -- media/rnnoise-offline` (both engines: -30.0 dBFS in, -59.5 dBFS out).
+- [x] [auto] Unsupported browsers get disabled controls with a reason and a working call — evidence:
       `pnpm test:e2e -- media/fallback`.
-- [ ] [auto] Preferences persist per device — evidence: `app/lib/media/preferences.test.ts`,
-      `pnpm test:e2e -- media/persistence`.
-- [ ] [auto] The CPU warning follows its thresholds — evidence: `app/lib/media/cpu-monitor.test.ts`.
-- [ ] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- media` (base fixture).
-- [ ] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
-- [ ] [agent-manual] `node scripts/vendor-assets.mjs` is idempotent, needs no network and fails clearly on a missing file
+- [x] [auto] Preferences persist per device — evidence: `app/lib/media/preferences.test.ts`,
+      `app/lib/call/features/effects/controller.test.ts`, `pnpm test:e2e -- media/persistence` (Chromium gives the fake
+      camera a new id on every page load, so the per-camera reload check runs in Firefox; per-mic runs in both).
+- [x] [auto] The CPU warning follows its thresholds — evidence: `app/lib/media/cpu-monitor.test.ts`.
+- [x] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- media` (base fixture; MediaPipe logs INFO
+      lines through console.log/warn only).
+- [x] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: local runs on the branch
+      (975 unit tests); `node scripts/check-build.mjs production` passes.
+- [x] [agent-manual] `node scripts/vendor-assets.mjs` is idempotent, needs no network and fails clearly on a missing file
       or a model hash mismatch — evidence: output of two runs (one with the model renamed) in the report.
-- [ ] [agent-manual] `/vendor/**/*.wasm` is served as `application/wasm` and `.js` as `text/javascript` — evidence:
-      `curl -sI` output per file in the report.
+- [x] [agent-manual] `/vendor/**/*.wasm` is served as `application/wasm` and `.js` as `text/javascript` — evidence:
+      `curl -sI` output per file in the report (`.tflite` is `text/plain`, which works for `fetch()`).
 - [ ] [user] Blur and noise suppression behave per the manual browser matrix (Chrome, Edge, Firefox, Safari macOS/iOS,
       Android Chrome: working, or disabled with a reason; no audio glitches) — evidence: `docs/TESTING.md` matrix rows.
 
