@@ -190,31 +190,41 @@ what `canPerform()` allows, and the server stays the only enforcement point.
   - `responsive.spec.ts` (`@responsive`): panels, menus and dialogs at 375/768/1440 px without horizontal overflow.
 
 ## Definition of Done
-- [ ] [auto] Authorization matrix: the UI offers an action only when `canPerform` allows it — evidence:
+- [x] [auto] Authorization matrix: the UI offers an action only when `canPerform` allows it — evidence:
       `app/lib/call/features/host-actions/menu.test.ts`, `app/lib/call/features/room-settings/controls.test.ts`,
       `pnpm test:e2e -- collab/permissions-ui`; server side: `tests/api/calls/authz.test.ts` (Stage 04).
-- [ ] [auto] A host action reaches the peer in ≤ 1 s — evidence: `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] A revoked mic cannot unmute — evidence: `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] The host turns a participant's camera off — evidence: `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] Ask to unmute never unmutes without the participant's click — evidence:
+      Result (collab-ui): unit tests pass; permissions-ui passes in Chromium.
+- [x] [auto] A host action reaches the peer in ≤ 1 s — evidence: `pnpm test:e2e -- collab/host-actions`.
+- [x] [auto] A revoked mic cannot unmute — evidence: `pnpm test:e2e -- collab/host-actions`.
+- [x] [auto] The host turns a participant's camera off — evidence: `pnpm test:e2e -- collab/host-actions`.
+      Result (collab-ui): all six host-actions specs pass in Chromium and Firefox.
+- [x] [auto] Ask to unmute never unmutes without the participant's click — evidence:
       `pnpm test:e2e -- collab/host-actions`.
-- [ ] [auto] Raise hand → allow to speak → the participant unmutes — evidence: `pnpm test:e2e -- collab/hands`.
-- [ ] [auto] Volume for everyone is applied by receivers — evidence: `pnpm test:e2e -- collab/volume`.
+- [x] [auto] Raise hand → allow to speak → the participant unmutes — evidence: `pnpm test:e2e -- collab/hands`.
+- [x] [auto] Volume for everyone is applied by receivers — evidence: `pnpm test:e2e -- collab/volume`.
 - [ ] [auto] Chat is ciphertext on the wire and an XSS payload renders as text — evidence:
       `pnpm test:e2e -- collab/chat`, `app/lib/call/features/chat/linkify.test.ts`.
-- [ ] [auto] The hand queue is ordered by raise time — evidence: `app/lib/call/features/hands/queue.test.ts`,
+      Result (collab-ui): linkify and chat-store unit tests pass; "chat turned off" passes in Chromium and
+      Firefox. The three specs that need a peer to receive a message fail (and so does collab/reactions):
+      call-core drops every app message because livekit-client 2.22.3 never sets `EncryptedPacket.encryptionType`,
+      so receivers see `NONE` (request in the collab-ui report). Not ticked until that fix lands.
+- [x] [auto] The hand queue is ordered by raise time — evidence: `app/lib/call/features/hands/queue.test.ts`,
       `pnpm test:e2e -- collab/hands`.
-- [ ] [auto] A waiting person appears for moderators ≤ 1 s; admit, deny and admit all work — evidence:
+- [x] [auto] A waiting person appears for moderators ≤ 1 s; admit, deny and admit all work — evidence:
       `pnpm test:e2e -- collab/lobby`.
-- [ ] [auto] Live settings reach everyone ≤ 1 s and a locked room rejects joins — evidence:
+- [x] [auto] Live settings reach everyone ≤ 1 s and a locked room rejects joins — evidence:
       `pnpm test:e2e -- collab/room-settings`.
-- [ ] [auto] Removal shows the removed notice and the rotate-key prompt; end for all ends every client — evidence:
+- [x] [auto] Removal shows the removed notice and the rotate-key prompt; end for all ends every client — evidence:
       `pnpm test:e2e -- collab/host-actions`.
 - [ ] [auto] No horizontal overflow at 375/768/1440 px — evidence: `pnpm test:e2e -- collab/responsive`.
-- [ ] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- collab` (base fixture).
-- [ ] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
-- [ ] [agent-manual] Only owned paths changed and every feature appears without editing core files — evidence:
+      Result (collab-ui): no horizontal overflow at any width, and 375/1440 pass in Chromium, Firefox and
+      mobile-chromium. At 768 px (desktop engines) the core control bar lets its end group overlap the center
+      buttons once a host has all controls (request in the collab-ui report). Not ticked until that fix lands.
+- [x] [auto] No console errors or CSP violations — evidence: `pnpm test:e2e -- collab` (base fixture).
+- [x] [auto] `lint`, `typecheck`, `test`, `build` and `check:english` are green — evidence: ci.yml.
+- [x] [agent-manual] Only owned paths changed and every feature appears without editing core files — evidence:
       `git diff --stat <waveBaseSha>...HEAD` in the report.
+      Result (collab-ui): 66 files, all under the owned feature folders, `tests/e2e/collab/**` and this file.
 - [ ] [user] Moderation, chat and reactions work in Safari (macOS, iOS) and Android Chrome — evidence: manual browser
       matrix in `docs/TESTING.md`.
 
