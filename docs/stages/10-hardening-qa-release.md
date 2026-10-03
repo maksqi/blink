@@ -188,13 +188,14 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       fix-server — status: open
 - [ ] F-020 [medium] ui — forms submitted before hydration send `GET /login?email=…&password=…` or `/?link=…#k=…`
       into the URL, history and the Caddy log (S-06) — owner: fix-ui (+ fix-infra: Caddy query redaction) — status: open
+      (Caddy part fixed by fix-infra 5687e71)
 - [x] F-021 [medium] deps — `pnpm audit --prod --audit-level high` exits 1: node-forge GHSA-86w9-cpqp-85rv and braces
       GHSA-vfj7-8cjw-p6xm (build-time only, no patched release on npm) (S-07) — owner: orchestrator — status: fixed
       (`auditConfig.ignoreGhsas` with reasons in `pnpm-workspace.yaml`, `shadcn-vue` moved to devDependencies)
-- [ ] F-022 [low] infra — the app runtime image keeps npm (all 7 HIGH trivy findings) and the Caddy binary has 6 HIGH
-      Go module findings (S-09) — owner: fix-infra — status: open
-- [ ] F-023 [low] infra — `postgres:18-alpine` and `node:24-bookworm-slim` are pinned by major version only (S-10) —
-      owner: fix-infra (+ orchestrator for workflows) — status: open
+- [x] F-022 [low] infra — the app runtime image keeps npm (all 7 HIGH trivy findings) and the Caddy binary has 6 HIGH
+      Go module findings (S-09) — owner: fix-infra — status: fixed (fix-infra 8157c68: no npm/npx/corepack in the runtime; xcaddy --replace; trivy HIGH/CRITICAL 7→0 and 6→0)
+- [x] F-023 [low] infra — `postgres:18-alpine` and `node:24-bookworm-slim` are pinned by major version only (S-10) —
+      owner: fix-infra (+ orchestrator for workflows) — status: fixed (fix-infra 6857646: node:24.21.0-bookworm-slim, postgres:18.6-alpine3.24 everywhere)
 - [ ] F-024 [low] server — password-reset request timing reveals whether an account exists (7.7 ms vs 1.5 ms) (S-11)
       — owner: fix-server — status: open
 - [ ] F-025 [low] server — chunked request bodies bypass the 1 MB limit outside Caddy (nuxt-security checks
@@ -286,8 +287,14 @@ Format: `- [ ] F-NNN [severity] <area> — <summary> — owner: <agent> — stat
       silence with no warning (e2e-prod, Firefox in the Playwright Linux image) — owner: fix-call — status: open
 - [ ] F-061 [low] e2e — `call/e2ee` and `media/mic-chain` assert `totalAudioEnergy > 0`, which comfort noise from a
       silent sender satisfies — owner: e2e-flows (call) + fix-call (media) — status: open
-- [ ] F-062 [low] infra — Caddy logs livekit-client's `join_request=` query (the SDP offer with ICE credentials) —
-      owner: fix-infra (+ orchestrator for the e2e Caddyfile) — status: open
+- [x] F-062 [low] infra — Caddy logs livekit-client's `join_request=` query (the SDP offer with ICE credentials) —
+      owner: fix-infra (+ orchestrator for the e2e Caddyfile) — status: fixed (fix-infra 5687e71, 7b5c966)
+- [ ] F-063 [low] ui — reloading `/dashboard` aborts route chunk imports, which surface as uncaught page errors
+      ("Importing a module script failed"); `auth/first-admin` fails on webkit-ui (2/2) and once on Firefox (e2e-flows)
+      — owner: fix-ui — status: open
+- [ ] F-064 [low] call — Firefox sometimes never fires `load` on a fully rendered pre-join page (a guest in
+      `rooms/key-leak` hung for 113 s with no request pending); `openToPrejoin` now waits for `domcontentloaded` — owner:
+      fix-call — status: open
 
 ## Tests
 - API: `tests/api/security/{authz-matrix,idor,csrf,rate-limits,cookies,headers}.test.ts`.
