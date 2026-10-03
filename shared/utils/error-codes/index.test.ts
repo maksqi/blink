@@ -25,7 +25,8 @@ describe('ERROR_MESSAGES copy', () => {
     const withoutNextStep = (Object.keys(ERROR_MESSAGES) as ErrorCode[]).filter((code) => {
       if (FINAL.includes(code)) return false
       const sentences = ERROR_MESSAGES[code].split(/(?<=\.)\s+/)
-      const instruction = /\b(try|ask|check|reload|refresh|sign in|contact|enter|choose|change|end|delete|use|open|request|start|wait)\b/i
+      const instruction =
+        /\b(try|ask|check|reload|refresh|sign in|contact|enter|choose|change|end|delete|use|open|request|start|wait)\b/i
       return sentences.length < 2 && !instruction.test(ERROR_MESSAGES[code])
     })
     expect(withoutNextStep).toEqual([])
